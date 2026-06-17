@@ -1,0 +1,106 @@
+schema_version: capex.production_preflight_gate_review.v1
+review_id: capex.production_preflight.three_project_evidence_package_review.v1
+owner_task: TASK-0601
+source_task_id: PP-TASK-003
+activation_posture: planning_only_no_capex_activation
+overall_status: no_go_blocked_pending_evidence
+gate_refs:
+  - PROD-PRE-G02
+  - PROD-PRE-G03
+  - PROD-PRE-G04
+  - PROD-PRE-G05
+approved_waivers: []
+future_waiver_required_fields:
+  - owner
+  - reason
+  - residual_risk
+  - expiry_or_review_date
+  - affected_gate
+evidence_contract_refs:
+  - THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK.md
+  - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+  - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+  - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+  - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+  - AGENT_LAB_EVAL_MATRIX.yaml
+  - OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+  - NO_OVERFITTING_REVIEW_CHECKPOINT.yaml
+  - PROJECT_ORACLE_MANIFEST_FORMAT.yaml
+  - FIXTURE_TIER_CI_POLICY.yaml
+gate_reviews:
+  - gate_id: PROD-PRE-G02
+    status: reviewed_no_go_blocked_pending_evidence
+    result_reason: Three-project strategy contracts exist, but fixture release, TP-G11 pass evidence, and explicit waiver evidence are absent.
+    covered_tiers:
+      - K12
+      - K3_mini
+      - K3_shadow
+      - blind_baseline
+    evidence_refs:
+      - THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK.md
+      - PROJECT_ORACLE_MANIFEST_FORMAT.yaml
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+      - FIXTURE_TIER_CI_POLICY.yaml
+  - gate_id: PROD-PRE-G03
+    status: reviewed_no_go_blocked_pending_evidence
+    result_reason: K12 expected-output planning evidence exists, but sanitized fixture release and executable MVP scenario pass evidence are not approved.
+    covered_tiers:
+      - K12
+    evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+      - PROJECT_ORACLE_MANIFEST_FORMAT.yaml
+  - gate_id: PROD-PRE-G04
+    status: reviewed_no_go_blocked_pending_evidence
+    result_reason: K3 mini catalog exists, but K3 shadow regression execution and authority/lifecycle pass or waiver evidence remain absent.
+    covered_tiers:
+      - K3_mini
+      - K3_shadow
+    evidence_refs:
+      - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+      - PROJECT_ORACLE_MANIFEST_FORMAT.yaml
+  - gate_id: PROD-PRE-G05
+    status: reviewed_no_go_blocked_pending_evidence
+    result_reason: Blind freeze protocol exists, but signed freeze evidence and first blind baseline execution remain absent.
+    covered_tiers:
+      - blind_baseline
+    evidence_refs:
+      - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+      - AGENT_LAB_EVAL_MATRIX.yaml
+      - NO_OVERFITTING_REVIEW_CHECKPOINT.yaml
+missing_evidence:
+  - fixture_release_approval
+  - k3_shadow_execution_report
+  - blind_baseline_execution_report
+  - signed_freeze_evidence
+  - cross_project_scorecard_pass_or_waiver
+  - explicit_gate_waiver_evidence
+rollup:
+  reviewed_gate_count: 4
+  passed_gate_count: 0
+  result_reason: Three-project evidence package review is complete, but PROD-PRE-G02 through PROD-PRE-G05 remain no-go pending missing evidence or explicit waiver.
+raw_data_boundary:
+  allowed_repo_material:
+    - fixture tier names
+    - sanitized manifest identifiers
+    - source package hashes
+    - aggregate review status
+    - gate mappings
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - blind_baseline_completion_claim
+  - waiver_approval
+  - production_preflight_approval
+  - pilot_readiness_approval
+  - final_go_no_go_approval

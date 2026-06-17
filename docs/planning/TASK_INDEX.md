@@ -558,10 +558,10 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0595 | EPIC-148 | DONE | high | Add full-project off-repo runbook for Codex |
 | TASK-0596 | EPIC-147 | DONE | medium | Add no-overfitting review checkpoint after blind baseline |
 | TASK-0597 | EPIC-146 | DONE | medium | Add project-oracle manifest format |
-| TASK-0598 | EPIC-147 | TODO | high | Add fixture tier policy to CI planning |
-| TASK-0599 | EPIC-152 | TODO | high | Run production preflight readiness review |
-| TASK-0600 | EPIC-152 | TODO | high | Verify P0 activation blockers are closed or explicitly waived |
-| TASK-0601 | EPIC-152 | TODO | high | Verify three-project evidence package |
+| TASK-0598 | EPIC-147 | DONE | high | Add fixture tier policy to CI planning |
+| TASK-0599 | EPIC-152 | DONE | high | Run production preflight readiness review |
+| TASK-0600 | EPIC-152 | DONE | high | Verify P0 activation blockers are closed or explicitly waived |
+| TASK-0601 | EPIC-152 | DONE | high | Verify three-project evidence package |
 | TASK-0602 | EPIC-152 | TODO | high | Verify raw-data quarantine and leak-scan evidence |
 | TASK-0603 | EPIC-152 | TODO | high | Verify capacity, backup, restore, and off-repo full-corpus run evidence |
 | TASK-0604 | EPIC-152 | TODO | high | Verify release bundle, migration lanes, activation gates, and rollback/compensation evidence |

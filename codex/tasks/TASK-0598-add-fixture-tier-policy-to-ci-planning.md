@@ -2,7 +2,8 @@
 id: TASK-0598
 epic: EPIC-147
 title: "Add fixture tier policy to CI planning"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: ["TASK-0589"]
@@ -60,3 +61,10 @@ Decide which test tiers run on PR, merge, nightly, release and controlled pilot.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/FIXTURE_TIER_CI_POLICY.yaml` as planning evidence for `TP-TASK-010`.
+- The policy records planned PR, merge, nightly, release, and controlled-pilot fixture-tier lanes with allowed check families, evidence refs, blocked/advisory posture, raw-data boundaries, and non-activation posture.
+- The policy explicitly states it does not modify GitHub required checks, claim hosted branch protection, release fixtures, run blind baselines, approve pilots, or activate CAPEX.
+- Added contract coverage in `tests/contract/test_capex_semantic_fixture_preflight_policy.py` for lane coverage, blocked lane posture, evidence refs, no raw-data boundary, no CI enforcement claim, and non-activation posture.
+- Closeout posture: planning evidence only. No CI workflow enforcement change, hosted branch-protection claim, fixture release, blind baseline execution, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added.

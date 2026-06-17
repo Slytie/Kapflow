@@ -2,7 +2,8 @@
 id: TASK-0601
 epic: EPIC-152
 title: "Verify three-project evidence package"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform", "sre"]
 reviewers: ["security", "qa"]
 depends_on: ["TASK-0589", "TASK-0590", "TASK-0591", "TASK-0592", "TASK-0593", "TASK-0594", "TASK-0595", "TASK-0596", "TASK-0597", "TASK-0598"]
@@ -61,3 +62,10 @@ Confirm K12 MVP fixture, K3 mini/shadow regression, and blind freeze/baseline pr
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_production_preflight/THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-003` and `PROD-PRE-G02..G05`.
+- The review covers existing sanitized K12, K3, blind validation, scorecard, oracle, Agent Lab, off-repo runbook, no-overfitting, and fixture-tier CI planning contracts.
+- `PROD-PRE-G02..G05` are reviewed but remain blocked where fixture release, K3 shadow execution, blind baseline execution, signed freeze evidence, scorecard pass, or explicit waiver evidence is absent.
+- Updated the master production-preflight review so `PROD-PRE-G02..G05` are reviewed but remain `no_go_blocked_pending_evidence`.
+- Closeout posture: review evidence only. No fixture release, blind baseline completion, production-preflight pass, waiver approval, pilot readiness, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, or CAPEX product activation is added.

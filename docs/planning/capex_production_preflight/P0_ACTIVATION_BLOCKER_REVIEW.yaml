@@ -1,0 +1,118 @@
+schema_version: capex.production_preflight_gate_review.v1
+review_id: capex.production_preflight.p0_activation_blocker_review.v1
+owner_task: TASK-0600
+source_task_id: PP-TASK-002
+activation_posture: planning_only_no_capex_activation
+overall_status: no_go_blocked_pending_evidence
+gate_refs:
+  - PROD-PRE-G01
+approved_waivers: []
+future_waiver_required_fields:
+  - owner
+  - reason
+  - residual_risk
+  - expiry_or_review_date
+  - affected_gate
+reviewed_blocker_families:
+  - family_id: approval_response_neutrality
+    status: satisfied_by_repo_evidence
+    blocking: false
+    evidence_refs:
+      - docs/adr/ADR-005-approval-response-domain-hooks.md
+      - tests/unit/test_approval_response_hooks.py
+      - tests/unit/test_approval_effect_registry.py
+  - family_id: artifact_auth_before_read
+    status: open_blocking_without_waiver
+    blocking: true
+    evidence_refs:
+      - docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md
+      - docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md
+      - codex/tasks/TASK-0562-fix-artifact-download-auth-before-read.md
+    blocked_reason: Later auth-before-read hardening and real pilot storage evidence remain open.
+  - family_id: project_membership_authorization
+    status: satisfied_by_repo_evidence
+    blocking: false
+    evidence_refs:
+      - docs/architecture/CAPEX_PROJECT_ACCESS_MODEL.md
+      - docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md
+      - tests/unit/test_capex_authorized_projects_query.py
+      - tests/runtime/api/test_capex_project_access_api.py
+  - family_id: source_occurrence_sourceref_resolution
+    status: partially_satisfied_blocking_future_scope
+    blocking: true
+    evidence_refs:
+      - docs/architecture/CAPEX_SOURCE_OCCURRENCE_CONTEXT_AND_TRUST_CONTRACT.md
+      - docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md
+      - tests/unit/test_capex_source_occurrence_resolver.py
+    blocked_reason: Physical SourceRef guard exists, but broader source governance, extraction, and binding remain future work.
+  - family_id: closure_waiver_lifecycle
+    status: satisfied_by_repo_evidence
+    blocking: false
+    evidence_refs:
+      - docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md
+      - tests/unit/test_capex_closure_governance.py
+      - tests/contract/test_capex_source_ref_and_closure_guardrails.py
+  - family_id: stale_command_guards
+    status: satisfied_by_repo_evidence
+    blocking: false
+    evidence_refs:
+      - docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md
+      - tests/unit/test_capex_workpage_command_envelope.py
+      - tests/unit/test_capex_workpage_projection_snapshots.py
+  - family_id: capex_semantic_tests
+    status: satisfied_by_repo_evidence
+    blocking: false
+    evidence_refs:
+      - Makefile
+      - docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml
+      - tests/contract/test_capex_semantic_test_suite.py
+  - family_id: codeowners_review_gates
+    status: planning_evidence_only
+    blocking: true
+    evidence_refs:
+      - .github/CODEOWNERS
+      - docs/domains/capex/domain.yaml
+    blocked_reason: Real hosted branch protection and production review-tier evidence remain later scope.
+  - family_id: storage_pilot_readiness
+    status: open_blocking_without_waiver
+    blocking: true
+    evidence_refs:
+      - docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md
+      - docs/architecture/CAPEX_W1_CLOSEOUT_REVIEW.md
+      - docs/domains/capex/domain.yaml
+    blocked_reason: Real pilot storage, restore, capacity, and off-repo full-corpus evidence remain open.
+  - family_id: release_preflight_chain
+    status: open_blocking_without_waiver
+    blocking: true
+    evidence_refs:
+      - docs/planning/capex_production_preflight/MASTER_Production_Preflight_Review.md
+      - docs/planning/epics/EPIC-152.md
+    blocked_reason: Production-preflight gate checks and final go/no-go memorandum remain assigned to TASK-0602 through TASK-0606.
+rollup:
+  blocking_family_count: 5
+  reviewed_family_count: 10
+  result_reason: P0 blocker review is complete, but open blocker families have no approved waiver.
+raw_data_boundary:
+  allowed_repo_material:
+    - task ids
+    - gate ids
+    - sanitized evidence references
+    - aggregate blocker status
+    - waiver field requirements
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - waiver_approval
+  - pilot_readiness_approval
+  - production_preflight_approval
+  - final_go_no_go_approval

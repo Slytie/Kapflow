@@ -1,0 +1,191 @@
+schema_version: capex.fixture_tier_ci_policy.v1
+policy_id: fixture_tier_ci_policy.three_project_validation.v1
+owner_task: TASK-0598
+source_task_id: TP-TASK-010
+activation_posture: planning_only_no_capex_activation
+status: planning_evidence_recorded
+gate_refs:
+  - TP-G01
+  - TP-G02
+  - TP-G03
+  - TP-G04
+  - TP-G05
+  - TP-G06
+  - TP-G07
+  - TP-G08
+  - TP-G09
+  - TP-G10
+  - TP-G11
+  - TP-G12
+policy_scope:
+  ci_enforcement_modified: false
+  github_required_checks_modified: false
+  hosted_branch_protection_claim: false
+  release_or_pilot_authority: false
+lane_order:
+  - pr
+  - merge
+  - nightly
+  - release
+  - controlled_pilot
+allowed_check_vocabulary:
+  - repo_contract_checks
+  - schema_validate
+  - progress_data_validate
+  - capex_semantic_tests
+  - sanitized_fixture_contracts
+  - no_raw_data_scan
+  - cross_project_scorecard_review
+  - no_overfitting_checkpoint_review
+  - off_repo_aggregate_report_review
+  - production_preflight_blocker_review
+ci_lanes:
+  - lane_id: pr
+    trigger_scope: pull_request_planning_contracts
+    activation_posture: planning_only_no_capex_activation
+    status: planning_allowed
+    fixture_tiers:
+      - K12
+      - K3_mini
+    allowed_checks:
+      - repo_contract_checks
+      - schema_validate
+      - progress_data_validate
+      - capex_semantic_tests
+      - sanitized_fixture_contracts
+      - no_raw_data_scan
+    evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+      - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+      - PROJECT_ORACLE_MANIFEST_FORMAT.yaml
+    raw_data_boundary: sanitized_repo_contracts_only
+    blocked_reason: ""
+  - lane_id: merge
+    trigger_scope: merge_to_main_planning_contracts
+    activation_posture: planning_only_no_capex_activation
+    status: planning_allowed
+    fixture_tiers:
+      - K12
+      - K3_mini
+    allowed_checks:
+      - repo_contract_checks
+      - schema_validate
+      - progress_data_validate
+      - capex_semantic_tests
+      - sanitized_fixture_contracts
+      - no_raw_data_scan
+      - cross_project_scorecard_review
+    evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+      - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+      - PROJECT_ORACLE_MANIFEST_FORMAT.yaml
+    raw_data_boundary: sanitized_repo_contracts_only
+    blocked_reason: ""
+  - lane_id: nightly
+    trigger_scope: scheduled_advisory_planning_review
+    activation_posture: planning_only_no_capex_activation
+    status: advisory_blocked_pending_evidence
+    fixture_tiers:
+      - K12
+      - K3_mini
+      - K3_shadow
+      - blind_baseline
+    allowed_checks:
+      - repo_contract_checks
+      - capex_semantic_tests
+      - no_raw_data_scan
+      - cross_project_scorecard_review
+      - no_overfitting_checkpoint_review
+      - off_repo_aggregate_report_review
+    evidence_refs:
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+      - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+      - AGENT_LAB_EVAL_MATRIX.yaml
+      - OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+      - NO_OVERFITTING_REVIEW_CHECKPOINT.yaml
+    raw_data_boundary: sanitized_repo_contracts_and_off_repo_aggregate_reports_only
+    blocked_reason: K3 shadow and blind baseline evidence are not run or approved.
+  - lane_id: release
+    trigger_scope: release_candidate_planning_review
+    activation_posture: planning_only_no_capex_activation
+    status: blocked_pending_production_preflight
+    fixture_tiers:
+      - K12
+      - K3_mini
+      - K3_shadow
+      - blind_baseline
+      - full_corpus_off_repo
+    allowed_checks:
+      - repo_contract_checks
+      - schema_validate
+      - progress_data_validate
+      - capex_semantic_tests
+      - no_raw_data_scan
+      - cross_project_scorecard_review
+      - no_overfitting_checkpoint_review
+      - off_repo_aggregate_report_review
+      - production_preflight_blocker_review
+    evidence_refs:
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+      - OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+      - NO_OVERFITTING_REVIEW_CHECKPOINT.yaml
+      - PROJECT_ORACLE_MANIFEST_FORMAT.yaml
+      - MASTER_Production_Preflight_Review.md
+    raw_data_boundary: sanitized_repo_contracts_and_reviewed_aggregate_reports_only
+    blocked_reason: Release lane remains blocked until production preflight gates and final go/no-go evidence close.
+  - lane_id: controlled_pilot
+    trigger_scope: controlled_pilot_planning_review
+    activation_posture: planning_only_no_capex_activation
+    status: blocked_pending_pilot_readiness
+    fixture_tiers:
+      - K12
+      - K3_mini
+      - K3_shadow
+      - blind_baseline
+      - full_corpus_off_repo
+    allowed_checks:
+      - no_raw_data_scan
+      - cross_project_scorecard_review
+      - off_repo_aggregate_report_review
+      - production_preflight_blocker_review
+    evidence_refs:
+      - OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+      - MASTER_Production_Preflight_Review.md
+    raw_data_boundary: reviewed_aggregate_reports_only
+    blocked_reason: Controlled pilot remains blocked until release, restore, capacity, leak-scan, and production-preflight evidence close.
+rollup_policy:
+  current_rollup_status: planning_policy_recorded_not_enforced
+  current_rollup_reason: Fixture-tier CI policy exists as planning evidence only; hosted CI enforcement and branch-protection claims are not made by this task.
+  blocked_until:
+    - fixture_release_evidence
+    - blind_baseline_execution
+    - no_overfitting_review_results
+    - full_corpus_off_repo_aggregate_report
+    - production_preflight_gate_evidence
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - blind_baseline_completion_claim
+  - hosted_branch_protection_claim
+  - github_required_check_enforcement
+  - production_preflight_approval
+  - pilot_readiness_approval
+raw_data_boundary:
+  allowed_repo_material:
+    - fixture tier names
+    - lane identifiers
+    - check family names
+    - evidence contract references
+    - aggregate status
+    - gate mappings
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic

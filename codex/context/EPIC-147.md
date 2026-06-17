@@ -24,7 +24,8 @@ TP-TASK-004, TP-TASK-005, TP-TASK-006, TP-TASK-008, TP-TASK-010
 - `TASK-0593` is closed as of 2026-06-17 with `docs/planning/capex_three_project_validation/CROSS_PROJECT_INVARIANT_SCORECARD.yaml`.
 - `TASK-0594` is closed as of 2026-06-17 with `docs/planning/capex_three_project_validation/AGENT_LAB_EVAL_MATRIX.yaml`.
 - `TASK-0596` is closed as of 2026-06-17 with `docs/planning/capex_three_project_validation/NO_OVERFITTING_REVIEW_CHECKPOINT.yaml`.
-- These records define freeze, scorecard, advisory Agent Lab matrix, and no-overfitting checkpoint structure only; `TASK-0598` remains open for CI fixture-tier policy.
+- `TASK-0598` is closed as of 2026-06-17 with `docs/planning/capex_three_project_validation/FIXTURE_TIER_CI_POLICY.yaml`.
+- These records define freeze, scorecard, advisory Agent Lab matrix, no-overfitting checkpoint, and fixture-tier CI policy structure only; they do not enforce hosted CI, release fixtures, run blind baselines, or activate CAPEX.
 
 ## Non-negotiable invariants
 - One truth system: official claims come only from immutable objects, append-only events, and audited pointers.

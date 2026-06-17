@@ -2,7 +2,8 @@
 id: TASK-0599
 epic: EPIC-152
 title: "Run production preflight readiness review"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform", "sre"]
 reviewers: ["security", "qa"]
 depends_on: ["TASK-0589", "TASK-0590", "TASK-0591", "TASK-0592", "TASK-0593", "TASK-0594", "TASK-0595", "TASK-0596", "TASK-0597", "TASK-0598"]
@@ -61,3 +62,10 @@ Verify all master gates, blockers, testing evidence, deployment evidence, and re
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_production_preflight/MASTER_Production_Preflight_Review.md` as planning evidence for `PP-TASK-001`.
+- The review records `overall_status: no_go_blocked_pending_evidence`, no approved waivers, `PROD-PRE-G01..G10` blocked pending `TASK-0600..TASK-0606`, and rollback posture to defer/no-go while CAPEX remains disabled.
+- Updated the CAPEX domain manifest production-preflight prerequisite to reference the master review while keeping prerequisite status `open`.
+- Added contract coverage in `tests/contract/test_capex_semantic_fixture_preflight_policy.py` and `tests/contract/test_capex_domain_manifest.py` for blocked gate status, waiver requirements, no-go posture, domain prerequisite openness, and non-activation posture.
+- Closeout posture: planning evidence only. No production-preflight pass, final go/no-go memo, waiver approval, pilot readiness, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, or CAPEX product activation is added.

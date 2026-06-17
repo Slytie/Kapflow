@@ -2,7 +2,8 @@
 id: TASK-0600
 epic: EPIC-152
 title: "Verify P0 activation blockers are closed or explicitly waived"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform", "sre"]
 reviewers: ["security", "qa"]
 depends_on: ["TASK-0589", "TASK-0590", "TASK-0591", "TASK-0592", "TASK-0593", "TASK-0594", "TASK-0595", "TASK-0596", "TASK-0597", "TASK-0598"]
@@ -61,3 +62,10 @@ Check approval.respond neutrality, auth-before-read, capex_project/project_membe
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_production_preflight/P0_ACTIVATION_BLOCKER_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-002` and `PROD-PRE-G01`.
+- The review covers approval-response neutrality, artifact auth-before-read, project membership and authorization, source occurrence and SourceRef resolution, closure/waiver lifecycle, stale-command guards, CAPEX semantic tests, CODEOWNERS/review gates, storage/pilot readiness, and the release/preflight chain.
+- Open blocker families remain blocking without approved waiver; `approved_waivers` is empty and future waivers require owner, reason, residual risk, expiry/review date, and affected gate.
+- Updated the master production-preflight review so `PROD-PRE-G01` is reviewed but remains `no_go_blocked_pending_evidence`.
+- Closeout posture: review evidence only. No production-preflight pass, waiver approval, pilot readiness, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, or CAPEX product activation is added.

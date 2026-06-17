@@ -108,10 +108,43 @@ def test_capex_domain_manifest_prerequisites_link_future_tasks() -> None:
         "TASK-0563",
         "TASK-0568",
         "TASK-0569",
+        "TASK-0599",
+        "TASK-0600",
+        "TASK-0601",
         "TASK-0283",
         "TASK-0289",
     } <= prerequisite_task_refs
     assert all(task_ref.startswith("TASK-") for task_ref in prerequisite_task_refs)
+
+
+def test_capex_domain_manifest_keeps_production_preflight_open() -> None:
+    manifest = _manifest_mapping()
+    prerequisites = {
+        row["prerequisite_id"]: row
+        for row in manifest["readiness_prerequisites"]
+    }
+    production_preflight = prerequisites["capex.production_preflight"]
+
+    assert production_preflight["status"] == "open"
+    assert "TASK-0599" in production_preflight["task_refs"]
+    assert "TASK-0600" in production_preflight["task_refs"]
+    assert "TASK-0601" in production_preflight["task_refs"]
+    assert (
+        "docs/planning/capex_production_preflight/"
+        "MASTER_Production_Preflight_Review.md"
+    ) in production_preflight["source_refs"]
+    assert (
+        "docs/planning/capex_production_preflight/"
+        "P0_ACTIVATION_BLOCKER_REVIEW.yaml"
+    ) in production_preflight["source_refs"]
+    assert (
+        "docs/planning/capex_production_preflight/"
+        "THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml"
+    ) in production_preflight["source_refs"]
+    assert "no-go/blocked planning evidence" in production_preflight["description"]
+    assert "remaining gate-specific production-preflight evidence" in (
+        production_preflight["description"]
+    )
 
 
 def test_capex_domain_manifest_has_no_raw_corpus_paths_or_content() -> None:

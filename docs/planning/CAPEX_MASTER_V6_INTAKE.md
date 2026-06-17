@@ -388,6 +388,18 @@
 - Evidence: CAPEX real-project acceptance contract tests cover no-overfitting classifications, required checkpoint fields, blocked-pending-baseline posture, cross-tier oracle row families, human oracle approval contract, compatibility refs from K12/K3 evidence files, raw-data boundaries, and non-activation posture.
 - Closeout posture: `TP-TASK-008` and `TP-TASK-009` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, blind baseline execution, blind tuning approval, `TP-G08`/`TP-G11` pass status, pilot readiness, production readiness, or product activation.
 
+## TASK-0598 / TASK-0599 closeout evidence
+- Added `docs/planning/capex_three_project_validation/FIXTURE_TIER_CI_POLICY.yaml` as planning evidence for `TP-TASK-010`.
+- Added `docs/planning/capex_production_preflight/MASTER_Production_Preflight_Review.md` as planning evidence for `PP-TASK-001`.
+- Evidence: CAPEX semantic fixture/preflight contract tests cover fixture-tier CI lane coverage, no hosted-CI enforcement claim, blocked release/pilot posture, production-preflight gate mapping, no approved waivers, no-go/blocked review posture, raw-data boundaries, and non-activation posture.
+- Closeout posture: `TP-TASK-010` and `PP-TASK-001` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, blind baseline execution, hosted CI enforcement, production-preflight pass status, final go/no-go approval, pilot readiness, production readiness, or product activation.
+
+## TASK-0600 / TASK-0601 closeout evidence
+- Added `docs/planning/capex_production_preflight/P0_ACTIVATION_BLOCKER_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-002`.
+- Added `docs/planning/capex_production_preflight/THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-003`.
+- Evidence: CAPEX production-preflight contract tests cover P0 blocker families, open-blocker fail-closed status, three-project evidence coverage for `PROD-PRE-G02..G05`, no approved waivers, raw-data boundaries, and non-activation posture.
+- Closeout posture: `PP-TASK-002` and `PP-TASK-003` are review closeouts only. They do not pass `PROD-PRE-G01..G05`, approve waivers, activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, blind baseline execution, pilot readiness, production readiness, final go/no-go approval, or product activation.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|
