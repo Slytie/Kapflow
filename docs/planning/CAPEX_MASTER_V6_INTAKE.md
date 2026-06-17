@@ -364,6 +364,12 @@
 - Evidence: CAPEX delivery-governance and real-project acceptance contract tests cover task-class DoR/DoD, PR-template consistency, fixture tier handling for K12/K3/blind validation, TP gate references, no raw corpus leakage, no project-specific hardcoding policy, non-activation posture, and downstream-gate boundaries.
 - Closeout posture: `SD-TASK-007` and `TP-TASK-001` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, expected-output manifests, oracle manifests, blind baseline runs, pilot readiness, production readiness, or product activation.
 
+## TASK-0590 / TASK-0591 closeout evidence
+- Added `docs/planning/capex_three_project_validation/K12_EXPECTED_OUTPUT_MANIFEST.yaml` as sanitized planning evidence for `TP-TASK-002`.
+- Added `docs/planning/capex_three_project_validation/K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml` as sanitized planning evidence for `TP-TASK-003`.
+- Evidence: CAPEX real-project acceptance contract tests cover source package hashes, gate refs, K12 oracle rows, K12 hardening rows, K3 expectation rows, K3 freeze families, raw-data boundaries, and non-activation posture.
+- Closeout posture: `TP-TASK-002` and `TP-TASK-003` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, universal oracle manifest format, blind baseline runs, cross-project scorecard, pilot readiness, production readiness, or product activation.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|

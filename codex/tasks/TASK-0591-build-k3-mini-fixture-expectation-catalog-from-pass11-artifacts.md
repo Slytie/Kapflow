@@ -2,7 +2,8 @@
 id: TASK-0591
 epic: EPIC-146
 title: "Build K3 mini-fixture expectation catalog from pass11 artifacts"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: ["TASK-0589"]
@@ -60,3 +61,9 @@ Convert K3 stale/reopen, workpage and schema freeze tables into authority/lifecy
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml` as sanitized planning evidence for `TP-TASK-003`.
+- The catalog records the observed source synthesis package name and sha256, derived source tables, K3 authority/lifecycle expectation rows, stale/reopen expectations, schema freeze expectations, workpage contract expectations, pointer-policy expectations, approval-validity expectations, rollback/remediation posture, and `TP-G01`, `TP-G04`, `TP-G05`, `TP-G08`, `TP-G11`, and `TP-G12` mappings.
+- Added contract coverage in `tests/contract/test_capex_real_project_acceptance.py` for required fields, source package hash, gate refs, expectation rows, freeze families, raw-data boundary, and non-activation posture.
+- Closeout posture: planning evidence only. No raw corpus import, fixture release approval, full K3 module activation, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added.

@@ -1,0 +1,152 @@
+schema_version: capex.fixture_expected_output_manifest.v1
+manifest_id: k12.expected_output.pass11.v1
+owner_task: TASK-0590
+source_task_id: TP-TASK-002
+fixture_tier: K12
+activation_posture: planning_only_no_capex_activation
+status: planning_evidence_recorded
+source_evidence:
+  package_name: k12_passes_9_11_and_full_synthesis_pack.zip
+  package_sha256: 7d011a821849fc3e3315d2dee079bfe910848ad276b402b790e5c667a0d965dd
+  source_location_policy: off_repo_quarantine
+  extracted_repo_content_policy: sanitized_manifest_rows_only
+  derived_from_tables:
+    - K12_Pass11_Acceptance_Test_Dry_Run_Matrix.csv
+    - K12_Pass10_ReReview_Trigger_Rules.csv
+    - K12_Pass11_Pointer_Dry_Run.csv
+    - K12_Pass11_Hardening_Register.csv
+gate_refs:
+  - TP-G01
+  - TP-G02
+  - TP-G03
+  - TP-G08
+  - TP-G11
+  - TP-G12
+versioning_basis:
+  schema_version_ref: capex.fixture_expected_output_manifest.v1
+  fixture_compiler_version_ref: pending_fixture_release
+  policy_version_ref: CAPEX_THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK
+  prompt_eval_version_ref: pending_agent_lab_matrix
+oracle_rows:
+  - oracle_id: K12-EO-001
+    source_table_refs:
+      - K12_Pass11_Acceptance_Test_Dry_Run_Matrix.csv
+    category: source_occurrence_context
+    invariant: Same-byte source identity must not collapse separate project context.
+    scenario: Load two sanitized source occurrences with the same digest and different contextual roles.
+    expected_result: Both source occurrences remain distinct and can receive separate reviewed role assignments.
+    automation_posture: automated_preferred
+    evidence_basis: pass11_dry_run_matrix
+    release_gate: required_for_mvp
+    tp_gate_refs:
+      - TP-G02
+      - TP-G03
+      - TP-G11
+    rollback_recovery: Remove the affected fixture release and reissue sanitized role-assignment evidence.
+  - oracle_id: K12-EO-002
+    source_table_refs:
+      - K12_Pass11_Acceptance_Test_Dry_Run_Matrix.csv
+      - K12_Pass11_Hardening_Register.csv
+    category: source_ref_required
+    invariant: Generated CAPEX artifacts without meaningful source refs cannot become official.
+    scenario: Submit a sanitized generated artifact row with missing or empty source reference evidence.
+    expected_result: Validation rejects the row or stores it as invalid draft, and pointer promotion is blocked.
+    automation_posture: automated_preferred
+    evidence_basis: pass11_negative_test_and_hardening_register
+    release_gate: required_for_mvp
+    tp_gate_refs:
+      - TP-G02
+      - TP-G03
+      - TP-G12
+    rollback_recovery: Invalidate the fixture manifest version and require source-ref repair before reuse.
+  - oracle_id: K12-EO-003
+    source_table_refs:
+      - K12_Pass11_Acceptance_Test_Dry_Run_Matrix.csv
+    category: verified_read_failure
+    invariant: Artifact bytes must match the recorded digest before review or promotion.
+    scenario: Attempt to render or promote a sanitized artifact whose bytes do not match its recorded digest.
+    expected_result: A digest-mismatch finding blocks downstream review and promotion until remediated.
+    automation_posture: automated_preferred
+    evidence_basis: pass11_dry_run_matrix
+    release_gate: required_for_mvp
+    tp_gate_refs:
+      - TP-G01
+      - TP-G03
+      - TP-G11
+    rollback_recovery: Remove derived packs from the release set and re-run leak and digest checks.
+  - oracle_id: K12-EO-004
+    source_table_refs:
+      - K12_Pass10_ReReview_Trigger_Rules.csv
+    category: re_review_trigger
+    invariant: New or changed governed evidence can stale current pointers without rewriting historical approvals.
+    scenario: A sanitized commitment, role assignment, or scoped evidence basis changes after a prior review.
+    expected_result: A scoped re-review task is required; existing history remains append-only; affected current pointer candidates are stale.
+    automation_posture: automated_preferred
+    evidence_basis: pass10_re_review_rules
+    release_gate: required_for_mvp
+    tp_gate_refs:
+      - TP-G03
+      - TP-G08
+      - TP-G11
+    rollback_recovery: Mark affected oracle rows invalid and rerun the no-overfitting review classification.
+  - oracle_id: K12-EO-005
+    source_table_refs:
+      - K12_Pass11_Pointer_Dry_Run.csv
+    category: pointer_blocked_by_open_flags
+    invariant: Pointer promotion cannot bypass unresolved review flags or missing approval.
+    scenario: A closure or commitment baseline candidate has schema-valid content but lacks required approval or has open blocking flags.
+    expected_result: Promotion remains blocked or pending human review; no official pointer is created by planning evidence.
+    automation_posture: automated_preferred
+    evidence_basis: pass11_pointer_dry_run
+    release_gate: required_for_mvp
+    tp_gate_refs:
+      - TP-G03
+      - TP-G11
+      - TP-G12
+    rollback_recovery: Remove the pointer oracle from the fixture release until approval and flag evidence is complete.
+hardening_rows:
+  - hardening_id: K12-HARDEN-001
+    source_table_refs:
+      - K12_Pass11_Hardening_Register.csv
+    finding_area: schema_packaging
+    expectation: Fixture releases must ship first-class schema evidence and fail validation when schema files are absent.
+    tp_gate_refs:
+      - TP-G02
+      - TP-G12
+  - hardening_id: K12-HARDEN-002
+    source_table_refs:
+      - K12_Pass11_Hardening_Register.csv
+    finding_area: source_refs_cardinality
+    expectation: Structurally present but empty source-ref arrays are insufficient for official or reviewed claims.
+    tp_gate_refs:
+      - TP-G03
+      - TP-G12
+  - hardening_id: K12-HARDEN-003
+    source_table_refs:
+      - K12_Pass11_Hardening_Register.csv
+    finding_area: rows_cardinality
+    expectation: Empty generated artifacts require an explicit no-findings reason or fail promotion policy.
+    tp_gate_refs:
+      - TP-G03
+      - TP-G12
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - production_preflight_approval
+raw_data_boundary:
+  allowed_repo_material:
+    - sanitized oracle identifiers
+    - source package hashes
+    - aggregate expectations
+    - gate mappings
+    - rollback and remediation policy
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic

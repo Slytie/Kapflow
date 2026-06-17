@@ -26,6 +26,16 @@ THREE_PROJECT_RUNBOOK_PATH = (
     / "docs/planning/capex_three_project_validation/"
     "THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK.md"
 )
+K12_EXPECTED_OUTPUT_MANIFEST_PATH = (
+    ROOT
+    / "docs/planning/capex_three_project_validation/"
+    "K12_EXPECTED_OUTPUT_MANIFEST.yaml"
+)
+K3_MINI_FIXTURE_EXPECTATION_CATALOG_PATH = (
+    ROOT
+    / "docs/planning/capex_three_project_validation/"
+    "K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml"
+)
 PROCUREMENT_ESCALATION_PROPOSAL_PATH = (
     ROOT
     / "docs/planning/capex_workflow_catalog/"
@@ -114,6 +124,12 @@ EXPECTED_THREE_PROJECT_TIERS = [
 
 def _load_register() -> dict:
     return yaml.safe_load(REGISTER_PATH.read_text(encoding="utf-8"))
+
+
+def _load_yaml(path: Path) -> dict:
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
 
 
 def _task_frontmatter(path: Path) -> dict:
@@ -273,6 +289,174 @@ def test_three_project_fixture_governance_runbook_is_planning_only() -> None:
         "runtime activation approved",
     ):
         assert forbidden.lower() not in lowered
+
+
+def test_k12_expected_output_manifest_is_sanitized_planning_evidence() -> None:
+    manifest = _load_yaml(K12_EXPECTED_OUTPUT_MANIFEST_PATH)
+    text = K12_EXPECTED_OUTPUT_MANIFEST_PATH.read_text(encoding="utf-8")
+    lowered = text.lower()
+
+    assert manifest["schema_version"] == "capex.fixture_expected_output_manifest.v1"
+    assert manifest["owner_task"] == "TASK-0590"
+    assert manifest["source_task_id"] == "TP-TASK-002"
+    assert manifest["fixture_tier"] == "K12"
+    assert manifest["activation_posture"] == "planning_only_no_capex_activation"
+    assert manifest["source_evidence"]["package_name"] == (
+        "k12_passes_9_11_and_full_synthesis_pack.zip"
+    )
+    assert manifest["source_evidence"]["package_sha256"] == (
+        "7d011a821849fc3e3315d2dee079bfe910848ad276b402b790e5c667a0d965dd"
+    )
+    assert set(manifest["gate_refs"]) >= {
+        "TP-G01",
+        "TP-G02",
+        "TP-G03",
+        "TP-G08",
+        "TP-G11",
+        "TP-G12",
+    }
+    assert set(manifest["cannot_be_used_for"]) >= {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "workflow_pack_activation",
+        "raw_corpus_import",
+        "fixture_release_approval",
+        "production_preflight_approval",
+    }
+
+    oracle_rows = manifest["oracle_rows"]
+    assert len(oracle_rows) >= 5
+    assert {row["category"] for row in oracle_rows} >= {
+        "source_occurrence_context",
+        "source_ref_required",
+        "verified_read_failure",
+        "re_review_trigger",
+        "pointer_blocked_by_open_flags",
+    }
+    for row in oracle_rows:
+        assert row["oracle_id"].startswith("K12-EO-")
+        assert row["source_table_refs"]
+        assert row["expected_result"]
+        assert row["evidence_basis"]
+        assert row["release_gate"]
+        assert row["rollback_recovery"]
+        assert set(row["tp_gate_refs"]).issubset(set(manifest["gate_refs"]))
+
+    hardening_rows = manifest["hardening_rows"]
+    assert {row["finding_area"] for row in hardening_rows} >= {
+        "schema_packaging",
+        "source_refs_cardinality",
+        "rows_cardinality",
+    }
+    assert manifest["raw_data_boundary"]["allowed_repo_material"] == [
+        "sanitized oracle identifiers",
+        "source package hashes",
+        "aggregate expectations",
+        "gate mappings",
+        "rollback and remediation policy",
+    ]
+    assert set(manifest["raw_data_boundary"]["prohibited_repo_material"]) >= {
+        "full project corpus files",
+        "unrestricted source excerpts",
+        "raw project filenames",
+        "screenshots or logs containing source content",
+        "project-specific hardcoded logic",
+    }
+    for forbidden in (
+        "product activation approved",
+        "runtime activation approved",
+        "public route approved",
+        "fixture release approved",
+        "raw k12 content",
+        "raw k3 content",
+    ):
+        assert forbidden not in lowered
+
+
+def test_k3_mini_fixture_expectation_catalog_is_sanitized_planning_evidence() -> None:
+    catalog = _load_yaml(K3_MINI_FIXTURE_EXPECTATION_CATALOG_PATH)
+    text = K3_MINI_FIXTURE_EXPECTATION_CATALOG_PATH.read_text(encoding="utf-8")
+    lowered = text.lower()
+
+    assert catalog["schema_version"] == "capex.k3_mini_fixture_expectation_catalog.v1"
+    assert catalog["owner_task"] == "TASK-0591"
+    assert catalog["source_task_id"] == "TP-TASK-003"
+    assert catalog["fixture_tier"] == "K3"
+    assert catalog["activation_posture"] == "planning_only_no_capex_activation"
+    assert catalog["source_evidence"]["package_name"] == (
+        "k3_passes_9_11_full_synthesis_clean_pack.zip"
+    )
+    assert catalog["source_evidence"]["package_sha256"] == (
+        "03d052edc7d4b27f59f9fbcdceece57c077c388ec3fefb604a44f690966ca1e8"
+    )
+    assert set(catalog["gate_refs"]) >= {
+        "TP-G01",
+        "TP-G04",
+        "TP-G05",
+        "TP-G08",
+        "TP-G11",
+        "TP-G12",
+    }
+    assert set(catalog["cannot_be_used_for"]) >= {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "workflow_pack_activation",
+        "raw_corpus_import",
+        "fixture_release_approval",
+        "full_k3_module_activation",
+        "production_preflight_approval",
+    }
+
+    expectation_rows = catalog["expectation_rows"]
+    assert len(expectation_rows) >= 6
+    assert {row["category"] for row in expectation_rows} >= {
+        "source_identity",
+        "artifact_role_identity",
+        "relation_collision",
+        "stale_reopen",
+        "pointer_policy",
+        "workpage_schema_freeze",
+    }
+    for row in expectation_rows:
+        assert row["expectation_id"].startswith("K3-EXP-")
+        assert row["source_table_refs"]
+        assert row["expected_behavior"]
+        assert row["failure_if"]
+        assert row["authority_lifecycle_surface"]
+        assert row["rollback_recovery"]
+        assert set(row["tp_gate_refs"]).issubset(set(catalog["gate_refs"]))
+
+    assert set(catalog["freeze_families"]) == {
+        "schema_freeze",
+        "workpage_contract_freeze",
+        "pointer_policy_freeze",
+        "stale_reopen_enforcement",
+    }
+    assert catalog["raw_data_boundary"]["allowed_repo_material"] == [
+        "sanitized expectation identifiers",
+        "source package hashes",
+        "aggregate authority and lifecycle expectations",
+        "gate mappings",
+        "rollback and remediation policy",
+    ]
+    assert set(catalog["raw_data_boundary"]["prohibited_repo_material"]) >= {
+        "full project corpus files",
+        "unrestricted source excerpts",
+        "raw project filenames",
+        "screenshots or logs containing source content",
+        "project-specific hardcoded logic",
+    }
+    for forbidden in (
+        "product activation approved",
+        "runtime activation approved",
+        "public route approved",
+        "fixture release approved",
+        "raw k12 content",
+        "raw k3 content",
+    ):
+        assert forbidden not in lowered
 
 
 def test_approval_with_conditions_posture_is_closeout_grade() -> None:

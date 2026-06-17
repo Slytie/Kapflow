@@ -22,7 +22,9 @@ TP-TASK-001, TP-TASK-002, TP-TASK-003, TP-TASK-009 plus SME-RP source row `TASK-
 ## Closed fixture-governance rows
 - `TASK-0589` is closed as of 2026-06-17 with `docs/planning/capex_three_project_validation/THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK.md`.
 - The runbook records raw/full off-repo handling, sanitized fixture/manifests/hash/aggregate-evidence boundaries, release approval, leak-scan, no-overfitting, and no project-specific hardcoding rules for K12, K3, and blind validation.
-- This is planning-governance evidence only; `TASK-0590`, `TASK-0591`, `TASK-0597`, and `TASK-0661` remain open for expected-output, K3 mini-fixture, oracle manifest, and binding K12 catalogue work.
+- `TASK-0590` is closed as of 2026-06-17 with `docs/planning/capex_three_project_validation/K12_EXPECTED_OUTPUT_MANIFEST.yaml`.
+- `TASK-0591` is closed as of 2026-06-17 with `docs/planning/capex_three_project_validation/K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml`.
+- This is planning-governance evidence only; `TASK-0597` and `TASK-0661` remain open for universal oracle manifest format and binding K12 catalogue work.
 
 ## Non-negotiable invariants
 - One truth system: official claims come only from immutable objects, append-only events, and audited pointers.

@@ -1,0 +1,144 @@
+schema_version: capex.k3_mini_fixture_expectation_catalog.v1
+catalog_id: k3.mini_fixture.expectations.pass11.v1
+owner_task: TASK-0591
+source_task_id: TP-TASK-003
+fixture_tier: K3
+activation_posture: planning_only_no_capex_activation
+status: planning_evidence_recorded
+source_evidence:
+  package_name: k3_passes_9_11_full_synthesis_clean_pack.zip
+  package_sha256: 03d052edc7d4b27f59f9fbcdceece57c077c388ec3fefb604a44f690966ca1e8
+  source_location_policy: off_repo_quarantine
+  extracted_repo_content_policy: sanitized_catalog_rows_only
+  derived_from_tables:
+    - repo_test_plan.csv
+    - pass11_schema_freeze_table.csv
+    - pass11_workpage_contract_freeze.csv
+    - pass11_pointer_policy_freeze.csv
+    - pass11_stale_reopen_enforcement_table.csv
+    - approval_validity_matrix.csv
+gate_refs:
+  - TP-G01
+  - TP-G04
+  - TP-G05
+  - TP-G08
+  - TP-G11
+  - TP-G12
+expectation_rows:
+  - expectation_id: K3-EXP-001
+    source_table_refs:
+      - repo_test_plan.csv
+    category: source_identity
+    invariant: Byte identity does not imply contextual identity.
+    expected_behavior: Same-digest sanitized occurrences remain separate when their project context differs.
+    failure_if: The system merges source occurrences automatically or loses reviewed context.
+    authority_lifecycle_surface: corpus_baseline
+    tp_gate_refs:
+      - TP-G04
+      - TP-G11
+    rollback_recovery: Remove the mini-fixture release and recreate sanitized occurrence evidence.
+  - expectation_id: K3-EXP-002
+    source_table_refs:
+      - repo_test_plan.csv
+    category: artifact_role_identity
+    invariant: One artifact can carry multiple contextual roles without hidden overwrite.
+    expected_behavior: Separate reviewed role rows can coexist for the same sanitized artifact identity.
+    failure_if: Later role assignment silently overwrites or masks an earlier role.
+    authority_lifecycle_surface: packet_review
+    tp_gate_refs:
+      - TP-G04
+      - TP-G11
+    rollback_recovery: Invalidate the role-assignment catalog row and require role review evidence.
+  - expectation_id: K3-EXP-003
+    source_table_refs:
+      - repo_test_plan.csv
+    category: relation_collision
+    invariant: Multiple contextual relations to the same subject must remain distinguishable.
+    expected_behavior: Relation kind and metadata preserve separate meanings for the same sanitized artifact-subject pair.
+    failure_if: A second relation cannot be stored or becomes ambiguous.
+    authority_lifecycle_surface: artifact_interaction
+    tp_gate_refs:
+      - TP-G04
+      - TP-G11
+    rollback_recovery: Remove the relation expectation until the later oracle format records relation identity.
+  - expectation_id: K3-EXP-004
+    source_table_refs:
+      - pass11_stale_reopen_enforcement_table.csv
+      - approval_validity_matrix.csv
+    category: stale_reopen
+    invariant: Authority-basis changes stale current interpretation without rewriting historical approval evidence.
+    expected_behavior: Current readiness or satisfied summaries are blocked pending re-review, while historical provenance survives.
+    failure_if: New authority evidence silently closes or deletes prior historical state.
+    authority_lifecycle_surface: authority_condition_tracker
+    tp_gate_refs:
+      - TP-G04
+      - TP-G05
+      - TP-G11
+    rollback_recovery: Mark the affected mini-fixture expectation invalid and require explicit waiver or re-review.
+  - expectation_id: K3-EXP-005
+    source_table_refs:
+      - pass11_pointer_policy_freeze.csv
+      - approval_validity_matrix.csv
+    category: pointer_policy
+    invariant: Current pointers require reviewed replacement; they cannot auto-follow latest file or external observation.
+    expected_behavior: Drafts remain workflow-scoped, current pointer count is bounded, and stale trigger classes require re-review.
+    failure_if: A latest artifact automatically becomes official or bypasses required approval.
+    authority_lifecycle_surface: pointer_promotion
+    tp_gate_refs:
+      - TP-G04
+      - TP-G05
+      - TP-G12
+    rollback_recovery: Remove pointer-policy expectation rows from release and reopen approval validity review.
+  - expectation_id: K3-EXP-006
+    source_table_refs:
+      - pass11_workpage_contract_freeze.csv
+      - pass11_schema_freeze_table.csv
+    category: workpage_schema_freeze
+    invariant: Workpages surface governed artifacts and stale triggers; they do not edit official status directly.
+    expected_behavior: Generated artifact families, source bases, approval owner, pointer policy, and derived-only views are explicit.
+    failure_if: A workpage projection directly marks official project state or hides the authoritative source basis.
+    authority_lifecycle_surface: workpage_contract
+    tp_gate_refs:
+      - TP-G04
+      - TP-G11
+      - TP-G12
+    rollback_recovery: Withdraw the workpage expectation row and require schema/workpage freeze review.
+freeze_families:
+  schema_freeze:
+    source_table_refs:
+      - pass11_schema_freeze_table.csv
+    expectation: Artifact kind, MVP expression, primary workpage, and justification are catalogued before runtime activation.
+  workpage_contract_freeze:
+    source_table_refs:
+      - pass11_workpage_contract_freeze.csv
+    expectation: Workpage generated artifacts, authoritative sources, approval owner, pointer policy, stale triggers, and derived views are explicit.
+  pointer_policy_freeze:
+    source_table_refs:
+      - pass11_pointer_policy_freeze.csv
+    expectation: Current pointer requirements, maximum current pointer count, draft policy, approval requirements, stale triggers, and approval survival rules are explicit.
+  stale_reopen_enforcement:
+    source_table_refs:
+      - pass11_stale_reopen_enforcement_table.csv
+    expectation: Trigger class, artifacts staled, flags opened, tasks spawned, pointer effect, and notes are recorded as lifecycle expectations.
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - full_k3_module_activation
+  - production_preflight_approval
+raw_data_boundary:
+  allowed_repo_material:
+    - sanitized expectation identifiers
+    - source package hashes
+    - aggregate authority and lifecycle expectations
+    - gate mappings
+    - rollback and remediation policy
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic

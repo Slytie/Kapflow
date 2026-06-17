@@ -2,7 +2,8 @@
 id: TASK-0590
 epic: EPIC-146
 title: "Build K12 expected-output manifest from pass11 artifacts"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: ["TASK-0589"]
@@ -60,3 +61,9 @@ Convert K12 dry-run, pointer, re-review and negative-test artifacts into scenari
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/K12_EXPECTED_OUTPUT_MANIFEST.yaml` as sanitized planning evidence for `TP-TASK-002`.
+- The manifest records the observed source synthesis package name and sha256, derived source tables, K12 scenario oracle rows, pointer dry-run expectations, re-review trigger expectations, hardening rows, rollback/remediation posture, and `TP-G01`, `TP-G02`, `TP-G03`, `TP-G08`, `TP-G11`, and `TP-G12` mappings.
+- Added contract coverage in `tests/contract/test_capex_real_project_acceptance.py` for required fields, source package hash, gate refs, oracle rows, hardening rows, raw-data boundary, and non-activation posture.
+- Closeout posture: planning evidence only. No raw corpus import, fixture release approval, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added.

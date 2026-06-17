@@ -11,7 +11,10 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 - Cadence decision: `TASK-0586` records weekly refinement, three-amigos, monthly dependency/risk review, demo/review, and 8-12 week outcome roadmap refresh as a lightweight cadence with explicit inputs, outputs, owners, and decision records.
 - Overlay decision: `TASK-0587` records a first-90-days execution overlay using relative windows for goal/metrics, dependency board, CI baseline, first slice demo, first MMF, and roadmap refresh without false date precision.
 - DoR/DoD decision: `TASK-0588` records CAPEX Definition of Ready / Done for architecture, runtime, workpage, fixture, agent-lab, and migration/release tasks, and adds a compact CAPEX DoR/DoD consistency checklist to the pull request template.
-- Fixture-governance decision: `TASK-0589` records the three-project fixture governance runbook for K12, K3, and blind validation tiers; raw/full corpora remain off-repo and later fixture/oracle/baseline gates remain open.
+- Fixture-governance decision: `TASK-0589` records the three-project fixture governance runbook for K12, K3, and blind validation tiers.
+- K12 expected-output decision: `TASK-0590` records a sanitized K12 expected-output manifest derived from off-repo pass 9-11 synthesis evidence, with dry-run, pointer, re-review, negative/hardening, gate, and rollback expectations.
+- K3 mini-fixture decision: `TASK-0591` records a sanitized K3 expectation catalog derived from off-repo pass 9-11 synthesis evidence, with source identity, artifact role, relation, stale/reopen, pointer-policy, approval-validity, workpage, and schema-freeze expectations.
+- Fixture boundary decision: raw/full corpora remain off-repo and later fixture release, universal oracle format, blind baseline, cross-project scorecard, capacity, production-preflight, and activation gates remain open.
 - Production-ready decision: the production-ready milestone remains blocked until restore, capacity, release, storage, raw-corpus, and production-preflight gates close or receive explicit waivers.
 - Boundary decision: this closeout adds no runtime code, migrations, routes, workflow pack activation, raw corpus import, fixture release, expected-output manifest, pilot readiness, production readiness, or CAPEX product activation.
 

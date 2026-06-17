@@ -550,8 +550,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0587 | EPIC-136 | DONE | medium | Add first-90-days execution overlay |
 | TASK-0588 | EPIC-136 | DONE | medium | Add Definition of Ready / Done for CAPEX task classes |
 | TASK-0589 | EPIC-146 | DONE | high | Create three-project fixture governance runbook |
-| TASK-0590 | EPIC-146 | TODO | high | Build K12 expected-output manifest from pass11 artifacts |
-| TASK-0591 | EPIC-146 | TODO | medium | Build K3 mini-fixture expectation catalog from pass11 artifacts |
+| TASK-0590 | EPIC-146 | DONE | high | Build K12 expected-output manifest from pass11 artifacts |
+| TASK-0591 | EPIC-146 | DONE | medium | Build K3 mini-fixture expectation catalog from pass11 artifacts |
 | TASK-0592 | EPIC-147 | TODO | high | Define blind validation freeze protocol |
 | TASK-0593 | EPIC-147 | TODO | high | Create cross-project invariant scorecard |
 | TASK-0594 | EPIC-147 | TODO | high | Wire agent Lab eval matrix to K12/K3/blind fixture tiers |

@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 396,
-    "done": 82,
+    "done": 84,
     "in_progress": 0,
-    "not_started": 309,
+    "not_started": 307,
     "blocked": 1,
     "needs_review": 4,
     "total": 396,
     "estimate": {
-      "percentComplete": 20.7,
-      "completedTasks": 82,
-      "remainingTasks": 314,
+      "percentComplete": 21.2,
+      "completedTasks": 84,
+      "remainingTasks": 312,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 50,
-      "completionTimestampCoverage": 61.0,
-      "etaDate": "2026-09-13",
+      "completedWithTimestamps": 52,
+      "completionTimestampCoverage": 61.9,
+      "etaDate": "2026-09-09",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-09-13",
+      "label": "ETA 2026-09-09",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -7780,10 +7780,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 66.7,
-        "etaDate": "2026-07-01",
+        "etaDate": "2026-06-30",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-01",
+        "label": "ETA 2026-06-30",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -12704,10 +12704,10 @@
         "remainingBlockedOrReviewTasks": 2,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-26",
+        "etaDate": "2026-06-25",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-26",
+        "label": "ETA 2026-06-25",
         "caveat": "2 blocked or needs-review task(s) remain."
       }
     },
@@ -14849,9 +14849,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 1,
+        "done": 3,
         "in_progress": 0,
-        "not_started": 4,
+        "not_started": 2,
         "blocked": 0,
         "needs_review": 0,
         "total": 5
@@ -14926,9 +14926,9 @@
           "epicId": "EPIC-146",
           "title": "Build K12 expected-output manifest from pass11 artifacts",
           "plainPurpose": "Convert K12 dry-run, pointer, re-review and negative-test artifacts into scenario-test oracles.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task TP-TASK-002 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -14972,20 +14972,25 @@
             "original_depends_on": "TP-TASK-001",
             "recommended_source_branch": "capex-fixture/* or lab/capex-agent-tasks for agent-only work"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_three_project_validation/K12_EXPECTED_OUTPUT_MANIFEST.yaml as sanitized planning evidence for TP-TASK-002.",
+            "The manifest records the observed source synthesis package name and sha256, derived source tables, K12 scenario oracle rows, pointer dry-run expectations, re-review trigger expectations, hardening rows, rollback/remediation posture, and TP-G01, TP-G02, TP-G03, TP-G08, TP-G11, and TP-G12 mappings.",
+            "Added contract coverage in tests/contract/test_capex_real_project_acceptance.py for required fields, source package hash, gate refs, oracle rows, hardening rows, raw-data boundary, and non-activation posture.",
+            "Closeout posture: planning evidence only. No raw corpus import, fixture release approval, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added."
+          ],
           "taskPath": "codex/tasks/TASK-0590-build-k12-expected-output-manifest-from-pass11-artifacts.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0591",
           "epicId": "EPIC-146",
           "title": "Build K3 mini-fixture expectation catalog from pass11 artifacts",
           "plainPurpose": "Convert K3 stale/reopen, workpage and schema freeze tables into authority/lifecycle tests.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task TP-TASK-003 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -15029,11 +15034,16 @@
             "original_depends_on": "TP-TASK-001",
             "recommended_source_branch": "capex-fixture/* or lab/capex-agent-tasks for agent-only work"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_three_project_validation/K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml as sanitized planning evidence for TP-TASK-003.",
+            "The catalog records the observed source synthesis package name and sha256, derived source tables, K3 authority/lifecycle expectation rows, stale/reopen expectations, schema freeze expectations, workpage contract expectations, pointer-policy expectations, approval-validity expectations, rollback/remediation posture, and TP-G01, TP-G04, TP-G05, TP-G08, TP-G11, and TP-G12 mappings.",
+            "Added contract coverage in tests/contract/test_capex_real_project_acceptance.py for required fields, source package hash, gate refs, expectation rows, freeze families, raw-data boundary, and non-activation posture.",
+            "Closeout posture: planning evidence only. No raw corpus import, fixture release approval, full K3 module activation, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added."
+          ],
           "taskPath": "codex/tasks/TASK-0591-build-k3-mini-fixture-expectation-catalog-from-pass11-artifacts.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0597",
@@ -15156,15 +15166,15 @@
         }
       ],
       "estimate": {
-        "percentComplete": 20.0,
-        "completedTasks": 1,
-        "remainingTasks": 4,
+        "percentComplete": 60.0,
+        "completedTasks": 3,
+        "remainingTasks": 2,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 1,
+        "completedWithTimestamps": 3,
         "completionTimestampCoverage": 100.0,
         "etaDate": "2026-06-18",
-        "etaConfidence": "low",
-        "etaSource": "global_completed_at",
+        "etaConfidence": "medium",
+        "etaSource": "epic_completed_at",
         "label": "ETA 2026-06-18",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
@@ -19832,10 +19842,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-07-07",
+        "etaDate": "2026-07-06",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-07",
+        "label": "ETA 2026-07-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
