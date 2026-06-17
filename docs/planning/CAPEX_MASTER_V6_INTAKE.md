@@ -344,7 +344,25 @@
 ## TASK-0582 / TASK-0583 closeout evidence
 - Added `docs/planning/capex_delivery/MASTER_Product_Goal_and_Metrics.md`, `Product_Goal_Metric_Stack.csv`, and `Vertical_Slice_Ladder.csv` as planning-governance evidence for `SD-TASK-001` and `SD-TASK-002`.
 - Evidence: CAPEX delivery-governance semantic contract tests cover the product goal, required metric categories, no velocity-only metric bias, exact `VS-00` through `VS-05` ladder rows, valid metric refs, and non-activation posture.
-- Closeout posture: `SD-TASK-001` and `SD-TASK-002` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, pilot readiness, production readiness, or the dependency/risk milestone overlay reserved for `SD-TASK-003`.
+- Closeout posture: `SD-TASK-001` and `SD-TASK-002` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, pilot readiness, production readiness, or product activation.
+
+## TASK-0584 / TASK-0585 closeout evidence
+- Added `docs/planning/capex_delivery/MASTER_Dependency_Register.csv` and `Risk_Based_Milestone_Model.csv` as planning-governance evidence for `SD-TASK-003`.
+- Added `docs/planning/capex_delivery/Backlog_Taxonomy_and_Decomposition_Guide.md` and `docs/planning/capex_delivery/templates/` as planning-governance evidence for `SD-TASK-004`.
+- Evidence: CAPEX delivery-governance semantic contract tests cover dependency ownership, needed-by milestones, mitigations, risk-if-late text, exact risk milestone names, valid dependency refs, production-ready blockers, singular backlog hierarchy, template requirements, no demo-only success criteria, raw-corpus boundary, and non-activation posture.
+- Closeout posture: `SD-TASK-003` and `SD-TASK-004` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, pilot readiness, production readiness, delivery cadence, first-90-days overlay, DoR/DoD, or product activation.
+
+## TASK-0586 / TASK-0587 closeout evidence
+- Added `docs/planning/capex_delivery/MASTER_Delivery_Operating_Cadence.md` as planning-governance evidence for `SD-TASK-005`.
+- Added `docs/planning/capex_delivery/MASTER_First_90_Days_Execution_Overlay.md` as planning-governance evidence for `SD-TASK-006`.
+- Evidence: CAPEX delivery-governance semantic contract tests cover cadence rhythms, lean-governance/no-meeting-bloat guardrails, accepted inputs/outputs, decision records, range-based first-quarter planning, existing metric/slice/dependency/milestone refs, no false date precision, raw-corpus boundary, and non-activation posture.
+- Closeout posture: `SD-TASK-005` and `SD-TASK-006` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, pilot readiness, production readiness, DoR/DoD, or product activation.
+
+## TASK-0588 / TASK-0589 closeout evidence
+- Added `docs/planning/capex_delivery/MASTER_Definition_of_Ready_Done.md` and patched `.github/pull_request_template.md` as planning-governance evidence for `SD-TASK-007`.
+- Added `docs/planning/capex_three_project_validation/THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK.md` as planning-governance evidence for `TP-TASK-001`.
+- Evidence: CAPEX delivery-governance and real-project acceptance contract tests cover task-class DoR/DoD, PR-template consistency, fixture tier handling for K12/K3/blind validation, TP gate references, no raw corpus leakage, no project-specific hardcoding policy, non-activation posture, and downstream-gate boundaries.
+- Closeout posture: `SD-TASK-007` and `TP-TASK-001` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, expected-output manifests, oracle manifests, blind baseline runs, pilot readiness, production readiness, or product activation.
 
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |

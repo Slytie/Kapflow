@@ -18,6 +18,14 @@ What changed and why?
 - [ ] Audit truth preserved
 - [ ] Automation safety preserved
 
+## CAPEX DoR/DoD consistency
+- [ ] Source truth updated before generated or derived artifacts
+- [ ] Tests or accepted test-gap recorded for affected CAPEX task class
+- [ ] Raw-data boundary preserved; no project corpus material in repo, CI, logs, screenshots, or generated packs
+- [ ] Activation boundary stated; no runtime/product/public activation unless explicitly approved
+- [ ] Rollback/recovery note included for governed behavior or release changes
+- [ ] Generated/progress freshness checks run when generated data is touched
+
 ## Source / generated lineage
 - Authoritative source files changed:
 - Generated or compiled artifacts impacted:

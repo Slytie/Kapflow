@@ -2,7 +2,8 @@
 id: TASK-0586
 epic: EPIC-136
 title: "Define delivery operating cadence"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0582", "TASK-0584"]
@@ -49,6 +50,13 @@ Define weekly refinement, three-amigos for near-term stories, monthly dependency
 - Refactor focus covered: none
 - Docs requirement covered: new cadence doc
 - Rollback/recovery posture recorded: revert cadence patch
+
+## Closeout evidence
+- Added `docs/planning/capex_delivery/MASTER_Delivery_Operating_Cadence.md` as planning-governance evidence for `SD-GATE-005`.
+- The cadence records weekly refinement, three-amigos, monthly dependency/risk review, demo/review, and 8-12 week outcome roadmap refresh with owners, inputs, outputs, and decision records.
+- The cadence includes lean-governance and no-meeting-bloat guardrails and preserves the one authoritative backlog hierarchy.
+- Added contract coverage in `tests/contract/test_capex_semantic_delivery_governance.py` for cadence rhythms, accepted inputs/outputs, decision records, non-activation posture, and raw-corpus boundary.
+- Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added.
 
 ## Source row mapping
 - Source task ID: `SD-TASK-005`

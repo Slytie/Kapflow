@@ -20,7 +20,12 @@ MP-PR000, V5-TASK-008, V5-TASK-009, SD-TASK-001, SD-TASK-002, SD-TASK-003, SD-TA
 ## Closed delivery-governance rows
 - `TASK-0582` is closed as of 2026-06-17 with `docs/planning/capex_delivery/MASTER_Product_Goal_and_Metrics.md` and `Product_Goal_Metric_Stack.csv`.
 - `TASK-0583` is closed as of 2026-06-17 with `docs/planning/capex_delivery/Vertical_Slice_Ladder.csv` covering `VS-00` through `VS-05`.
-- These closeouts are repo planning-governance evidence only; `TASK-0584` remains open for the dependency register and risk-based milestone overlay.
+- `TASK-0584` is closed as of 2026-06-17 with `MASTER_Dependency_Register.csv` and `Risk_Based_Milestone_Model.csv`, including production-ready blockers for restore, capacity, release, storage, raw-corpus, and production-preflight evidence.
+- `TASK-0585` is closed as of 2026-06-17 with `Backlog_Taxonomy_and_Decomposition_Guide.md` and backlog/story templates.
+- `TASK-0586` is closed as of 2026-06-17 with `MASTER_Delivery_Operating_Cadence.md` and lean cadence guardrails.
+- `TASK-0587` is closed as of 2026-06-17 with `MASTER_First_90_Days_Execution_Overlay.md` and no-false-date-precision roadmap guidance.
+- `TASK-0588` is closed as of 2026-06-17 with `MASTER_Definition_of_Ready_Done.md` and a CAPEX DoR/DoD consistency checklist in the pull request template.
+- These closeouts are repo planning-governance evidence only; no EPIC-136 delivery-governance task remains open.
 
 ## Load first
 - `docs/planning/epics/EPIC-136.md`

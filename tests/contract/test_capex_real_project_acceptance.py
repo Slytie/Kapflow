@@ -21,6 +21,11 @@ SOURCE_CONTEXT_CONTRACT_PATH = (
 WORKPAGE_GENERATION_CONTRACT_PATH = (
     ROOT / "docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md"
 )
+THREE_PROJECT_RUNBOOK_PATH = (
+    ROOT
+    / "docs/planning/capex_three_project_validation/"
+    "THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK.md"
+)
 PROCUREMENT_ESCALATION_PROPOSAL_PATH = (
     ROOT
     / "docs/planning/capex_workflow_catalog/"
@@ -98,6 +103,12 @@ EXPECTED_WORKPAGE_REQUIRED_GUARDS = [
     "source_binding",
     "actor_authority",
     "audit_evidence",
+]
+EXPECTED_TP_GATES = [f"TP-G{index:02d}" for index in range(1, 13)]
+EXPECTED_THREE_PROJECT_TIERS = [
+    "K12",
+    "K3",
+    "blind validation",
 ]
 
 
@@ -226,6 +237,42 @@ def test_target_epic_notes_reference_sme_rp_addendum_tasks() -> None:
         assert "SME-RP" in text
         for snippet in required_snippets:
             assert snippet in text
+
+
+def test_three_project_fixture_governance_runbook_is_planning_only() -> None:
+    text = THREE_PROJECT_RUNBOOK_PATH.read_text(encoding="utf-8")
+    normalized = re.sub(r"\s+", " ", text)
+    lowered = normalized.lower()
+
+    assert "planning_only_no_capex_activation" in lowered
+    assert "TP-TASK-001" in text
+    assert "TP-G01..TP-G12" in text
+    for tier in EXPECTED_THREE_PROJECT_TIERS:
+        assert tier in text
+    for required in (
+        "raw/full corpora stay off-repo",
+        "sanitized fixtures",
+        "manifests",
+        "hashes",
+        "aggregate evidence",
+        "quarantine",
+        "leak-scan",
+        "release approval",
+        "no-overfitting",
+        "no project-specific hardcoding",
+    ):
+        assert required in lowered
+    for gate in EXPECTED_TP_GATES:
+        assert gate in text
+    assert "does not pass all TP gates" in normalized
+    for forbidden in (
+        "raw K12 content",
+        "raw K3 content",
+        "raw blind-validation content",
+        "product activation approved",
+        "runtime activation approved",
+    ):
+        assert forbidden.lower() not in lowered
 
 
 def test_approval_with_conditions_posture_is_closeout_grade() -> None:

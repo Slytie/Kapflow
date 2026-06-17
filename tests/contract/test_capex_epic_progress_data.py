@@ -63,9 +63,9 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     data = _load_data()
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
-    assert data["summary"]["estimate"]["remainingTasks"] == 320
-    assert data["summary"]["estimate"]["etaDate"] == "2026-09-27"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-09-27"
+    assert data["summary"]["estimate"]["remainingTasks"] == 314
+    assert data["summary"]["estimate"]["etaDate"] == "2026-09-13"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-09-13"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")

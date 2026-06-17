@@ -2,7 +2,8 @@
 id: TASK-0589
 epic: EPIC-146
 title: "Create three-project fixture governance runbook"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: []
@@ -49,6 +50,13 @@ Define raw/full/sanitized/off-repo handling for K12, K3 and blind validation pro
 - Refactor focus covered: keep fixture/test utilities reusable across K12, K3, and blind validation
 - Docs requirement covered: update three-project testing strategy and runbook
 - Rollback/recovery posture recorded: remove fixture release; keep raw data quarantined; record waiver if gate cannot pass
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK.md` as planning-governance evidence for `TP-TASK-001`.
+- The runbook covers K12, K3, and blind validation fixture tiers; raw/full off-repo handling; sanitized fixtures, manifests, hashes, aggregate evidence, release approval, quarantine, leak-scan, no-overfitting, and no project-specific hardcoding.
+- The runbook maps `TP-G01..TP-G12` as governance meanings while explicitly leaving downstream fixture, oracle, blind baseline, scorecard, capacity, and expected-output evidence to later tasks.
+- Added contract coverage in `tests/contract/test_capex_real_project_acceptance.py` for fixture tier coverage, raw-data boundary, TP gate references, non-activation posture, and no downstream-gate completion claim.
+- Closeout posture: planning-governance evidence only. No fixture release, expected-output manifest, oracle schema, raw corpus import, runtime code, routes, workflow pack activation, pilot readiness, production readiness, or CAPEX product activation is added.
 
 ## Source row mapping
 - Source task ID: `TP-TASK-001`

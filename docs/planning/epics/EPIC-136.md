@@ -6,7 +6,7 @@ Own the v6 intake record, source-package provenance, task conversion, and source
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0582` and `TASK-0583` are closed with the CAPEX Product Goal, metric stack, and vertical-slice ladder; `TASK-0648` is closed with SME-RP approval-with-conditions sign-off wording; `TASK-0664` is closed with the module-specific readiness rule.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0582` through `TASK-0588` are closed with the CAPEX Product Goal, metric stack, vertical-slice ladder, dependency register, risk milestone overlay, backlog hierarchy, story templates, delivery cadence, first-90-days execution overlay, and task-class DoR/DoD; `TASK-0648` is closed with SME-RP approval-with-conditions sign-off wording; `TASK-0664` is closed with the module-specific readiness rule.
 
 ## In scope
 - Source task families/counts: MP:1, SD:7, SME-RP:2, V5:2.
@@ -35,11 +35,11 @@ Context pack:
 - `TASK-0233` (`MP-PR000`) - Red-team integration update
 - `TASK-0582` (`SD-TASK-001`) - Define CAPEX Product Goal and metric stack - DONE 2026-06-17
 - `TASK-0583` (`SD-TASK-002`) - Create CAPEX vertical-slice ladder - DONE 2026-06-17
-- `TASK-0584` (`SD-TASK-003`) - Add dependency register and risk-based milestone overlay
-- `TASK-0585` (`SD-TASK-004`) - Add backlog hierarchy and story decomposition templates
-- `TASK-0586` (`SD-TASK-005`) - Define delivery operating cadence
-- `TASK-0587` (`SD-TASK-006`) - Add first-90-days execution overlay
-- `TASK-0588` (`SD-TASK-007`) - Add Definition of Ready / Done for CAPEX task classes
+- `TASK-0584` (`SD-TASK-003`) - Add dependency register and risk-based milestone overlay - DONE 2026-06-17
+- `TASK-0585` (`SD-TASK-004`) - Add backlog hierarchy and story decomposition templates - DONE 2026-06-17
+- `TASK-0586` (`SD-TASK-005`) - Define delivery operating cadence - DONE 2026-06-17
+- `TASK-0587` (`SD-TASK-006`) - Add first-90-days execution overlay - DONE 2026-06-17
+- `TASK-0588` (`SD-TASK-007`) - Add Definition of Ready / Done for CAPEX task classes - DONE 2026-06-17
 - `TASK-0648` (`SME-RP:TASK-0625`) - DONE - Create SME-RP approval-with-conditions annex pack and sign-off wording
 - `TASK-0664` (`SME-RP:TASK-0641`) - DONE - Add module-specific SME readiness rule
 
@@ -57,7 +57,11 @@ Context pack:
 ## Delivery governance addendum
 - `TASK-0582` records the CAPEX Product Goal and metric stack under `docs/planning/capex_delivery/` as repo planning-governance evidence only.
 - `TASK-0583` records the first vertical-slice ladder (`VS-00` through `VS-05`) with entry/exit gates, metric refs, repo evidence refs, and planning-only activation posture.
-- `TASK-0584` remains open for the dependency register and risk-based milestone overlay; the vertical-slice ladder does not close dependency/risk milestone work.
+- `TASK-0584` records `MASTER_Dependency_Register.csv` and `Risk_Based_Milestone_Model.csv`, including owner, needed-by milestone, mitigation, risk-if-late, planning-only posture, and production-ready blockers.
+- `TASK-0585` records `Backlog_Taxonomy_and_Decomposition_Guide.md` plus the outcome-epic, feature, vertical-story, and Given-When-Then acceptance templates as the one authoritative CAPEX planning backlog hierarchy.
+- `TASK-0586` records `MASTER_Delivery_Operating_Cadence.md` with weekly refinement, three-amigos, monthly dependency/risk review, demo/review, and 8-12 week outcome roadmap refresh.
+- `TASK-0587` records `MASTER_First_90_Days_Execution_Overlay.md` with range-based first-quarter planning for goal/metrics, dependency board, CI baseline, first slice demo, first MMF, and roadmap refresh without exact-date precision.
+- `TASK-0588` records `MASTER_Definition_of_Ready_Done.md` plus the CAPEX DoR/DoD consistency checklist in `.github/pull_request_template.md`.
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

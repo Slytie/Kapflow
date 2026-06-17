@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 396,
-    "done": 76,
+    "done": 82,
     "in_progress": 0,
-    "not_started": 315,
+    "not_started": 309,
     "blocked": 1,
     "needs_review": 4,
     "total": 396,
     "estimate": {
-      "percentComplete": 19.2,
-      "completedTasks": 76,
-      "remainingTasks": 320,
+      "percentComplete": 20.7,
+      "completedTasks": 82,
+      "remainingTasks": 314,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 44,
-      "completionTimestampCoverage": 57.9,
-      "etaDate": "2026-09-27",
+      "completedWithTimestamps": 50,
+      "completionTimestampCoverage": 61.0,
+      "etaDate": "2026-09-13",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-09-27",
+      "label": "ETA 2026-09-13",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -58,7 +58,7 @@
       "id": "EPIC-136",
       "title": "CAPEX intake, provenance, and source freeze",
       "plainPurpose": "Own the v6 intake record, source-package provenance, task conversion, and source-freeze gates.",
-      "displayStatus": "in_progress",
+      "displayStatus": "done",
       "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
       "dependencies": [
         "EPIC-080",
@@ -82,9 +82,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 7,
+        "done": 12,
         "in_progress": 0,
-        "not_started": 5,
+        "not_started": 0,
         "blocked": 0,
         "needs_review": 0,
         "total": 12
@@ -377,7 +377,7 @@
             "Added docs/planning/capex_delivery/Vertical_Slice_Ladder.csv with exact VS-00 through VS-05 rows for blocker proof, K12 learning, K12 closure, procurement escalation MMF, pointer promotion, and validation holdout.",
             "Each slice records entry gates, exit gates, metric refs, repo evidence refs, a planning-only activation posture, and a non-demo-theater guardrail.",
             "Added semantic contract tests proving slice IDs are exact, metric refs are valid, every slice has entry/exit gates, and the ladder does not claim public runtime/product activation.",
-            "Left TASK-0584 open for the dependency register and risk-based milestone overlay; this task closes only the vertical-slice ladder.",
+            "At this task's original closeout, TASK-0584 was left open for the dependency register and risk-based milestone overlay; TASK-0584 now has its own closeout evidence and this task remains scoped to the vertical-slice ladder.",
             "No runtime code, migrations, routes, workflow packs, frontend behavior, raw corpus import, pilot approval, production approval, or CAPEX product activation was introduced."
           ],
           "taskPath": "codex/tasks/TASK-0583-create-capex-vertical-slice-ladder.md",
@@ -390,9 +390,9 @@
           "epicId": "EPIC-136",
           "title": "Add dependency register and risk-based milestone overlay",
           "plainPurpose": "Create explicit dependency register and risk milestones for stakeholder aligned, architecture proven, system viable, business increment, production ready.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task SD-TASK-003 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -436,20 +436,26 @@
             "original_depends_on": "SD-TASK-001",
             "recommended_source_branch": "analysis/master-delivery-safety"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_delivery/MASTER_Dependency_Register.csv with explicit dependency ids, owners, needed-by milestones, related slices/tasks, mitigations, risk-if-late text, status, and planning-only activation posture.",
+            "Added docs/planning/capex_delivery/Risk_Based_Milestone_Model.csv with the exact milestone names stakeholder aligned, architecture proven, system viable, business increment, and production ready.",
+            "Recorded production-ready as blocked until later restore, capacity, release, storage, raw-corpus, and production-preflight gates close or receive explicit waivers.",
+            "Added contract coverage in tests/contract/test_capex_semantic_delivery_governance.py for dependency fields, milestone ordering, valid dependency refs, non-activation posture, and raw-corpus boundary.",
+            "Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0584-add-dependency-register-and-risk-based-milestone-overlay.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0585",
           "epicId": "EPIC-136",
           "title": "Add backlog hierarchy and story decomposition templates",
           "plainPurpose": "Add outcome epic, feature, story, and Given-When-Then templates, with rule that near-term stories are vertical and testable.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task SD-TASK-004 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -493,20 +499,26 @@
             "original_depends_on": "SD-TASK-001",
             "recommended_source_branch": "analysis/master-delivery-safety"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_delivery/Backlog_Taxonomy_and_Decomposition_Guide.md with the one authoritative hierarchy: product goal -> outcome epic -> feature -> vertical slice -> story -> Given-When-Then acceptance scenario.",
+            "Added templates under docs/planning/capex_delivery/templates/ for outcome epics, features, vertical stories, and Given-When-Then acceptance scenarios.",
+            "Templates require metric refs, slice refs, source/evidence refs, acceptance scenarios, non-activation posture, and rollback or recovery notes.",
+            "Added contract coverage in tests/contract/test_capex_semantic_delivery_governance.py for singular hierarchy, template requirements, no duplicate backlog systems, no demo-only success criteria, non-activation posture, and raw-corpus boundary.",
+            "Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0585-add-backlog-hierarchy-and-story-decomposition-templates.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0586",
           "epicId": "EPIC-136",
           "title": "Define delivery operating cadence",
           "plainPurpose": "Define weekly refinement, three-amigos for near-term stories, monthly dependency/risk review, 8-12 week outcome roadmap refresh.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task SD-TASK-005 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -551,20 +563,26 @@
             "original_depends_on": "SD-TASK-001;SD-TASK-003",
             "recommended_source_branch": "analysis/master-delivery-safety"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_delivery/MASTER_Delivery_Operating_Cadence.md as planning-governance evidence for SD-GATE-005.",
+            "The cadence records weekly refinement, three-amigos, monthly dependency/risk review, demo/review, and 8-12 week outcome roadmap refresh with owners, inputs, outputs, and decision records.",
+            "The cadence includes lean-governance and no-meeting-bloat guardrails and preserves the one authoritative backlog hierarchy.",
+            "Added contract coverage in tests/contract/test_capex_semantic_delivery_governance.py for cadence rhythms, accepted inputs/outputs, decision records, non-activation posture, and raw-corpus boundary.",
+            "Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0586-define-delivery-operating-cadence.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0587",
           "epicId": "EPIC-136",
           "title": "Add first-90-days execution overlay",
           "plainPurpose": "Map first execution quarter after signoff: goal/metrics, dependency board, CI baseline, first slice demo, first MMF, roadmap refresh.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task SD-TASK-006 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -610,20 +628,26 @@
             "original_depends_on": "SD-TASK-001;SD-TASK-002;SD-TASK-003",
             "recommended_source_branch": "analysis/master-delivery-safety"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_delivery/MASTER_First_90_Days_Execution_Overlay.md as planning-governance evidence for SD-GATE-006.",
+            "The overlay maps the first execution quarter after signoff into relative windows for goal/metrics, dependency board, CI baseline, first slice demo, first MMF, and roadmap refresh.",
+            "The overlay distinguishes blockers, learning slices, first MMF, and roadmap refresh without exact calendar-date precision.",
+            "Added contract coverage in tests/contract/test_capex_semantic_delivery_governance.py for range-based planning, metric refs, slice refs, dependency refs, milestone refs, non-activation posture, and raw-corpus boundary.",
+            "Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0587-add-first-90-days-execution-overlay.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0588",
           "epicId": "EPIC-136",
           "title": "Add Definition of Ready / Done for CAPEX task classes",
           "plainPurpose": "DoR/DoD for architecture, runtime, workpage, agent-lab, fixture, migration/release tasks.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task SD-TASK-007 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -667,11 +691,17 @@
             "original_depends_on": "SD-TASK-004",
             "recommended_source_branch": "analysis/master-delivery-safety"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_delivery/MASTER_Definition_of_Ready_Done.md as planning-governance evidence for SD-GATE-007.",
+            "The DoR/DoD covers architecture, runtime, workpage, fixture, agent-lab, and migration/release task classes.",
+            "Updated .github/pull_request_template.md with a CAPEX DoR/DoD consistency checklist for source truth, tests or accepted test-gap, raw-data boundary, activation boundary, rollback/recovery, and generated/progress freshness.",
+            "Added contract coverage in tests/contract/test_capex_semantic_delivery_governance.py for task class coverage, TDD/code-review/refactor/source-truth alignment, PR-template consistency, non-activation posture, and raw-corpus boundary.",
+            "Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0588-add-definition-of-ready-done-for-capex-task-classes.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0648",
@@ -799,17 +829,17 @@
         }
       ],
       "estimate": {
-        "percentComplete": 58.3,
-        "completedTasks": 7,
-        "remainingTasks": 5,
+        "percentComplete": 100.0,
+        "completedTasks": 12,
+        "remainingTasks": 0,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 4,
-        "completionTimestampCoverage": 57.1,
-        "etaDate": "2026-06-27",
-        "etaConfidence": "medium",
-        "etaSource": "epic_completed_at",
-        "label": "ETA 2026-06-27",
-        "caveat": "Estimate is based on remaining current-scope task count."
+        "completedWithTimestamps": 9,
+        "completionTimestampCoverage": 75.0,
+        "etaDate": null,
+        "etaConfidence": "complete",
+        "etaSource": "none",
+        "label": "Complete",
+        "caveat": "No remaining current-scope tasks."
       }
     },
     {
@@ -7750,10 +7780,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 66.7,
-        "etaDate": "2026-07-03",
+        "etaDate": "2026-07-01",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-03",
+        "label": "ETA 2026-07-01",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -10740,10 +10770,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 50.0,
-        "etaDate": "2026-06-21",
+        "etaDate": "2026-06-20",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-21",
+        "label": "ETA 2026-06-20",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -12674,10 +12704,10 @@
         "remainingBlockedOrReviewTasks": 2,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-27",
+        "etaDate": "2026-06-26",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-27",
+        "label": "ETA 2026-06-26",
         "caveat": "2 blocked or needs-review task(s) remain."
       }
     },
@@ -14784,10 +14814,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-28",
+        "etaDate": "2026-06-27",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-28",
+        "label": "ETA 2026-06-27",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14795,7 +14825,7 @@
       "id": "EPIC-146",
       "title": "CAPEX three-project validation",
       "plainPurpose": "Use the three approved ZIP fixture roles for validation planning without importing raw corpora.",
-      "displayStatus": "not_started",
+      "displayStatus": "in_progress",
       "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
       "dependencies": [
         "EPIC-145",
@@ -14819,9 +14849,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 0,
+        "done": 1,
         "in_progress": 0,
-        "not_started": 5,
+        "not_started": 4,
         "blocked": 0,
         "needs_review": 0,
         "total": 5
@@ -14834,9 +14864,9 @@
           "epicId": "EPIC-146",
           "title": "Create three-project fixture governance runbook",
           "plainPurpose": "Define raw/full/sanitized/off-repo handling for K12, K3 and blind validation project.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task TP-TASK-001 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -14879,11 +14909,17 @@
             "source_only_dependency_notes": "P0 blockers; fixture governance; no-raw-data policy",
             "recommended_source_branch": "capex-fixture/* or lab/capex-agent-tasks for agent-only work"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_three_project_validation/THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK.md as planning-governance evidence for TP-TASK-001.",
+            "The runbook covers K12, K3, and blind validation fixture tiers; raw/full off-repo handling; sanitized fixtures, manifests, hashes, aggregate evidence, release approval, quarantine, leak-scan, no-overfitting, and no project-specific hardcoding.",
+            "The runbook maps TP-G01..TP-G12 as governance meanings while explicitly leaving downstream fixture, oracle, blind baseline, scorecard, capacity, and expected-output evidence to later tasks.",
+            "Added contract coverage in tests/contract/test_capex_real_project_acceptance.py for fixture tier coverage, raw-data boundary, TP gate references, non-activation posture, and no downstream-gate completion claim.",
+            "Closeout posture: planning-governance evidence only. No fixture release, expected-output manifest, oracle schema, raw corpus import, runtime code, routes, workflow pack activation, pilot readiness, production readiness, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0589-create-three-project-fixture-governance-runbook.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0590",
@@ -15120,16 +15156,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 0.0,
-        "completedTasks": 0,
-        "remainingTasks": 5,
+        "percentComplete": 20.0,
+        "completedTasks": 1,
+        "remainingTasks": 4,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 0,
-        "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-19",
+        "completedWithTimestamps": 1,
+        "completionTimestampCoverage": 100.0,
+        "etaDate": "2026-06-18",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-19",
+        "label": "ETA 2026-06-18",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -15465,10 +15501,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-19",
+        "etaDate": "2026-06-18",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-19",
+        "label": "ETA 2026-06-18",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -19796,10 +19832,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-07-09",
+        "etaDate": "2026-07-07",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-09",
+        "label": "ETA 2026-07-07",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -21538,10 +21574,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-27",
+        "etaDate": "2026-06-25",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-27",
+        "label": "ETA 2026-06-25",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -23239,10 +23275,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-26",
+        "etaDate": "2026-06-25",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-26",
+        "label": "ETA 2026-06-25",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -23837,10 +23873,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-20",
+        "etaDate": "2026-06-19",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-20",
+        "label": "ETA 2026-06-19",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     }

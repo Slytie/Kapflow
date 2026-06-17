@@ -2,7 +2,8 @@
 id: TASK-0588
 epic: EPIC-136
 title: "Add Definition of Ready / Done for CAPEX task classes"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: ["TASK-0585"]
@@ -49,6 +50,13 @@ DoR/DoD for architecture, runtime, workpage, agent-lab, fixture, migration/relea
 - Refactor focus covered: none
 - Docs requirement covered: DoR/DoD doc and template patch
 - Rollback/recovery posture recorded: revert doc/template patch
+
+## Closeout evidence
+- Added `docs/planning/capex_delivery/MASTER_Definition_of_Ready_Done.md` as planning-governance evidence for `SD-GATE-007`.
+- The DoR/DoD covers architecture, runtime, workpage, fixture, agent-lab, and migration/release task classes.
+- Updated `.github/pull_request_template.md` with a CAPEX DoR/DoD consistency checklist for source truth, tests or accepted test-gap, raw-data boundary, activation boundary, rollback/recovery, and generated/progress freshness.
+- Added contract coverage in `tests/contract/test_capex_semantic_delivery_governance.py` for task class coverage, TDD/code-review/refactor/source-truth alignment, PR-template consistency, non-activation posture, and raw-corpus boundary.
+- Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added.
 
 ## Source row mapping
 - Source task ID: `SD-TASK-007`

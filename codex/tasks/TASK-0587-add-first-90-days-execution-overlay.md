@@ -2,7 +2,8 @@
 id: TASK-0587
 epic: EPIC-136
 title: "Add first-90-days execution overlay"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0582", "TASK-0583", "TASK-0584"]
@@ -49,6 +50,13 @@ Map first execution quarter after signoff: goal/metrics, dependency board, CI ba
 - Refactor focus covered: none
 - Docs requirement covered: roadmap overlay
 - Rollback/recovery posture recorded: revert roadmap overlay
+
+## Closeout evidence
+- Added `docs/planning/capex_delivery/MASTER_First_90_Days_Execution_Overlay.md` as planning-governance evidence for `SD-GATE-006`.
+- The overlay maps the first execution quarter after signoff into relative windows for goal/metrics, dependency board, CI baseline, first slice demo, first MMF, and roadmap refresh.
+- The overlay distinguishes blockers, learning slices, first MMF, and roadmap refresh without exact calendar-date precision.
+- Added contract coverage in `tests/contract/test_capex_semantic_delivery_governance.py` for range-based planning, metric refs, slice refs, dependency refs, milestone refs, non-activation posture, and raw-corpus boundary.
+- Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added.
 
 ## Source row mapping
 - Source task ID: `SD-TASK-006`

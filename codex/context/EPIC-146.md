@@ -19,6 +19,11 @@ TP-TASK-001, TP-TASK-002, TP-TASK-003, TP-TASK-009 plus SME-RP source row `TASK-
 - `TASK-0661` promotes `K12-T1..T10` as the first binding real-project fixture-case IDs under `SME-RP-G010`.
 - K12, K3, and blind-validation are fixture tiers under generalized real-project validation, not acceptance-gate namespaces.
 
+## Closed fixture-governance rows
+- `TASK-0589` is closed as of 2026-06-17 with `docs/planning/capex_three_project_validation/THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK.md`.
+- The runbook records raw/full off-repo handling, sanitized fixture/manifests/hash/aggregate-evidence boundaries, release approval, leak-scan, no-overfitting, and no project-specific hardcoding rules for K12, K3, and blind validation.
+- This is planning-governance evidence only; `TASK-0590`, `TASK-0591`, `TASK-0597`, and `TASK-0661` remain open for expected-output, K3 mini-fixture, oracle manifest, and binding K12 catalogue work.
+
 ## Non-negotiable invariants
 - One truth system: official claims come only from immutable objects, append-only events, and audited pointers.
 - Tenant, domain, and future CAPEX project boundaries must not be crossed in reads, writes, exports, projections, or generated material.

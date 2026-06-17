@@ -2,7 +2,8 @@
 id: TASK-0585
 epic: EPIC-136
 title: "Add backlog hierarchy and story decomposition templates"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0582"]
@@ -49,6 +50,13 @@ Add outcome epic, feature, story, and Given-When-Then templates, with rule that 
 - Refactor focus covered: none
 - Docs requirement covered: new guide
 - Rollback/recovery posture recorded: revert guide patch
+
+## Closeout evidence
+- Added `docs/planning/capex_delivery/Backlog_Taxonomy_and_Decomposition_Guide.md` with the one authoritative hierarchy: product goal -> outcome epic -> feature -> vertical slice -> story -> Given-When-Then acceptance scenario.
+- Added templates under `docs/planning/capex_delivery/templates/` for outcome epics, features, vertical stories, and Given-When-Then acceptance scenarios.
+- Templates require metric refs, slice refs, source/evidence refs, acceptance scenarios, non-activation posture, and rollback or recovery notes.
+- Added contract coverage in `tests/contract/test_capex_semantic_delivery_governance.py` for singular hierarchy, template requirements, no duplicate backlog systems, no demo-only success criteria, non-activation posture, and raw-corpus boundary.
+- Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added.
 
 ## Source row mapping
 - Source task ID: `SD-TASK-004`

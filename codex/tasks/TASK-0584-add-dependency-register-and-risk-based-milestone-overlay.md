@@ -2,7 +2,8 @@
 id: TASK-0584
 epic: EPIC-136
 title: "Add dependency register and risk-based milestone overlay"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0582"]
@@ -49,6 +50,13 @@ Create explicit dependency register and risk milestones for stakeholder aligned,
 - Refactor focus covered: none
 - Docs requirement covered: delivery cadence doc
 - Rollback/recovery posture recorded: revert register patch
+
+## Closeout evidence
+- Added `docs/planning/capex_delivery/MASTER_Dependency_Register.csv` with explicit dependency ids, owners, needed-by milestones, related slices/tasks, mitigations, risk-if-late text, status, and planning-only activation posture.
+- Added `docs/planning/capex_delivery/Risk_Based_Milestone_Model.csv` with the exact milestone names `stakeholder aligned`, `architecture proven`, `system viable`, `business increment`, and `production ready`.
+- Recorded production-ready as blocked until later restore, capacity, release, storage, raw-corpus, and production-preflight gates close or receive explicit waivers.
+- Added contract coverage in `tests/contract/test_capex_semantic_delivery_governance.py` for dependency fields, milestone ordering, valid dependency refs, non-activation posture, and raw-corpus boundary.
+- Closeout posture: planning-governance evidence only. No runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation is added.
 
 ## Source row mapping
 - Source task ID: `SD-TASK-003`

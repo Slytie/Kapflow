@@ -544,12 +544,12 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0581 | EPIC-143 | DONE | medium | Define workflow handoff manifest |
 | TASK-0582 | EPIC-136 | DONE | high | Define CAPEX Product Goal and metric stack |
 | TASK-0583 | EPIC-136 | DONE | high | Create CAPEX vertical-slice ladder |
-| TASK-0584 | EPIC-136 | TODO | high | Add dependency register and risk-based milestone overlay |
-| TASK-0585 | EPIC-136 | TODO | medium | Add backlog hierarchy and story decomposition templates |
-| TASK-0586 | EPIC-136 | TODO | medium | Define delivery operating cadence |
-| TASK-0587 | EPIC-136 | TODO | medium | Add first-90-days execution overlay |
-| TASK-0588 | EPIC-136 | TODO | medium | Add Definition of Ready / Done for CAPEX task classes |
-| TASK-0589 | EPIC-146 | TODO | high | Create three-project fixture governance runbook |
+| TASK-0584 | EPIC-136 | DONE | high | Add dependency register and risk-based milestone overlay |
+| TASK-0585 | EPIC-136 | DONE | medium | Add backlog hierarchy and story decomposition templates |
+| TASK-0586 | EPIC-136 | DONE | medium | Define delivery operating cadence |
+| TASK-0587 | EPIC-136 | DONE | medium | Add first-90-days execution overlay |
+| TASK-0588 | EPIC-136 | DONE | medium | Add Definition of Ready / Done for CAPEX task classes |
+| TASK-0589 | EPIC-146 | DONE | high | Create three-project fixture governance runbook |
 | TASK-0590 | EPIC-146 | TODO | high | Build K12 expected-output manifest from pass11 artifacts |
 | TASK-0591 | EPIC-146 | TODO | medium | Build K3 mini-fixture expectation catalog from pass11 artifacts |
 | TASK-0592 | EPIC-147 | TODO | high | Define blind validation freeze protocol |
