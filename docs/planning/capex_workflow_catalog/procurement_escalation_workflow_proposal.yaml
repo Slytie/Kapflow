@@ -1,0 +1,129 @@
+schema_version: capex.workflow_catalog.proposal.v1
+proposal_id: capex.procurement_escalation.workflow_proposal.v1
+title: CAPEX procurement and CEO escalation workflow proposal
+activation_posture: planning_only_no_capex_activation
+catalog_surface: planning_only_capex_workflow_catalog
+source_task_ref: TASK-0571
+gate_refs:
+  - NU-GATE-011
+depends_on_gate_refs:
+  - SME-RP-G006
+  - SME-RP-G007
+  - SME-RP-G012
+remaining_activation_task_refs:
+  - TASK-0655
+  - TASK-0657
+  - TASK-0659
+canonical_substrate:
+  allowed_outputs:
+    - task
+    - approval
+    - flag
+    - artifact_delta
+    - event
+    - pointer_request
+  forbidden_outputs:
+    - workpage_state
+    - generic_status_command
+    - external_status
+    - ai_output
+task_chain:
+  - task_id: capex.procurement_decision_package.prepare
+    task_kind: procurement_decision_package
+    owner_role: Project Manager
+    canonical_output: task
+    evidence_requirements:
+      - source_refs
+      - evidence_refs
+      - capex_scope
+      - decision_package_artifact
+    creates:
+      - capex.procurement_evidence.reconcile
+      - capex.commercial_variance.review
+  - task_id: capex.procurement_evidence.reconcile
+    task_kind: procurement_evidence_reconciliation
+    owner_role: Procurement
+    canonical_output: task
+    evidence_requirements:
+      - purchase_requisition_or_purchase_order_source_ref
+      - supplier_or_quotation_source_ref
+      - controlling_allocation_source_ref
+      - reviewed_evidence_status
+    creates:
+      - capex.commercial_variance.review
+  - task_id: capex.commercial_variance.review
+    task_kind: commercial_variance_review
+    owner_role: Controlling
+    canonical_output: task
+    evidence_requirements:
+      - approved_budget
+      - forecast
+      - deviation_amount
+      - deviation_category
+      - evidence_refs
+    creates:
+      - capex.ceo_sponsor.escalation_decide
+  - task_id: capex.ceo_sponsor.escalation_decide
+    task_kind: ceo_sponsor_escalation_decision
+    owner_role: CEO / Sponsor
+    canonical_output: approval
+    evidence_requirements:
+      - escalation_reason
+      - recommendation
+      - residual_risk
+      - conditions
+      - reviewed_decision_package_artifact
+    creates:
+      - capex.post_decision.conditions_track
+  - task_id: capex.post_decision.conditions_track
+    task_kind: post_decision_condition_tracking
+    owner_role: Project Manager
+    canonical_output: task
+    evidence_requirements:
+      - outcome
+      - conditions
+      - owner_assignment
+      - follow_up_evidence_refs
+    creates: []
+escalation_gates:
+  threshold_families:
+    - budget deviation
+    - schedule shift with production impact
+    - safety or quality impact
+    - residual risk acceptance
+    - supplier dispute or claim exposure
+    - decision despite incomplete evidence
+    - recurring defect / system-effectiveness risk
+  threshold_value_policy: no_numeric_thresholds_invented_by_platform
+  requires_business_signoff_gate_refs:
+    - SME-RP-G006
+    - SME-RP-G007
+  escalation_actor: CEO / Sponsor
+workpage_boundary:
+  blocker_routing: canonical_task_chain_required
+  workpages_may:
+    - display_blockers
+    - propose_task_creation
+    - display_approval_prompt
+    - show_evidence_gaps
+  workpages_must_not:
+    - set_official_project_status
+    - set_closure
+    - set_evidence_sufficiency
+    - set_commercial_status
+    - edit_procurement_status_as_truth
+    - bypass_task_chain
+    - promote_pointer_directly
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - public_workpage_activation
+  - authored_workflow_pack_activation
+  - migration_approval
+  - raw_corpus_import
+  - threshold_signoff
+  - procurement_field_signoff
+notes:
+  - This proposal defines routing shape only; TASK-0659 remains responsible for mandatory procurement fields and executive threshold signoff.
+  - Future runtime implementation must bind all tasks to tenant, domain, project, capex_scope, source refs, artifacts, approvals, and audited events.

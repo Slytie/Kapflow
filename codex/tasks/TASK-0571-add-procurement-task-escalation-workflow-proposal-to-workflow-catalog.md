@@ -2,7 +2,8 @@
 id: TASK-0571
 epic: EPIC-143
 title: "Add procurement/task escalation workflow proposal to workflow catalog"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -58,6 +59,12 @@ Represent procurement/work/component decision flows as task chains with CEO esca
 - Original depends_on: `workpage/task routing decisions`
 - Source-only dependency notes: `workpage/task routing decisions`
 - Recommended source branch: `capex/workflow-routing-docs`
+
+## Closeout evidence
+- Added `docs/planning/capex_workflow_catalog/procurement_escalation_workflow_proposal.yaml` as a planning-only CAPEX workflow catalog proposal for procurement and CEO escalation task chains.
+- Added semantic contract coverage proving the proposal is task/approval-chain based, evidence-bound, not editable workpage status, and cannot activate CAPEX runtime/product/public routes or sign off procurement thresholds.
+- Updated the SME-RP acceptance register, CAPEX domain manifest, EPIC-143 docs, and CB2 semantic backlog so `NU-GATE-011` has repo-native planning evidence while authored workflow packs and `TASK-0659` threshold signoff remain blocked.
+- No runtime code, migrations, routes, frontend routes, raw corpus import, authored workflow pack activation, or CAPEX activation was introduced.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.

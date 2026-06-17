@@ -14,6 +14,7 @@ ART-001, ART-003, ART-004, ART-005, ART-006, RF-007, RF-008, ARCH-W4-S01, ... pl
 
 ## Closed foundation slice
 - `TASK-0565` is closed as of 2026-06-08: runtime state now includes `capex_waivers`, `capex_closure_gate_evaluations`, and `capex_closure_snapshots`, with closure vector evaluation and stale recurrence helpers under `onetruth.capex_platform.closure_governance`.
+- `TASK-0570` is closed as of 2026-06-17 with non-commutative closure snapshot and official pointer sequence tests proving event/order sensitivity.
 - Waivers are recorded as `satisfied_by_waiver`, not as `pass`, and absence of evidence still fails closure.
 - This does not expose closure/promotion UI, public APIs, generated artifact policy validators, or CAPEX runtime activation.
 

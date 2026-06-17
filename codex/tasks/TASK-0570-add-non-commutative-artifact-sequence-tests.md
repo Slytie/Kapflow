@@ -2,7 +2,8 @@
 id: TASK-0570
 epic: EPIC-142
 title: "Add non-commutative artifact sequence tests"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -58,6 +59,12 @@ Demonstrate different artifact order produces different stale/closure/commitment
 - Original depends_on: `artifact/operator model; event ordering`
 - Source-only dependency notes: `artifact/operator model; event ordering`
 - Recommended source branch: `capex/formalism-sequence-tests`
+
+## Closeout evidence
+- Added closure sequence coverage proving a basis-change recurrence before snapshot creation leaves a later snapshot current, while the same basis-change recurrence after snapshot creation marks the existing snapshot stale.
+- Added official pointer sequence coverage proving promotion order changes final project official pointer target and generation history.
+- Updated `docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md` to record that CAPEX artifact, pointer, and closure transitions are non-commutative and later evidence does not retroactively rewrite earlier governed outcomes.
+- No runtime code, migrations, routes, frontend routes, raw corpus import, or CAPEX activation was introduced.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.

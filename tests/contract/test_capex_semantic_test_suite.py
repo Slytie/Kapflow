@@ -53,8 +53,8 @@ def test_capex_cb2_semantic_rows_point_to_repo_evidence_or_future_phase() -> Non
         else:
             green_rows.append(row["cb2_id"])
 
-    assert set(future_rows) == {"CB2-T006", "CB2-T011", "CB2-T012"}
-    assert {"CB2-T013", "CB2-T014"} <= set(green_rows)
+    assert set(future_rows) == {"CB2-T006", "CB2-T012"}
+    assert {"CB2-T011", "CB2-T013", "CB2-T014"} <= set(green_rows)
 
 
 def test_capex_semantic_marker_manifest_globs_match_real_tests() -> None:

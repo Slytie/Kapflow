@@ -149,15 +149,17 @@ rows:
   - cb2_id: CB2-T011
     title: Procurement and CEO escalation tasks are defined separately from workpages
     phase: P8/P9 workflow product
-    phase_status: tracked_future_phase
+    phase_status: repo_evidence_green
     gate_refs:
       - NU-GATE-011
     task_refs:
       - TASK-0571
     evidence_paths:
-      - docs/planning/CAPEX_V6_CONVERSION_MAP.csv
+      - docs/planning/capex_workflow_catalog/procurement_escalation_workflow_proposal.yaml
+      - tests/contract/test_capex_semantic_workflow_catalog.py
+      - docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml
       - docs/planning/epics/EPIC-143.md
-    rationale: This remains later workflow-catalog work and is tracked here so the burden does not disappear.
+    rationale: The planning-only proposal defines procurement and CEO escalation as canonical task/approval chains, not editable workpage status; runtime workflow activation remains blocked.
   - cb2_id: CB2-T012
     title: Raw-corpus and fixture leakage guardrails remain enforced
     phase: P10 fixture and AI guardrails

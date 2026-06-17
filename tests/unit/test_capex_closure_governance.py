@@ -260,3 +260,69 @@ def test_recurrence_rule_registry_marks_current_snapshots_stale_on_basis_ref_cha
             )
     finally:
         connection.close()
+
+
+def test_basis_change_order_changes_closure_snapshot_outcome() -> None:
+    def run_sequence(*, change_before_snapshot: bool) -> tuple[str, tuple[str, ...]]:
+        connection = _connection()
+        try:
+            suffix = "before" if change_before_snapshot else "after"
+            source_ref = _source_ref(connection, f"so-order-{suffix}")
+            evaluation_id = f"cge-order-{suffix}"
+            snapshot_id = f"cs-order-{suffix}"
+            evaluate_closure_gate(
+                connection,
+                closure_gate_evaluation_id=evaluation_id,
+                tenant_id=TENANT_ID,
+                domain_id=DOMAIN_ID,
+                project_id=PROJECT_ID,
+                closure_target_kind="capex_packet",
+                closure_target_ref=f"packet-order-{suffix}",
+                dimensions=(ClosureDimensionInput("cost_basis", (source_ref,)),),
+                created_by_actor_id="human:reviewer",
+                created_by_actor_type="human",
+                now_iso=NOW,
+            )
+
+            if change_before_snapshot:
+                stale_ids = mark_stale_closure_snapshots_for_basis_refs(
+                    connection,
+                    changed_basis_refs=(source_ref,),
+                    tenant_id=TENANT_ID,
+                    domain_id=DOMAIN_ID,
+                    project_id=PROJECT_ID,
+                    now_iso="2026-06-08T01:00:00Z",
+                )
+
+            create_closure_snapshot_from_evaluation(
+                connection,
+                closure_snapshot_id=snapshot_id,
+                closure_gate_evaluation_id=evaluation_id,
+                created_by_actor_id="human:reviewer",
+                created_by_actor_type="human",
+                now_iso="2026-06-08T02:00:00Z",
+            )
+
+            if not change_before_snapshot:
+                stale_ids = mark_stale_closure_snapshots_for_basis_refs(
+                    connection,
+                    changed_basis_refs=(source_ref,),
+                    tenant_id=TENANT_ID,
+                    domain_id=DOMAIN_ID,
+                    project_id=PROJECT_ID,
+                    now_iso="2026-06-08T03:00:00Z",
+                )
+
+            snapshot = get_closure_snapshot(connection, snapshot_id)
+            assert snapshot is not None
+            return str(snapshot["state"]), tuple(stale_ids)
+        finally:
+            connection.close()
+
+    before_state, before_stale_ids = run_sequence(change_before_snapshot=True)
+    after_state, after_stale_ids = run_sequence(change_before_snapshot=False)
+
+    assert before_state == "current"
+    assert before_stale_ids == ()
+    assert after_state == "stale"
+    assert after_stale_ids == ("cs-order-after",)

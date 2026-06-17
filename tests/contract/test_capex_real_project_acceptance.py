@@ -21,6 +21,11 @@ SOURCE_CONTEXT_CONTRACT_PATH = (
 WORKPAGE_GENERATION_CONTRACT_PATH = (
     ROOT / "docs/architecture/CAPEX_WORKPAGE_TO_TASK_GENERATION_CONTRACT.md"
 )
+PROCUREMENT_ESCALATION_PROPOSAL_PATH = (
+    ROOT
+    / "docs/planning/capex_workflow_catalog/"
+    "procurement_escalation_workflow_proposal.yaml"
+)
 TASK_DIR = ROOT / "codex/tasks"
 FRONTMATTER_RE = re.compile(r"\A---\n(?P<body>.*?)\n---\n", re.DOTALL)
 
@@ -571,3 +576,39 @@ def test_workpage_to_task_generation_rules_preserve_canonical_truth() -> None:
         "Generic status commands are not allowed.",
     ):
         assert required in normalized
+
+
+def test_procurement_escalation_workflow_proposal_is_planning_only() -> None:
+    register = _load_register()
+    proposal = register["procurement_escalation_workflow_proposal"]
+
+    assert proposal["proposal_id"] == "capex.procurement_escalation.workflow_proposal.v1"
+    assert proposal["proposal_ref"] == (
+        "docs/planning/capex_workflow_catalog/"
+        "procurement_escalation_workflow_proposal.yaml"
+    )
+    assert PROCUREMENT_ESCALATION_PROPOSAL_PATH.exists()
+    assert proposal["activation_posture"] == "planning_only_no_capex_activation"
+    assert proposal["gate_refs"] == ["NU-GATE-011"]
+    assert set(proposal["depends_on_gate_refs"]) == {
+        "SME-RP-G006",
+        "SME-RP-G007",
+        "SME-RP-G012",
+    }
+    assert proposal["task_refs"] == ["TASK-0571"]
+    assert "TASK-0659" in proposal["remaining_activation_task_refs"]
+    assert proposal["routing_boundary"] == (
+        "procurement_and_ceo_decisions_are_task_chains_not_editable_workpage_status"
+    )
+    assert set(proposal["cannot_be_used_for"]) >= {
+        "implementation_approval",
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "public_workpage_activation",
+        "authored_workflow_pack_activation",
+        "migration_approval",
+        "raw_corpus_import",
+        "threshold_signoff",
+        "procurement_field_signoff",
+    }

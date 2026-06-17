@@ -530,8 +530,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0567 | EPIC-144 | DONE | high | Add CAPEX projection snapshot and stale-command test harness |
 | TASK-0568 | EPIC-149 | DONE | high | Add CAPEX semantic test suite and CODEOWNERS gates |
 | TASK-0569 | EPIC-151 | DONE | medium | Add interface-burden conservation policy and tests |
-| TASK-0570 | EPIC-142 | TODO | medium | Add non-commutative artifact sequence tests |
-| TASK-0571 | EPIC-143 | TODO | medium | Add procurement/task escalation workflow proposal to workflow catalog |
+| TASK-0570 | EPIC-142 | DONE | medium | Add non-commutative artifact sequence tests |
+| TASK-0571 | EPIC-143 | DONE | medium | Add procurement/task escalation workflow proposal to workflow catalog |
 | TASK-0572 | EPIC-142 | DONE | high | Patch master architecture: reality vs representation |
 | TASK-0573 | EPIC-142 | DONE | high | Add canonical relation_kind vocabulary |
 | TASK-0574 | EPIC-143 | DONE | high | Define feasibility-set workflow semantics |

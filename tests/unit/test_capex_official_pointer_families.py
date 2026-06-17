@@ -273,6 +273,56 @@ def test_project_official_pointer_requires_explicit_promotion_and_tracks_generat
         connection.close()
 
 
+def test_project_official_pointer_generation_is_order_sensitive(tmp_path: Path) -> None:
+    def promote_sequence(sequence_name: str, artifact_ids: tuple[str, str]) -> dict[str, object]:
+        db_url = _init_db(tmp_path / f"capex-pointer-order-{sequence_name}.db")
+        connection = _open(db_url)
+        try:
+            _seed(connection, db_url)
+            project = get_capex_project(connection, PROJECT_ID)
+            assert project is not None
+
+            history: list[tuple[str, int]] = []
+            for index, artifact_id in enumerate(artifact_ids):
+                payload = _promote_payload(
+                    artifact_version_id=artifact_id,
+                    actor_id="human:contributor",
+                    key=f"unit:capex-pointer:order:{sequence_name}:{index}",
+                )
+                if index:
+                    payload["expected_generation"] = index - 1
+                promoted = promote_project_official_pointer_command(connection, payload)
+                history.append(
+                    (
+                        str(promoted["pointer"]["artifact_version_id"]),
+                        int(promoted["pointer"]["generation"]),
+                    )
+                )
+
+            fetched = get_project_official_pointer(
+                connection,
+                project=project,
+                pointer_family="current-schedule",
+            )
+            assert fetched is not None
+            return {
+                "history": history,
+                "final_artifact_version_id": fetched["artifact_version_id"],
+                "final_generation": int(fetched["generation"]),
+            }
+        finally:
+            connection.close()
+
+    forward = promote_sequence("forward", ("av-pointer-001", "av-pointer-002"))
+    reverse = promote_sequence("reverse", ("av-pointer-002", "av-pointer-001"))
+
+    assert forward["history"] == [("av-pointer-001", 0), ("av-pointer-002", 1)]
+    assert reverse["history"] == [("av-pointer-002", 0), ("av-pointer-001", 1)]
+    assert forward["final_generation"] == reverse["final_generation"] == 1
+    assert forward["final_artifact_version_id"] == "av-pointer-002"
+    assert reverse["final_artifact_version_id"] == "av-pointer-001"
+
+
 def test_artifact_versions_capture_project_identity_and_reject_mismatch(tmp_path: Path) -> None:
     db_url = _init_db(tmp_path / "capex-pointer-artifact-identity.db")
     connection = _open(db_url)

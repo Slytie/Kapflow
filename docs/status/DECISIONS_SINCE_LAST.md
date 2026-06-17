@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-17 (EPIC-142/143 sequence and workflow proposal closeout)
+- Sequence-formalism decision: `TASK-0570` records CAPEX closure and pointer transitions as non-commutative; later evidence, basis changes, or pointer activity must create new governed outcomes rather than retroactively rewriting earlier snapshots or pointer generations.
+- Workflow-routing decision: `TASK-0571` records procurement and CEO escalation as canonical task/approval-chain planning evidence, not editable workpage status.
+- Threshold-boundary decision: the procurement escalation proposal references Annex B threshold families but cannot sign off field/threshold values; `TASK-0659` remains the activation blocker for procurement fields and executive thresholds.
+- Activation decision: this closeout adds tests and planning/catalog evidence only; it adds no runtime code, migrations, public CAPEX routes, frontend routes, authored workflow pack activation, raw corpus import, or CAPEX product activation.
+
 ## 2026-06-17 (EPIC-140+ review tasks 9-10 repair)
 - Control-plane decision: task status truth is now enforced between `docs/planning/TASK_INDEX.md` and task frontmatter, and DONE/COMPLETED tasks may not depend on open tasks unless a valid machine-readable `dependency_exceptions` entry exists.
 - Progress-ownership decision: `frontend/src/data/capexEpicProgressData.json` remains the repo-owned generated CAPEX progress data source; `capex-progress-check` validates freshness and is part of the CAPEX semantic verification lane.

@@ -57,7 +57,7 @@ readiness_prerequisites:
       - docs/planning/epics/EPIC-141.md
       - docs/planning/CAPEX_MASTER_V6_INTAKE.md
   - prerequisite_id: capex.workflow_catalog
-    description: Internal workflow handoff manifest validation exists through TASK-0566; CAPEX workflow packs are not authored or accepted yet.
+    description: Internal workflow handoff manifest validation exists through TASK-0566, and the procurement/CEO escalation planning proposal exists through TASK-0571; CAPEX workflow packs are not authored, accepted, or activated yet.
     status: open
     task_refs:
       - TASK-0283
@@ -68,10 +68,12 @@ readiness_prerequisites:
       - TASK-0288
       - TASK-0289
       - TASK-0566
+      - TASK-0571
     source_refs:
       - docs/planning/epics/EPIC-143.md
       - docs/planning/CAPEX_V6_CONVERSION_MAP.csv
       - docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md
+      - docs/planning/capex_workflow_catalog/procurement_escalation_workflow_proposal.yaml
   - prerequisite_id: capex.workpage_projection_family
     description: Internal projection snapshot, signed cursor, and stale-command guard foundation exists through TASK-0567; public CAPEX workpage APIs, frontend routes, projection families, and activation remain future EPIC-144 work.
     status: open
@@ -125,7 +127,7 @@ disabled_capabilities:
       - TASK-0563
   - capability_id: capex.workflow_catalog
     description: CAPEX workflow packs are not registered as runnable domain workflows.
-    disabled_reason: EPIC-143 workflow catalog tasks remain TODO.
+    disabled_reason: EPIC-143 has internal handoff and planning proposal evidence only; authored runnable workflow packs remain TODO.
     owner_task_refs:
       - TASK-0283
       - TASK-0284

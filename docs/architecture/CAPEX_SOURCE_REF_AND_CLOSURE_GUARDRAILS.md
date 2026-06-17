@@ -36,6 +36,20 @@ The closure result vocabulary is intentionally small:
 - `satisfied_by_waiver`: every required dimension is satisfied, but at least one dimension used a waiver.
 - `fail`: at least one required dimension is missing or unresolved.
 
+## Order-Sensitive Artifact And Closure Formalism
+CAPEX artifact, pointer, and closure transitions are non-commutative. The same
+source basis change, artifact promotion, or pointer repointing operation can
+produce different current-state outcomes depending on whether it occurs before
+or after a closure snapshot, official pointer generation, or downstream
+commitment is recorded.
+
+Later evidence, artifact ingestion, or pointer activity must not retroactively
+rewrite earlier governed outcomes. Instead, later changes must create new
+evaluations, pointer generations, stale markers, tasks, approvals, events, or
+artifact deltas through the canonical substrate. Historical evaluations,
+snapshots, events, and pointer generations remain audit evidence for the order
+in which they occurred.
+
 ## Rollback Posture
 If SourceRef resolution or closure evaluation fails, disable evidence binding and closure gates for the affected CAPEX workflow surface. Do not destroy governed project, source occurrence, waiver, evaluation, or snapshot state as a rollback mechanism.
 

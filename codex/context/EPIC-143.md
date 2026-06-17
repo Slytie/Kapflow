@@ -13,6 +13,7 @@ WFLOW-001, WFLOW-002, WFLOW-003, WFLOW-004, WFLOW-005, WFLOW-006, WFLOW-007, NU-
 
 ## Closed foundation rows
 - `TASK-0566` is closed as of 2026-06-08: `capex.workflow_handoff_manifest.v1` and `onetruth.capex_platform.workflow_handoffs` provide an internal handoff manifest contract and validation guard over exact artifact, pointer, SourceRef, validation, closure, task, and workpage basis.
+- `TASK-0571` is closed as of 2026-06-17 with a planning-only procurement and CEO escalation proposal that routes decisions through canonical task/approval chains rather than editable workpage status.
 - This does not author or activate CAPEX workflow packs.
 
 ## SME-RP addendum rows

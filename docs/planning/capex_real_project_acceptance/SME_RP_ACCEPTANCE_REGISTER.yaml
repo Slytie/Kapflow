@@ -244,6 +244,26 @@ workpage_task_generation_rules:
     - unresolved_source_ref
     - missing_actor_authority
     - missing_audit_evidence
+procurement_escalation_workflow_proposal:
+  proposal_id: capex.procurement_escalation.workflow_proposal.v1
+  proposal_ref: docs/planning/capex_workflow_catalog/procurement_escalation_workflow_proposal.yaml
+  activation_posture: planning_only_no_capex_activation
+  gate_refs: [NU-GATE-011]
+  depends_on_gate_refs: [SME-RP-G006, SME-RP-G007, SME-RP-G012]
+  task_refs: [TASK-0571]
+  remaining_activation_task_refs: [TASK-0655, TASK-0657, TASK-0659]
+  routing_boundary: procurement_and_ceo_decisions_are_task_chains_not_editable_workpage_status
+  cannot_be_used_for:
+    - implementation_approval
+    - capex_runtime_activation
+    - product_activation
+    - public_route_activation
+    - public_workpage_activation
+    - authored_workflow_pack_activation
+    - migration_approval
+    - raw_corpus_import
+    - threshold_signoff
+    - procurement_field_signoff
 acceptance_gates:
   - gate_id: SME-RP-G001
     gate_name: Approval-with-conditions and signature limitation recorded
