@@ -1,0 +1,204 @@
+schema_version: capex.cross_project_invariant_scorecard.v1
+scorecard_id: three_project_invariant_scorecard.v1
+owner_task: TASK-0593
+source_task_id: TP-TASK-005
+activation_posture: planning_only_no_capex_activation
+status: planning_evidence_recorded
+no_overfitting_checkpoint_ref: NO_OVERFITTING_REVIEW_CHECKPOINT.yaml
+gate_refs:
+  - TP-G01
+  - TP-G02
+  - TP-G03
+  - TP-G04
+  - TP-G05
+  - TP-G06
+  - TP-G07
+  - TP-G08
+  - TP-G09
+  - TP-G11
+  - TP-G12
+fixture_tiers:
+  - tier_id: K12
+    evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+    current_status: not_run
+  - tier_id: K3_mini
+    evidence_refs:
+      - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+    current_status: not_run
+  - tier_id: K3_shadow
+    evidence_refs: []
+    current_status: blocked_pending_evidence
+  - tier_id: blind_baseline
+    evidence_refs:
+      - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+    current_status: blocked_pending_evidence
+status_vocabulary:
+  - not_run
+  - green
+  - red
+  - waived
+  - blocked_pending_evidence
+waiver_requirements:
+  required_fields:
+    - owner
+    - reason
+    - residual_risk
+    - expiry_or_review_date
+    - affected_invariant_id
+    - affected_fixture_tier
+  cannot_waive:
+    - raw_data_leakage_without_remediation
+    - project_specific_hardcoding_without_removal
+invariant_rows:
+  - invariant_id: CP-INV-001
+    name: source_identity_context
+    requirement: Same-byte source identity must not collapse separate project or role context.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G03
+      - TP-G04
+      - TP-G11
+  - invariant_id: CP-INV-002
+    name: source_ref_sufficiency
+    requirement: Reviewed claims require meaningful source refs; empty or unresolved source refs cannot support official claims.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G03
+      - TP-G04
+      - TP-G11
+      - TP-G12
+  - invariant_id: CP-INV-003
+    name: no_false_closure
+    requirement: Evidence presence, external status, settlement, or workpage state cannot close project state without canonical review.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G03
+      - TP-G04
+      - TP-G07
+      - TP-G11
+  - invariant_id: CP-INV-004
+    name: pointer_officialness
+    requirement: Latest artifacts, lab outputs, and approvals do not move official pointers without explicit governed promotion.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G03
+      - TP-G04
+      - TP-G09
+      - TP-G11
+  - invariant_id: CP-INV-005
+    name: stale_reopen_behavior
+    requirement: Changed basis evidence creates stale or re-review work instead of rewriting historical outcomes.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G03
+      - TP-G04
+      - TP-G08
+      - TP-G11
+  - invariant_id: CP-INV-006
+    name: authorization_project_boundary
+    requirement: Reads, writes, projections, exports, and generated material remain inside tenant, domain, and project boundaries.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G01
+      - TP-G11
+  - invariant_id: CP-INV-007
+    name: raw_leakage_scan
+    requirement: Restricted project material must not appear in repo, CI logs, screenshots, generated packs, or planning artifacts.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G01
+      - TP-G06
+      - TP-G07
+      - TP-G11
+  - invariant_id: CP-INV-008
+    name: generated_artifact_authority
+    requirement: Generated artifacts and AI output are not source authority and require reviewed source/evidence bindings before adoption.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G03
+      - TP-G04
+      - TP-G09
+      - TP-G11
+  - invariant_id: CP-INV-009
+    name: workpage_non_authority
+    requirement: Workpages surface governed state and tasks; they do not directly set official project status, closure, or evidence sufficiency.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G03
+      - TP-G04
+      - TP-G11
+  - invariant_id: CP-INV-010
+    name: no_project_specific_hardcoding
+    requirement: Prompts, tests, retrieval recipes, task logic, and workpage logic cannot special-case project names or fixture-only facts.
+    tier_statuses:
+      K12: not_run
+      K3_mini: not_run
+      K3_shadow: blocked_pending_evidence
+      blind_baseline: blocked_pending_evidence
+    gate_refs:
+      - TP-G08
+      - TP-G11
+rollup_policy:
+  green_condition: All critical invariant rows are green or explicitly waived with required waiver fields for every required fixture tier.
+  current_rollup_status: blocked_pending_evidence
+  current_rollup_reason: Structure exists, but K12, K3 mini/shadow, and blind baseline score evidence has not been run or approved.
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - tp_g11_pass_claim
+  - production_preflight_approval
+  - pilot_readiness_approval
+raw_data_boundary:
+  allowed_repo_material:
+    - invariant identifiers
+    - status vocabulary
+    - aggregate tier status
+    - evidence references by manifest name
+    - gate mappings
+    - waiver requirements
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic

@@ -6,7 +6,7 @@ Plan capacity, restore, leak-scan, and full-corpus runbooks while keeping raw co
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0595` is closed with the planning-only off-repo full-corpus runbook for Codex.
 
 ## In scope
 - Source task families/counts: INGEST:1, SAFE:1, TEST:1, TP:1.
@@ -33,7 +33,11 @@ Context pack:
 - `TASK-0275` (`INGEST-010`) - Storage quota, backup and restore gate
 - `TASK-0306` (`TEST-003`) - Scale benchmark harness and CI/manual gates
 - `TASK-0324` (`SAFE-D-001`) - Run full real-corpus capacity, backup, and restore rehearsal before pilot readiness
-- `TASK-0595` (`TP-TASK-007`) - Add full-project off-repo runbook for Codex
+- `TASK-0595` (`TP-TASK-007`) - Add full-project off-repo runbook for Codex - DONE 2026-06-17
+
+## Off-repo runbook addendum
+- `TASK-0595` records `docs/planning/capex_three_project_validation/OFF_REPO_FULL_CORPUS_RUNBOOK.yaml` as planning evidence for `TP-TASK-007`.
+- The runbook defines repo-clean preflight, operator-owned quarantine, read-only raw-corpus access, sanitized aggregate outputs, leak scan, reviewed repo-copy, teardown, rollback, and capacity/restore placeholders only. It does not pass `TP-G10`, satisfy restore/capacity gates, approve pilot or production readiness, import raw corpus material, or activate CAPEX.
 
 ## Acceptance criteria
 - Every listed task preserves its v6 source row, acceptance gate, dependency notes, and raw-data boundary.

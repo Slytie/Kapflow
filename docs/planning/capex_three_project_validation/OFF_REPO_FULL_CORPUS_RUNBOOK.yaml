@@ -1,0 +1,120 @@
+schema_version: capex.off_repo_full_corpus_runbook.v1
+runbook_id: off_repo_full_corpus.codex_runbook.v1
+owner_task: TASK-0595
+source_task_id: TP-TASK-007
+activation_posture: planning_only_no_capex_activation
+status: planning_evidence_recorded
+gate_refs:
+  - TP-G01
+  - TP-G10
+  - TP-G11
+  - TP-G12
+downstream_gate_refs:
+  - PROD-PRE-G06
+  - PROD-PRE-G07
+run_scope:
+  raw_corpus_location_policy: off_repo_operator_owned_quarantine
+  repo_write_policy: sanitized_aggregate_outputs_only_after_leak_scan
+  supported_operator_role: designated_fixture_operator
+  default_run_mode: validate_and_report_only
+workflow_steps:
+  - step_id: OFFREPO-001
+    name: repo_clean_preflight
+    required_controls:
+      - confirm_git_status_reviewed
+      - confirm_no_raw_paths_are_tracked
+      - confirm_output_root_is_outside_repo_or_ignored
+    evidence_output: preflight_attestation
+  - step_id: OFFREPO-002
+    name: operator_owned_quarantine_path
+    required_controls:
+      - record_operator_owner
+      - record_package_basename_and_digest
+      - keep_raw_corpus_outside_repo
+    evidence_output: quarantine_manifest
+  - step_id: OFFREPO-003
+    name: read_only_raw_corpus_mount
+    required_controls:
+      - mount_or_open_source_read_only
+      - deny_repo_relative_raw_mounts
+      - deny_generated_pack_raw_copy
+    evidence_output: mount_attestation
+  - step_id: OFFREPO-004
+    name: sanitized_output_directory
+    required_controls:
+      - separate_sanitized_output_from_raw_mount
+      - allow_only_hashes_counts_statuses_and_aggregate_findings
+      - redact_or_exclude_source_content
+    evidence_output: sanitized_output_manifest
+  - step_id: OFFREPO-005
+    name: aggregate_reports_only
+    required_controls:
+      - produce_counts_digests_and_status_summaries
+      - exclude_raw_filenames_unrestricted_excerpts_and_screenshots
+      - mark_reports_non_authoritative_until_reviewed
+    evidence_output: aggregate_report_manifest
+  - step_id: OFFREPO-006
+    name: leak_scan_before_repo_copy
+    required_controls:
+      - scan_sanitized_outputs_before_copy
+      - fail_on_raw_content_markers
+      - fail_on_unapproved_source_excerpts
+    evidence_output: leak_scan_report
+  - step_id: OFFREPO-007
+    name: reviewed_repo_copy
+    required_controls:
+      - copy_only_sanitized_aggregate_evidence
+      - record_human_review
+      - keep_raw_corpus_paths_out_of_committed_material
+    evidence_output: reviewed_copy_attestation
+  - step_id: OFFREPO-008
+    name: teardown
+    required_controls:
+      - unmount_or_close_raw_source
+      - remove_unreviewed_temporary_outputs
+      - retain_only_off_repo_operator_evidence_archive
+    evidence_output: teardown_attestation
+rollback_recovery:
+  leak_response: Remove affected repo artifacts, invalidate copied evidence, quarantine generated packs, and rerun leak scan after remediation.
+  capacity_failure_response: Record blocked_pending_capacity_evidence and do not claim TP-G10 or PROD-PRE-G07.
+  restore_failure_response: Record blocked_pending_restore_evidence and do not claim pilot or production readiness.
+capacity_restore_placeholders:
+  capacity_realism_status: blocked_pending_evidence
+  backup_restore_status: blocked_pending_evidence
+  required_before_tp_g10_claim:
+    - full_off_repo_corpus_run_report
+    - extraction_projection_search_summary
+    - backup_manifest
+    - restore_rehearsal_report
+    - no_raw_leakage_report
+operator_checklist:
+  - confirm raw corpora are outside the repo before starting
+  - confirm no public route or product activation is part of the run
+  - confirm all outputs are advisory until reviewed
+  - confirm copied evidence is sanitized aggregate evidence only
+  - confirm cleanup and rollback notes are recorded
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - tp_g10_pass_claim
+  - production_preflight_approval
+  - pilot_readiness_approval
+raw_data_boundary:
+  allowed_repo_material:
+    - package basenames and digests
+    - aggregate counts
+    - sanitized status summaries
+    - leak-scan pass/fail summaries
+    - operator attestations
+    - rollback and remediation notes
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - mounted raw corpus paths
+    - project-specific hardcoded logic

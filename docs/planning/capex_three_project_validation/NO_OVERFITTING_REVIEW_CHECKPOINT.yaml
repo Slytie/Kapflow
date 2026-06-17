@@ -1,0 +1,149 @@
+schema_version: capex.no_overfitting_review_checkpoint.v1
+checkpoint_id: blind_baseline.no_overfitting_review.v1
+owner_task: TASK-0596
+source_task_id: TP-TASK-008
+activation_posture: planning_only_no_capex_activation
+status: blocked_pending_blind_baseline_evidence
+gate_refs:
+  - TP-G01
+  - TP-G07
+  - TP-G08
+  - TP-G09
+  - TP-G11
+  - TP-G12
+depends_on_evidence:
+  - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+  - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+  - AGENT_LAB_EVAL_MATRIX.yaml
+  - OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+checkpoint_record_required_fields:
+  - blind_baseline_ref
+  - changed_surface
+  - affected_fixture_tiers
+  - evidence_refs
+  - reviewer
+  - decision
+  - rollback_remediation
+  - classification
+classification_vocabulary:
+  - generalizable
+  - fixture_specific
+  - evidence_absent
+  - deferred_module
+  - invalid_expectation
+decision_vocabulary:
+  - accepted_generalizable_change
+  - reject_fixture_specific_change
+  - defer_until_module_ready
+  - repair_invalid_expectation
+  - block_pending_evidence
+affected_fixture_tiers:
+  - K12
+  - K3_mini
+  - K3_shadow
+  - blind_baseline
+review_surfaces:
+  - runtime_rules
+  - prompts
+  - retrieval_recipes
+  - schemas
+  - evaluator_criteria
+  - tool_registry
+  - source_ref_policy
+  - pointer_policy
+  - closure_policy
+  - workpage_contract
+checkpoint_rows:
+  - checkpoint_row_id: NO-OVERFIT-001
+    changed_surface: runtime_rules
+    required_classification: generalizable
+    required_evidence_refs:
+      - blind_baseline_ref
+      - cross_project_invariant_delta
+      - reviewer_decision
+    expected_decision: accepted_generalizable_change
+    rollback_remediation: Keep append-only baseline evidence and apply only after cross-tier invariant review.
+    tp_gate_refs:
+      - TP-G08
+      - TP-G11
+  - checkpoint_row_id: NO-OVERFIT-002
+    changed_surface: prompts
+    required_classification: fixture_specific
+    required_evidence_refs:
+      - blind_baseline_ref
+      - affected_prompt_version
+      - reviewer_decision
+    expected_decision: reject_fixture_specific_change
+    rollback_remediation: Remove fixture-specific prompt changes and quarantine any derived advisory output.
+    tp_gate_refs:
+      - TP-G08
+      - TP-G09
+  - checkpoint_row_id: NO-OVERFIT-003
+    changed_surface: retrieval_recipes
+    required_classification: evidence_absent
+    required_evidence_refs:
+      - blind_baseline_ref
+      - missing_evidence_manifest
+      - reviewer_decision
+    expected_decision: block_pending_evidence
+    rollback_remediation: Record missing evidence and do not tune retrieval from holdout-only observations.
+    tp_gate_refs:
+      - TP-G07
+      - TP-G08
+      - TP-G12
+  - checkpoint_row_id: NO-OVERFIT-004
+    changed_surface: module_scope
+    required_classification: deferred_module
+    required_evidence_refs:
+      - blind_baseline_ref
+      - affected_module_ref
+      - reviewer_decision
+    expected_decision: defer_until_module_ready
+    rollback_remediation: Keep the finding as blocked planning evidence until the affected module gate closes.
+    tp_gate_refs:
+      - TP-G08
+      - TP-G11
+  - checkpoint_row_id: NO-OVERFIT-005
+    changed_surface: oracle_expectation
+    required_classification: invalid_expectation
+    required_evidence_refs:
+      - blind_baseline_ref
+      - oracle_row_ref
+      - reviewer_decision
+    expected_decision: repair_invalid_expectation
+    rollback_remediation: Mark the oracle row invalid and require a replacement manifest version before reuse.
+    tp_gate_refs:
+      - TP-G08
+      - TP-G12
+rollup_policy:
+  current_rollup_status: blocked_pending_blind_baseline_evidence
+  current_rollup_reason: Checkpoint structure exists, but no blind baseline evidence or reviewer decisions have been recorded.
+  green_condition: Every post-blind change is classified and reviewed before it can support fixture, oracle, or release claims.
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - blind_tuning_approval
+  - tp_g08_pass_claim
+  - production_preflight_approval
+  - pilot_readiness_approval
+raw_data_boundary:
+  allowed_repo_material:
+    - checkpoint schema fields
+    - classification vocabulary
+    - aggregate decision status
+    - gate mappings
+    - rollback and remediation policy
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic
+rollback_recovery:
+  fixture_specific_response: Reject or remove the affected change, quarantine derived advisory outputs, and require cross-project review before reuse.
+  evidence_absent_response: Keep the finding as missing-evidence planning evidence and do not tune from holdout-only observations.
+  invalid_expectation_response: Mark the affected oracle row invalid and require a replacement manifest version with reviewer evidence.

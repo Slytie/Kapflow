@@ -2,7 +2,8 @@
 id: TASK-0597
 epic: EPIC-146
 title: "Add project-oracle manifest format"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: ["TASK-0589"]
@@ -60,3 +61,10 @@ Represent expected outputs, negative tests and human oracle approval consistentl
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/PROJECT_ORACLE_MANIFEST_FORMAT.yaml` as planning evidence for `TP-TASK-009`.
+- The format covers K12, K3 mini, K3 shadow, and blind baseline tiers with row families for expected outputs, negative tests, human oracle approval, re-review triggers, pointer officialness, authority lifecycle, raw-leakage guards, and no-overfitting classification.
+- Added compatibility refs from the K12 expected-output manifest and K3 mini-fixture expectation catalog to the shared oracle format.
+- Added contract coverage in `tests/contract/test_capex_real_project_acceptance.py` for required top-level fields, oracle row fields, row-family coverage, human review posture, gate refs, raw-data boundary, and non-activation posture.
+- Closeout posture: planning evidence only. No oracle release, fixture release approval, blind baseline run, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added.

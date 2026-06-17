@@ -2,7 +2,8 @@
 id: TASK-0595
 epic: EPIC-148
 title: "Add full-project off-repo runbook for Codex"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: []
@@ -61,3 +62,10 @@ Tell Codex how to mount/process full corpora without committing data.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/OFF_REPO_FULL_CORPUS_RUNBOOK.yaml` as planning evidence for `TP-TASK-007`.
+- The runbook records repo-clean preflight, operator-owned quarantine, read-only raw-corpus mount, sanitized output directory, aggregate-only reports, leak scan before repo copy, reviewed repo copy, teardown, and rollback/remediation controls.
+- The runbook records capacity and restore placeholders as `blocked_pending_evidence`, maps `TP-G01`, `TP-G10`, `TP-G11`, `TP-G12`, `PROD-PRE-G06`, and `PROD-PRE-G07`, and does not claim full-corpus execution or gate closure.
+- Added contract coverage in `tests/contract/test_capex_real_project_acceptance.py` for workflow steps, capacity/restore placeholders, raw-data boundary, gate refs, and non-activation posture.
+- Closeout posture: planning evidence only. No full-corpus run, raw corpus import, fixture release approval, `TP-G10` pass claim, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added.

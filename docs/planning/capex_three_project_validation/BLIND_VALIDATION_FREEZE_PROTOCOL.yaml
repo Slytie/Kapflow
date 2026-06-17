@@ -1,0 +1,126 @@
+schema_version: capex.blind_validation_freeze_protocol.v1
+protocol_id: blind_validation.freeze_protocol.v1
+owner_task: TASK-0592
+source_task_id: TP-TASK-004
+fixture_tier: blind_validation
+activation_posture: planning_only_no_capex_activation
+status: planning_evidence_recorded
+no_overfitting_checkpoint_ref: NO_OVERFITTING_REVIEW_CHECKPOINT.yaml
+gate_refs:
+  - TP-G01
+  - TP-G06
+  - TP-G07
+  - TP-G08
+  - TP-G09
+  - TP-G12
+source_policy:
+  blind_holdout_location: off_repo_quarantine
+  repo_material_policy: frozen_protocol_metadata_only
+  access_policy: restricted_until_freeze_and_baseline_rules_are_satisfied
+  contamination_policy: no_tuning_from_blind_holdout_before_baseline
+freeze_dimensions:
+  - dimension_id: BV-FREEZE-001
+    name: runtime_rules
+    required_record: runtime_rule_set_id
+    freeze_requirement: Record runtime behavior rules before first blind run.
+    change_after_freeze_requires: no_overfitting_classification
+  - dimension_id: BV-FREEZE-002
+    name: prompt_versions
+    required_record: prompt_version_manifest
+    freeze_requirement: Record prompt and instruction versions before first blind run.
+    change_after_freeze_requires: no_overfitting_classification
+  - dimension_id: BV-FREEZE-003
+    name: retrieval_recipe_versions
+    required_record: retrieval_recipe_manifest
+    freeze_requirement: Record retrieval, chunking, ranking, and source-ref recipe versions before first blind run.
+    change_after_freeze_requires: no_overfitting_classification
+  - dimension_id: BV-FREEZE-004
+    name: schema_versions
+    required_record: schema_version_manifest
+    freeze_requirement: Record artifact, evidence, pointer, closure, and workpage schema versions before first blind run.
+    change_after_freeze_requires: no_overfitting_classification
+  - dimension_id: BV-FREEZE-005
+    name: tool_registry
+    required_record: tool_registry_manifest
+    freeze_requirement: Record available tool families and deny side-effecting official truth mutations from lab output.
+    change_after_freeze_requires: no_overfitting_classification
+  - dimension_id: BV-FREEZE-006
+    name: evaluator_criteria
+    required_record: evaluator_criteria_manifest
+    freeze_requirement: Record success, defect, false-closure, evidence-recall, and raw-leak criteria before first blind run.
+    change_after_freeze_requires: no_overfitting_classification
+  - dimension_id: BV-FREEZE-007
+    name: access_controls
+    required_record: blind_holdout_access_log
+    freeze_requirement: Record who can see holdout material and who can run or review the blind baseline.
+    change_after_freeze_requires: access_exception_review
+  - dimension_id: BV-FREEZE-008
+    name: baseline_output_custody
+    required_record: baseline_output_manifest
+    freeze_requirement: Record unmodified outputs, errors, unsupported claims, missing evidence, false closures, and leak-scan result before tuning.
+    change_after_freeze_requires: append_only_baseline_correction_note
+required_pre_run_records:
+  - runtime_rule_set_id
+  - prompt_version_manifest
+  - retrieval_recipe_manifest
+  - schema_version_manifest
+  - tool_registry_manifest
+  - evaluator_criteria_manifest
+  - blind_holdout_access_log
+required_first_run_records:
+  - unmodified_output_manifest
+  - error_manifest
+  - unsupported_claims_manifest
+  - missing_evidence_recall_manifest
+  - false_closure_manifest
+  - raw_leak_scan_report
+post_blind_change_classification:
+  allowed_values:
+    - generalizable
+    - fixture_specific
+    - evidence_absent
+    - deferred_module
+    - invalid_expectation
+  required_for:
+    - runtime_rule_change
+    - prompt_change
+    - retrieval_recipe_change
+    - schema_change
+    - evaluator_criteria_change
+    - tool_registry_change
+agent_lab_boundary:
+  lab_output_authority: advisory_only
+  official_truth_mutation_allowed: false
+  required_tool_action_mode: ToolProposal_until_approved
+  prohibited_direct_outputs:
+    - official_pointer
+    - approval_response
+    - closure_snapshot
+    - runtime_truth_mutation
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - blind_baseline_completion_claim
+  - production_preflight_approval
+  - pilot_readiness_approval
+raw_data_boundary:
+  allowed_repo_material:
+    - frozen protocol metadata
+    - gate mappings
+    - access-control requirements
+    - aggregate baseline record requirements
+    - leak-scan requirement
+    - rollback and remediation policy
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic
+rollback_recovery:
+  contamination_response: If holdout material is exposed before freeze or baseline, invalidate the affected baseline attempt and record a remediation or waiver before reuse.
+  leak_response: If restricted material appears in repo artifacts, remove the release candidate, invalidate derived packs, and require leak-scan evidence before reuse.
+  tuning_response: If a change is made after blind exposure, classify it through the no-overfitting values before it can affect future fixture claims.

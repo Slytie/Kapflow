@@ -14,6 +14,10 @@ INGEST-010, TEST-003, SAFE-D-001, TP-TASK-007
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 
+## Closed off-repo runbook row
+- `TASK-0595` is closed as of 2026-06-17 with `docs/planning/capex_three_project_validation/OFF_REPO_FULL_CORPUS_RUNBOOK.yaml`.
+- This records the full-project Codex runbook as planning evidence only; storage quota, scale benchmark, capacity rehearsal, restore proof, pilot readiness, production preflight, and CAPEX activation remain open.
+
 ## Non-negotiable invariants
 - One truth system: official claims come only from immutable objects, append-only events, and audited pointers.
 - Tenant, domain, and future CAPEX project boundaries must not be crossed in reads, writes, exports, projections, or generated material.

@@ -2,7 +2,8 @@
 id: TASK-0594
 epic: EPIC-147
 title: "Wire agent Lab eval matrix to K12/K3/blind fixture tiers"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: ["TASK-0589"]
@@ -60,3 +61,10 @@ Allow agent development in parallel without granting authority or overfitting.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/AGENT_LAB_EVAL_MATRIX.yaml` as planning evidence for `TP-TASK-006`.
+- The matrix covers K12, K3 mini, K3 shadow, and blind baseline fixture tiers and references the K12 expected-output manifest, K3 expectation catalog, blind freeze protocol, and cross-project scorecard.
+- The matrix records Agent Lab non-authority boundaries: lab output is advisory only, tool actions remain proposals until approved, and lab output cannot create official pointers, approval responses, closure snapshots, runtime truth mutations, fixture release approval, public route activation, or product activation.
+- Added contract coverage in `tests/contract/test_capex_real_project_acceptance.py` for fixture tier coverage, evidence refs, status vocabulary, matrix rows, gate refs, raw-data boundary, and non-activation posture.
+- Closeout posture: planning evidence only. No Agent Lab execution, official truth mutation, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added.

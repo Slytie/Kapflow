@@ -36,6 +36,36 @@ K3_MINI_FIXTURE_EXPECTATION_CATALOG_PATH = (
     / "docs/planning/capex_three_project_validation/"
     "K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml"
 )
+BLIND_VALIDATION_FREEZE_PROTOCOL_PATH = (
+    ROOT
+    / "docs/planning/capex_three_project_validation/"
+    "BLIND_VALIDATION_FREEZE_PROTOCOL.yaml"
+)
+CROSS_PROJECT_INVARIANT_SCORECARD_PATH = (
+    ROOT
+    / "docs/planning/capex_three_project_validation/"
+    "CROSS_PROJECT_INVARIANT_SCORECARD.yaml"
+)
+AGENT_LAB_EVAL_MATRIX_PATH = (
+    ROOT
+    / "docs/planning/capex_three_project_validation/"
+    "AGENT_LAB_EVAL_MATRIX.yaml"
+)
+OFF_REPO_FULL_CORPUS_RUNBOOK_PATH = (
+    ROOT
+    / "docs/planning/capex_three_project_validation/"
+    "OFF_REPO_FULL_CORPUS_RUNBOOK.yaml"
+)
+NO_OVERFITTING_REVIEW_CHECKPOINT_PATH = (
+    ROOT
+    / "docs/planning/capex_three_project_validation/"
+    "NO_OVERFITTING_REVIEW_CHECKPOINT.yaml"
+)
+PROJECT_ORACLE_MANIFEST_FORMAT_PATH = (
+    ROOT
+    / "docs/planning/capex_three_project_validation/"
+    "PROJECT_ORACLE_MANIFEST_FORMAT.yaml"
+)
 PROCUREMENT_ESCALATION_PROPOSAL_PATH = (
     ROOT
     / "docs/planning/capex_workflow_catalog/"
@@ -120,6 +150,67 @@ EXPECTED_THREE_PROJECT_TIERS = [
     "K3",
     "blind validation",
 ]
+EXPECTED_BLIND_FREEZE_DIMENSIONS = {
+    "runtime_rules",
+    "prompt_versions",
+    "retrieval_recipe_versions",
+    "schema_versions",
+    "tool_registry",
+    "evaluator_criteria",
+    "access_controls",
+    "baseline_output_custody",
+}
+EXPECTED_SCORECARD_INVARIANTS = {
+    "source_identity_context",
+    "source_ref_sufficiency",
+    "no_false_closure",
+    "pointer_officialness",
+    "stale_reopen_behavior",
+    "authorization_project_boundary",
+    "raw_leakage_scan",
+    "generated_artifact_authority",
+    "workpage_non_authority",
+    "no_project_specific_hardcoding",
+}
+EXPECTED_AGENT_LAB_TIERS = [
+    "K12",
+    "K3_mini",
+    "K3_shadow",
+    "blind_baseline",
+]
+EXPECTED_OFF_REPO_STEPS = [
+    "repo_clean_preflight",
+    "operator_owned_quarantine_path",
+    "read_only_raw_corpus_mount",
+    "sanitized_output_directory",
+    "aggregate_reports_only",
+    "leak_scan_before_repo_copy",
+    "reviewed_repo_copy",
+    "teardown",
+]
+EXPECTED_NO_OVERFITTING_CLASSIFICATIONS = {
+    "generalizable",
+    "fixture_specific",
+    "evidence_absent",
+    "deferred_module",
+    "invalid_expectation",
+}
+EXPECTED_PROJECT_ORACLE_TIERS = [
+    "K12",
+    "K3_mini",
+    "K3_shadow",
+    "blind_baseline",
+]
+EXPECTED_PROJECT_ORACLE_ROW_FAMILIES = {
+    "expected_output",
+    "negative_test",
+    "human_oracle_approval",
+    "re_review_trigger",
+    "pointer_officialness",
+    "authority_lifecycle",
+    "raw_leakage_guard",
+    "no_overfitting_classification",
+}
 
 
 def _load_register() -> dict:
@@ -301,6 +392,7 @@ def test_k12_expected_output_manifest_is_sanitized_planning_evidence() -> None:
     assert manifest["source_task_id"] == "TP-TASK-002"
     assert manifest["fixture_tier"] == "K12"
     assert manifest["activation_posture"] == "planning_only_no_capex_activation"
+    assert manifest["oracle_format_ref"] == "PROJECT_ORACLE_MANIFEST_FORMAT.yaml"
     assert manifest["source_evidence"]["package_name"] == (
         "k12_passes_9_11_and_full_synthesis_pack.zip"
     )
@@ -384,6 +476,7 @@ def test_k3_mini_fixture_expectation_catalog_is_sanitized_planning_evidence() ->
     assert catalog["source_task_id"] == "TP-TASK-003"
     assert catalog["fixture_tier"] == "K3"
     assert catalog["activation_posture"] == "planning_only_no_capex_activation"
+    assert catalog["oracle_format_ref"] == "PROJECT_ORACLE_MANIFEST_FORMAT.yaml"
     assert catalog["source_evidence"]["package_name"] == (
         "k3_passes_9_11_full_synthesis_clean_pack.zip"
     )
@@ -455,6 +548,618 @@ def test_k3_mini_fixture_expectation_catalog_is_sanitized_planning_evidence() ->
         "fixture release approved",
         "raw k12 content",
         "raw k3 content",
+    ):
+        assert forbidden not in lowered
+
+
+def test_blind_validation_freeze_protocol_is_planning_only() -> None:
+    protocol = _load_yaml(BLIND_VALIDATION_FREEZE_PROTOCOL_PATH)
+    text = BLIND_VALIDATION_FREEZE_PROTOCOL_PATH.read_text(encoding="utf-8")
+    lowered = text.lower()
+
+    assert protocol["schema_version"] == "capex.blind_validation_freeze_protocol.v1"
+    assert protocol["owner_task"] == "TASK-0592"
+    assert protocol["source_task_id"] == "TP-TASK-004"
+    assert protocol["fixture_tier"] == "blind_validation"
+    assert protocol["activation_posture"] == "planning_only_no_capex_activation"
+    assert (
+        protocol["no_overfitting_checkpoint_ref"]
+        == "NO_OVERFITTING_REVIEW_CHECKPOINT.yaml"
+    )
+    assert set(protocol["gate_refs"]) >= {
+        "TP-G01",
+        "TP-G06",
+        "TP-G07",
+        "TP-G08",
+        "TP-G09",
+        "TP-G12",
+    }
+    assert protocol["source_policy"]["blind_holdout_location"] == "off_repo_quarantine"
+    assert (
+        protocol["source_policy"]["contamination_policy"]
+        == "no_tuning_from_blind_holdout_before_baseline"
+    )
+    assert {row["name"] for row in protocol["freeze_dimensions"]} == (
+        EXPECTED_BLIND_FREEZE_DIMENSIONS
+    )
+    for row in protocol["freeze_dimensions"]:
+        assert row["dimension_id"].startswith("BV-FREEZE-")
+        assert row["required_record"]
+        assert row["freeze_requirement"]
+        assert row["change_after_freeze_requires"]
+
+    assert set(protocol["required_pre_run_records"]) >= {
+        "runtime_rule_set_id",
+        "prompt_version_manifest",
+        "retrieval_recipe_manifest",
+        "schema_version_manifest",
+        "tool_registry_manifest",
+        "evaluator_criteria_manifest",
+        "blind_holdout_access_log",
+    }
+    assert set(protocol["required_first_run_records"]) >= {
+        "unmodified_output_manifest",
+        "error_manifest",
+        "unsupported_claims_manifest",
+        "missing_evidence_recall_manifest",
+        "false_closure_manifest",
+        "raw_leak_scan_report",
+    }
+    assert set(protocol["post_blind_change_classification"]["allowed_values"]) == {
+        "generalizable",
+        "fixture_specific",
+        "evidence_absent",
+        "deferred_module",
+        "invalid_expectation",
+    }
+    assert protocol["agent_lab_boundary"]["lab_output_authority"] == "advisory_only"
+    assert protocol["agent_lab_boundary"]["official_truth_mutation_allowed"] is False
+    assert set(protocol["agent_lab_boundary"]["prohibited_direct_outputs"]) >= {
+        "official_pointer",
+        "approval_response",
+        "closure_snapshot",
+        "runtime_truth_mutation",
+    }
+    assert set(protocol["cannot_be_used_for"]) >= {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "workflow_pack_activation",
+        "raw_corpus_import",
+        "blind_baseline_completion_claim",
+        "production_preflight_approval",
+        "pilot_readiness_approval",
+    }
+    assert set(protocol["raw_data_boundary"]["allowed_repo_material"]) >= {
+        "frozen protocol metadata",
+        "gate mappings",
+        "access-control requirements",
+        "aggregate baseline record requirements",
+        "leak-scan requirement",
+        "rollback and remediation policy",
+    }
+    assert set(protocol["raw_data_boundary"]["prohibited_repo_material"]) >= {
+        "full project corpus files",
+        "unrestricted source excerpts",
+        "raw project filenames",
+        "screenshots or logs containing source content",
+        "project-specific hardcoded logic",
+    }
+    for forbidden in (
+        "product activation approved",
+        "runtime activation approved",
+        "public route approved",
+        "blind baseline passed",
+        "production preflight approved",
+    ):
+        assert forbidden not in lowered
+
+
+def test_cross_project_invariant_scorecard_records_structure_not_pass_claim() -> None:
+    scorecard = _load_yaml(CROSS_PROJECT_INVARIANT_SCORECARD_PATH)
+    text = CROSS_PROJECT_INVARIANT_SCORECARD_PATH.read_text(encoding="utf-8")
+    lowered = text.lower()
+
+    assert scorecard["schema_version"] == "capex.cross_project_invariant_scorecard.v1"
+    assert scorecard["owner_task"] == "TASK-0593"
+    assert scorecard["source_task_id"] == "TP-TASK-005"
+    assert scorecard["activation_posture"] == "planning_only_no_capex_activation"
+    assert (
+        scorecard["no_overfitting_checkpoint_ref"]
+        == "NO_OVERFITTING_REVIEW_CHECKPOINT.yaml"
+    )
+    assert set(scorecard["gate_refs"]) >= {
+        "TP-G01",
+        "TP-G02",
+        "TP-G03",
+        "TP-G04",
+        "TP-G05",
+        "TP-G06",
+        "TP-G07",
+        "TP-G08",
+        "TP-G09",
+        "TP-G11",
+        "TP-G12",
+    }
+    assert [row["tier_id"] for row in scorecard["fixture_tiers"]] == [
+        "K12",
+        "K3_mini",
+        "K3_shadow",
+        "blind_baseline",
+    ]
+    assert set(scorecard["status_vocabulary"]) == {
+        "not_run",
+        "green",
+        "red",
+        "waived",
+        "blocked_pending_evidence",
+    }
+    assert set(scorecard["waiver_requirements"]["required_fields"]) >= {
+        "owner",
+        "reason",
+        "residual_risk",
+        "expiry_or_review_date",
+        "affected_invariant_id",
+        "affected_fixture_tier",
+    }
+    assert {row["name"] for row in scorecard["invariant_rows"]} == (
+        EXPECTED_SCORECARD_INVARIANTS
+    )
+    valid_statuses = set(scorecard["status_vocabulary"])
+    fixture_tiers = {row["tier_id"] for row in scorecard["fixture_tiers"]}
+    for row in scorecard["invariant_rows"]:
+        assert row["invariant_id"].startswith("CP-INV-")
+        assert row["requirement"]
+        assert set(row["tier_statuses"]) == fixture_tiers
+        assert set(row["tier_statuses"].values()).issubset(valid_statuses)
+        assert set(row["gate_refs"]).issubset(set(scorecard["gate_refs"]))
+        assert "green" not in set(row["tier_statuses"].values())
+        assert "waived" not in set(row["tier_statuses"].values())
+
+    assert scorecard["rollup_policy"]["current_rollup_status"] == (
+        "blocked_pending_evidence"
+    )
+    assert "not been run or approved" in scorecard["rollup_policy"][
+        "current_rollup_reason"
+    ]
+    assert set(scorecard["cannot_be_used_for"]) >= {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "workflow_pack_activation",
+        "raw_corpus_import",
+        "tp_g11_pass_claim",
+        "production_preflight_approval",
+        "pilot_readiness_approval",
+    }
+    assert set(scorecard["raw_data_boundary"]["prohibited_repo_material"]) >= {
+        "full project corpus files",
+        "unrestricted source excerpts",
+        "raw project filenames",
+        "screenshots or logs containing source content",
+        "project-specific hardcoded logic",
+    }
+    for forbidden in (
+        "tp-g11 passed",
+        "product activation approved",
+        "runtime activation approved",
+        "public route approved",
+        "production preflight approved",
+    ):
+        assert forbidden not in lowered
+
+
+def test_agent_lab_eval_matrix_is_advisory_only() -> None:
+    matrix = _load_yaml(AGENT_LAB_EVAL_MATRIX_PATH)
+    text = AGENT_LAB_EVAL_MATRIX_PATH.read_text(encoding="utf-8")
+    lowered = text.lower()
+
+    assert matrix["schema_version"] == "capex.agent_lab_eval_matrix.v1"
+    assert matrix["owner_task"] == "TASK-0594"
+    assert matrix["source_task_id"] == "TP-TASK-006"
+    assert matrix["activation_posture"] == "planning_only_no_capex_activation"
+    assert (
+        matrix["no_overfitting_checkpoint_ref"]
+        == "NO_OVERFITTING_REVIEW_CHECKPOINT.yaml"
+    )
+    assert set(matrix["gate_refs"]) >= {
+        "TP-G01",
+        "TP-G06",
+        "TP-G07",
+        "TP-G08",
+        "TP-G09",
+        "TP-G11",
+        "TP-G12",
+    }
+    assert [row["tier_id"] for row in matrix["fixture_tiers"]] == (
+        EXPECTED_AGENT_LAB_TIERS
+    )
+    expected_refs = {
+        "K12_EXPECTED_OUTPUT_MANIFEST.yaml",
+        "K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml",
+        "BLIND_VALIDATION_FREEZE_PROTOCOL.yaml",
+        "CROSS_PROJECT_INVARIANT_SCORECARD.yaml",
+    }
+    observed_refs = {
+        ref
+        for tier in matrix["fixture_tiers"]
+        for ref in tier.get("evidence_refs", [])
+    }
+    assert expected_refs.issubset(observed_refs)
+    assert set(matrix["status_vocabulary"]) >= {
+        "planning_ready",
+        "not_run",
+        "advisory_report_recorded",
+        "blocked_pending_evidence",
+        "blocked_pending_freeze_and_baseline",
+        "invalidated_pending_remediation",
+    }
+
+    non_authority = matrix["lab_non_authority"]
+    assert non_authority["lab_output_authority"] == "advisory_only"
+    assert non_authority["official_truth_mutation_allowed"] is False
+    assert non_authority["required_tool_action_mode"] == "ToolProposal_until_approved"
+    assert set(non_authority["prohibited_direct_outputs"]) >= {
+        "official_pointer",
+        "approval_response",
+        "closure_snapshot",
+        "runtime_truth_mutation",
+        "fixture_release_approval",
+        "public_route_activation",
+        "product_activation",
+    }
+
+    assert {row["eval_family"] for row in matrix["matrix_rows"]} >= {
+        "source_ref_and_evidence_binding",
+        "no_false_closure",
+        "pointer_and_officialness",
+        "raw_leak_scan",
+        "no_overfitting_guard",
+    }
+    valid_tiers = set(EXPECTED_AGENT_LAB_TIERS)
+    for row in matrix["matrix_rows"]:
+        assert row["matrix_row_id"].startswith("LAB-EVAL-")
+        assert set(row["fixture_tiers"]).issubset(valid_tiers)
+        assert row["expected_advisory_output"]
+        assert row["required_evidence_refs"]
+        assert set(row["gate_refs"]).issubset(set(matrix["gate_refs"]))
+
+    assert matrix["rollup_policy"]["current_rollup_status"] == (
+        "planning_ready_not_active"
+    )
+    assert set(matrix["cannot_be_used_for"]) >= {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "workflow_pack_activation",
+        "raw_corpus_import",
+        "fixture_release_approval",
+        "official_pointer_creation",
+        "approval_response_creation",
+        "closure_snapshot_creation",
+        "production_preflight_approval",
+        "pilot_readiness_approval",
+    }
+    for forbidden in (
+        "product activation approved",
+        "runtime activation approved",
+        "public route approved",
+        "official pointer created",
+        "approval response created",
+        "production preflight approved",
+    ):
+        assert forbidden not in lowered
+
+
+def test_off_repo_full_corpus_runbook_keeps_raw_data_off_repo() -> None:
+    runbook = _load_yaml(OFF_REPO_FULL_CORPUS_RUNBOOK_PATH)
+    text = OFF_REPO_FULL_CORPUS_RUNBOOK_PATH.read_text(encoding="utf-8")
+    lowered = text.lower()
+
+    assert runbook["schema_version"] == "capex.off_repo_full_corpus_runbook.v1"
+    assert runbook["owner_task"] == "TASK-0595"
+    assert runbook["source_task_id"] == "TP-TASK-007"
+    assert runbook["activation_posture"] == "planning_only_no_capex_activation"
+    assert set(runbook["gate_refs"]) >= {
+        "TP-G01",
+        "TP-G10",
+        "TP-G11",
+        "TP-G12",
+    }
+    assert set(runbook["downstream_gate_refs"]) == {
+        "PROD-PRE-G06",
+        "PROD-PRE-G07",
+    }
+    assert (
+        runbook["run_scope"]["raw_corpus_location_policy"]
+        == "off_repo_operator_owned_quarantine"
+    )
+    assert runbook["run_scope"]["default_run_mode"] == "validate_and_report_only"
+    assert [row["name"] for row in runbook["workflow_steps"]] == (
+        EXPECTED_OFF_REPO_STEPS
+    )
+    for row in runbook["workflow_steps"]:
+        assert row["step_id"].startswith("OFFREPO-")
+        assert row["required_controls"]
+        assert row["evidence_output"]
+
+    assert runbook["capacity_restore_placeholders"][
+        "capacity_realism_status"
+    ] == "blocked_pending_evidence"
+    assert runbook["capacity_restore_placeholders"][
+        "backup_restore_status"
+    ] == "blocked_pending_evidence"
+    assert set(runbook["capacity_restore_placeholders"][
+        "required_before_tp_g10_claim"
+    ]) >= {
+        "full_off_repo_corpus_run_report",
+        "extraction_projection_search_summary",
+        "backup_manifest",
+        "restore_rehearsal_report",
+        "no_raw_leakage_report",
+    }
+    assert set(runbook["cannot_be_used_for"]) >= {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "workflow_pack_activation",
+        "raw_corpus_import",
+        "fixture_release_approval",
+        "tp_g10_pass_claim",
+        "production_preflight_approval",
+        "pilot_readiness_approval",
+    }
+    assert set(runbook["raw_data_boundary"]["allowed_repo_material"]) >= {
+        "package basenames and digests",
+        "aggregate counts",
+        "sanitized status summaries",
+        "leak-scan pass/fail summaries",
+        "operator attestations",
+        "rollback and remediation notes",
+    }
+    assert set(runbook["raw_data_boundary"]["prohibited_repo_material"]) >= {
+        "full project corpus files",
+        "unrestricted source excerpts",
+        "raw project filenames",
+        "screenshots or logs containing source content",
+        "mounted raw corpus paths",
+        "project-specific hardcoded logic",
+    }
+    for forbidden in (
+        "raw corpus import approved",
+        "tp-g10 passed",
+        "production preflight approved",
+        "pilot readiness approved",
+        "product activation approved",
+    ):
+        assert forbidden not in lowered
+
+
+def test_no_overfitting_review_checkpoint_is_blocked_until_blind_baseline() -> None:
+    checkpoint = _load_yaml(NO_OVERFITTING_REVIEW_CHECKPOINT_PATH)
+    text = NO_OVERFITTING_REVIEW_CHECKPOINT_PATH.read_text(encoding="utf-8")
+    lowered = text.lower()
+
+    assert (
+        checkpoint["schema_version"]
+        == "capex.no_overfitting_review_checkpoint.v1"
+    )
+    assert checkpoint["owner_task"] == "TASK-0596"
+    assert checkpoint["source_task_id"] == "TP-TASK-008"
+    assert checkpoint["activation_posture"] == "planning_only_no_capex_activation"
+    assert checkpoint["status"] == "blocked_pending_blind_baseline_evidence"
+    assert set(checkpoint["gate_refs"]) >= {
+        "TP-G01",
+        "TP-G07",
+        "TP-G08",
+        "TP-G09",
+        "TP-G11",
+        "TP-G12",
+    }
+    assert set(checkpoint["depends_on_evidence"]) >= {
+        "BLIND_VALIDATION_FREEZE_PROTOCOL.yaml",
+        "CROSS_PROJECT_INVARIANT_SCORECARD.yaml",
+        "AGENT_LAB_EVAL_MATRIX.yaml",
+        "OFF_REPO_FULL_CORPUS_RUNBOOK.yaml",
+    }
+    assert set(checkpoint["checkpoint_record_required_fields"]) >= {
+        "blind_baseline_ref",
+        "changed_surface",
+        "affected_fixture_tiers",
+        "evidence_refs",
+        "reviewer",
+        "decision",
+        "rollback_remediation",
+        "classification",
+    }
+    assert set(checkpoint["classification_vocabulary"]) == (
+        EXPECTED_NO_OVERFITTING_CLASSIFICATIONS
+    )
+    assert set(checkpoint["affected_fixture_tiers"]) == set(
+        EXPECTED_PROJECT_ORACLE_TIERS
+    )
+    observed_classifications = {
+        row["required_classification"] for row in checkpoint["checkpoint_rows"]
+    }
+    assert observed_classifications == EXPECTED_NO_OVERFITTING_CLASSIFICATIONS
+    for row in checkpoint["checkpoint_rows"]:
+        assert row["checkpoint_row_id"].startswith("NO-OVERFIT-")
+        assert row["changed_surface"]
+        assert row["required_evidence_refs"]
+        assert row["expected_decision"] in checkpoint["decision_vocabulary"]
+        assert row["rollback_remediation"]
+        assert set(row["tp_gate_refs"]).issubset(set(checkpoint["gate_refs"]))
+
+    assert checkpoint["rollup_policy"]["current_rollup_status"] == (
+        "blocked_pending_blind_baseline_evidence"
+    )
+    assert set(checkpoint["cannot_be_used_for"]) >= {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "workflow_pack_activation",
+        "raw_corpus_import",
+        "fixture_release_approval",
+        "blind_tuning_approval",
+        "tp_g08_pass_claim",
+        "production_preflight_approval",
+        "pilot_readiness_approval",
+    }
+    assert set(checkpoint["raw_data_boundary"]["prohibited_repo_material"]) >= {
+        "full project corpus files",
+        "unrestricted source excerpts",
+        "raw project filenames",
+        "screenshots or logs containing source content",
+        "project-specific hardcoded logic",
+    }
+    for forbidden in (
+        "fixture release approved",
+        "blind tuning approved",
+        "tp-g08 passed",
+        "product activation approved",
+        "runtime activation approved",
+        "public route approved",
+        "production preflight approved",
+        "pilot readiness approved",
+    ):
+        assert forbidden not in lowered
+
+
+def test_project_oracle_manifest_format_is_cross_tier_planning_contract() -> None:
+    oracle_format = _load_yaml(PROJECT_ORACLE_MANIFEST_FORMAT_PATH)
+    text = PROJECT_ORACLE_MANIFEST_FORMAT_PATH.read_text(encoding="utf-8")
+    lowered = text.lower()
+
+    assert (
+        oracle_format["schema_version"]
+        == "capex.project_oracle_manifest_format.v1"
+    )
+    assert oracle_format["owner_task"] == "TASK-0597"
+    assert oracle_format["source_task_id"] == "TP-TASK-009"
+    assert oracle_format["activation_posture"] == (
+        "planning_only_no_capex_activation"
+    )
+    assert oracle_format["fixture_tiers"] == EXPECTED_PROJECT_ORACLE_TIERS
+    assert set(oracle_format["gate_refs"]) >= {
+        "TP-G01",
+        "TP-G02",
+        "TP-G03",
+        "TP-G04",
+        "TP-G05",
+        "TP-G06",
+        "TP-G07",
+        "TP-G08",
+        "TP-G09",
+        "TP-G10",
+        "TP-G11",
+        "TP-G12",
+    }
+    assert set(oracle_format["evidence_contract_refs"]) >= {
+        "K12_EXPECTED_OUTPUT_MANIFEST.yaml",
+        "K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml",
+        "BLIND_VALIDATION_FREEZE_PROTOCOL.yaml",
+        "CROSS_PROJECT_INVARIANT_SCORECARD.yaml",
+        "AGENT_LAB_EVAL_MATRIX.yaml",
+        "OFF_REPO_FULL_CORPUS_RUNBOOK.yaml",
+        "NO_OVERFITTING_REVIEW_CHECKPOINT.yaml",
+    }
+    assert set(oracle_format["required_top_level_fields"]) >= {
+        "schema_version",
+        "manifest_id",
+        "owner_task",
+        "source_task_id",
+        "fixture_tier",
+        "activation_posture",
+        "source_evidence",
+        "versioning_basis",
+        "oracle_rows",
+        "human_oracle_approval",
+        "raw_data_boundary",
+    }
+    assert set(oracle_format["required_oracle_row_fields"]) >= {
+        "oracle_id",
+        "row_family",
+        "fixture_tier",
+        "source_evidence_refs",
+        "expected_behavior",
+        "expected_result",
+        "failure_condition",
+        "tp_gate_refs",
+        "automation_posture",
+        "human_review_posture",
+        "rollback_remediation",
+        "versioning_basis",
+    }
+    assert set(oracle_format["row_family_vocabulary"]) == (
+        EXPECTED_PROJECT_ORACLE_ROW_FAMILIES
+    )
+    observed_families = {
+        row["row_family"] for row in oracle_format["example_oracle_rows"]
+    }
+    assert observed_families == EXPECTED_PROJECT_ORACLE_ROW_FAMILIES
+    for row in oracle_format["example_oracle_rows"]:
+        assert row["oracle_id"].startswith("ORACLE-FORMAT-")
+        assert row["fixture_tier"] in EXPECTED_PROJECT_ORACLE_TIERS
+        assert row["source_evidence_refs"]
+        assert row["expected_behavior"]
+        assert row["expected_result"]
+        assert row["failure_condition"]
+        assert row["automation_posture"] in oracle_format[
+            "automation_posture_vocabulary"
+        ]
+        assert row["human_review_posture"] in oracle_format[
+            "human_review_posture_vocabulary"
+        ]
+        assert row["rollback_remediation"]
+        assert set(row["tp_gate_refs"]).issubset(set(oracle_format["gate_refs"]))
+        assert set(row["versioning_basis"]) == set(
+            oracle_format["versioning_basis_fields"]
+        )
+
+    approval = oracle_format["human_oracle_approval_contract"]
+    assert approval["approval_authority"] == "planning_evidence_only"
+    assert set(approval["required_fields"]) >= {
+        "reviewer",
+        "review_date",
+        "decision",
+        "source_evidence_refs",
+        "residual_risk",
+        "rollback_remediation",
+    }
+    assert set(oracle_format["cannot_be_used_for"]) >= {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "workflow_pack_activation",
+        "raw_corpus_import",
+        "fixture_release_approval",
+        "official_pointer_creation",
+        "approval_response_creation",
+        "closure_snapshot_creation",
+        "production_preflight_approval",
+        "pilot_readiness_approval",
+    }
+    assert set(oracle_format["raw_data_boundary"]["prohibited_repo_material"]) >= {
+        "full project corpus files",
+        "unrestricted source excerpts",
+        "raw project filenames",
+        "screenshots or logs containing source content",
+        "project-specific hardcoded logic",
+    }
+
+    k12_manifest = _load_yaml(K12_EXPECTED_OUTPUT_MANIFEST_PATH)
+    k3_catalog = _load_yaml(K3_MINI_FIXTURE_EXPECTATION_CATALOG_PATH)
+    assert k12_manifest["oracle_format_ref"] == "PROJECT_ORACLE_MANIFEST_FORMAT.yaml"
+    assert k3_catalog["oracle_format_ref"] == "PROJECT_ORACLE_MANIFEST_FORMAT.yaml"
+    for forbidden in (
+        "raw corpus import approved",
+        "fixture release approved",
+        "official pointer created",
+        "approval response created",
+        "product activation approved",
+        "runtime activation approved",
+        "public route approved",
+        "production preflight approved",
     ):
         assert forbidden not in lowered
 

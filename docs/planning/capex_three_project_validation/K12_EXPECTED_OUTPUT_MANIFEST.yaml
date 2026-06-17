@@ -5,6 +5,7 @@ source_task_id: TP-TASK-002
 fixture_tier: K12
 activation_posture: planning_only_no_capex_activation
 status: planning_evidence_recorded
+oracle_format_ref: PROJECT_ORACLE_MANIFEST_FORMAT.yaml
 source_evidence:
   package_name: k12_passes_9_11_and_full_synthesis_pack.zip
   package_sha256: 7d011a821849fc3e3315d2dee079bfe910848ad276b402b790e5c667a0d965dd

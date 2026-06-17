@@ -370,6 +370,24 @@
 - Evidence: CAPEX real-project acceptance contract tests cover source package hashes, gate refs, K12 oracle rows, K12 hardening rows, K3 expectation rows, K3 freeze families, raw-data boundaries, and non-activation posture.
 - Closeout posture: `TP-TASK-002` and `TP-TASK-003` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, universal oracle manifest format, blind baseline runs, cross-project scorecard, pilot readiness, production readiness, or product activation.
 
+## TASK-0592 / TASK-0593 closeout evidence
+- Added `docs/planning/capex_three_project_validation/BLIND_VALIDATION_FREEZE_PROTOCOL.yaml` as planning evidence for `TP-TASK-004`.
+- Added `docs/planning/capex_three_project_validation/CROSS_PROJECT_INVARIANT_SCORECARD.yaml` as planning evidence for `TP-TASK-005`.
+- Evidence: CAPEX real-project acceptance contract tests cover freeze dimensions, access controls, baseline custody, leak-scan requirements, Agent Lab non-authority, scorecard tiers, invariant rows, status vocabulary, waiver requirements, raw-data boundaries, and non-activation posture.
+- Closeout posture: `TP-TASK-004` and `TP-TASK-005` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, blind baseline execution, `TP-G11` pass status, pilot readiness, production readiness, or product activation.
+
+## TASK-0594 / TASK-0595 closeout evidence
+- Added `docs/planning/capex_three_project_validation/AGENT_LAB_EVAL_MATRIX.yaml` as planning evidence for `TP-TASK-006`.
+- Added `docs/planning/capex_three_project_validation/OFF_REPO_FULL_CORPUS_RUNBOOK.yaml` as planning evidence for `TP-TASK-007`.
+- Evidence: CAPEX real-project acceptance contract tests cover Agent Lab fixture tiers, evidence refs, non-authority boundaries, advisory rollup posture, off-repo quarantine, read-only raw-corpus access, sanitized aggregate outputs, leak scan, teardown, rollback/remediation, capacity/restore placeholders, raw-data boundaries, and non-activation posture.
+- Closeout posture: `TP-TASK-006` and `TP-TASK-007` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, blind baseline execution, Agent Lab official authority, `TP-G10` or `TP-G11` pass status, pilot readiness, production readiness, or product activation.
+
+## TASK-0596 / TASK-0597 closeout evidence
+- Added `docs/planning/capex_three_project_validation/NO_OVERFITTING_REVIEW_CHECKPOINT.yaml` as planning evidence for `TP-TASK-008`.
+- Added `docs/planning/capex_three_project_validation/PROJECT_ORACLE_MANIFEST_FORMAT.yaml` as planning evidence for `TP-TASK-009`.
+- Evidence: CAPEX real-project acceptance contract tests cover no-overfitting classifications, required checkpoint fields, blocked-pending-baseline posture, cross-tier oracle row families, human oracle approval contract, compatibility refs from K12/K3 evidence files, raw-data boundaries, and non-activation posture.
+- Closeout posture: `TP-TASK-008` and `TP-TASK-009` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, blind baseline execution, blind tuning approval, `TP-G08`/`TP-G11` pass status, pilot readiness, production readiness, or product activation.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|

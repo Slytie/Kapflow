@@ -1,0 +1,293 @@
+schema_version: capex.project_oracle_manifest_format.v1
+format_id: project_oracle_manifest.cross_tier.v1
+owner_task: TASK-0597
+source_task_id: TP-TASK-009
+activation_posture: planning_only_no_capex_activation
+status: planning_evidence_recorded
+gate_refs:
+  - TP-G01
+  - TP-G02
+  - TP-G03
+  - TP-G04
+  - TP-G05
+  - TP-G06
+  - TP-G07
+  - TP-G08
+  - TP-G09
+  - TP-G10
+  - TP-G11
+  - TP-G12
+fixture_tiers:
+  - K12
+  - K3_mini
+  - K3_shadow
+  - blind_baseline
+evidence_contract_refs:
+  - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+  - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+  - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+  - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+  - AGENT_LAB_EVAL_MATRIX.yaml
+  - OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+  - NO_OVERFITTING_REVIEW_CHECKPOINT.yaml
+required_top_level_fields:
+  - schema_version
+  - manifest_id
+  - owner_task
+  - source_task_id
+  - fixture_tier
+  - activation_posture
+  - source_evidence
+  - versioning_basis
+  - oracle_rows
+  - human_oracle_approval
+  - raw_data_boundary
+required_oracle_row_fields:
+  - oracle_id
+  - row_family
+  - fixture_tier
+  - source_evidence_refs
+  - expected_behavior
+  - expected_result
+  - failure_condition
+  - tp_gate_refs
+  - automation_posture
+  - human_review_posture
+  - rollback_remediation
+  - versioning_basis
+row_family_vocabulary:
+  - expected_output
+  - negative_test
+  - human_oracle_approval
+  - re_review_trigger
+  - pointer_officialness
+  - authority_lifecycle
+  - raw_leakage_guard
+  - no_overfitting_classification
+automation_posture_vocabulary:
+  - automated_preferred
+  - manual_review_required
+  - advisory_only
+  - blocked_pending_evidence
+human_review_posture_vocabulary:
+  - required_before_fixture_release
+  - required_before_pointer_promotion
+  - required_before_baseline_claim
+  - advisory_review_only
+  - blocked_pending_evidence
+versioning_basis_fields:
+  - schema_version_ref
+  - fixture_compiler_version_ref
+  - policy_version_ref
+  - prompt_eval_version_ref
+  - source_evidence_version_ref
+example_oracle_rows:
+  - oracle_id: ORACLE-FORMAT-001
+    row_family: expected_output
+    fixture_tier: K12
+    source_evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+    expected_behavior: Scenario output is compared to sanitized expected-result rows.
+    expected_result: The expected result is recorded without raw source excerpts or project-specific hardcoding.
+    failure_condition: Missing or contradictory source evidence blocks release use.
+    tp_gate_refs:
+      - TP-G02
+      - TP-G03
+      - TP-G12
+    automation_posture: automated_preferred
+    human_review_posture: required_before_fixture_release
+    rollback_remediation: Invalidate the oracle row and require a replacement manifest version.
+    versioning_basis:
+      schema_version_ref: capex.project_oracle_manifest_format.v1
+      fixture_compiler_version_ref: pending_fixture_release
+      policy_version_ref: CAPEX_THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK
+      prompt_eval_version_ref: pending_agent_lab_matrix
+      source_evidence_version_ref: sanitized_manifest_version
+  - oracle_id: ORACLE-FORMAT-002
+    row_family: negative_test
+    fixture_tier: K3_mini
+    source_evidence_refs:
+      - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+    expected_behavior: Invalid source refs, digest mismatches, or cross-project evidence fail closed.
+    expected_result: The row records the failure as expected guardrail behavior.
+    failure_condition: A negative case becomes accepted or official without review.
+    tp_gate_refs:
+      - TP-G04
+      - TP-G11
+      - TP-G12
+    automation_posture: automated_preferred
+    human_review_posture: required_before_fixture_release
+    rollback_remediation: Remove the mini-fixture row and require guardrail repair evidence.
+    versioning_basis:
+      schema_version_ref: capex.project_oracle_manifest_format.v1
+      fixture_compiler_version_ref: pending_fixture_release
+      policy_version_ref: CAPEX_THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK
+      prompt_eval_version_ref: pending_agent_lab_matrix
+      source_evidence_version_ref: sanitized_catalog_version
+  - oracle_id: ORACLE-FORMAT-003
+    row_family: human_oracle_approval
+    fixture_tier: K12
+    source_evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+    expected_behavior: A named human review record is required before oracle rows support fixture release.
+    expected_result: Approval remains planning evidence and cannot mutate runtime truth.
+    failure_condition: Oracle rows are treated as released without human review.
+    tp_gate_refs:
+      - TP-G02
+      - TP-G11
+    automation_posture: manual_review_required
+    human_review_posture: required_before_fixture_release
+    rollback_remediation: Remove release claims and record a reviewer correction.
+    versioning_basis:
+      schema_version_ref: capex.project_oracle_manifest_format.v1
+      fixture_compiler_version_ref: pending_fixture_release
+      policy_version_ref: CAPEX_THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK
+      prompt_eval_version_ref: pending_agent_lab_matrix
+      source_evidence_version_ref: reviewer_record_version
+  - oracle_id: ORACLE-FORMAT-004
+    row_family: re_review_trigger
+    fixture_tier: blind_baseline
+    source_evidence_refs:
+      - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+    expected_behavior: Changed evidence basis creates re-review work instead of rewriting historical results.
+    expected_result: Prior baseline outputs remain append-only and current candidates are marked stale.
+    failure_condition: Later evidence retroactively rewrites earlier baseline or pointer outcomes.
+    tp_gate_refs:
+      - TP-G07
+      - TP-G08
+      - TP-G11
+    automation_posture: advisory_only
+    human_review_posture: required_before_baseline_claim
+    rollback_remediation: Invalidate the affected advisory output and route through no-overfitting review.
+    versioning_basis:
+      schema_version_ref: capex.project_oracle_manifest_format.v1
+      fixture_compiler_version_ref: pending_fixture_release
+      policy_version_ref: BLIND_VALIDATION_FREEZE_PROTOCOL
+      prompt_eval_version_ref: frozen_prompt_eval_version
+      source_evidence_version_ref: blind_baseline_ref
+  - oracle_id: ORACLE-FORMAT-005
+    row_family: pointer_officialness
+    fixture_tier: K12
+    source_evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+    expected_behavior: Latest artifacts, lab outputs, and approvals do not move official pointers by themselves.
+    expected_result: Officialness changes only through governed pointer promotion outside oracle planning evidence.
+    failure_condition: An oracle or lab row creates or moves an official pointer.
+    tp_gate_refs:
+      - TP-G03
+      - TP-G09
+      - TP-G11
+    automation_posture: automated_preferred
+    human_review_posture: required_before_pointer_promotion
+    rollback_remediation: Remove the pointer claim and invalidate affected advisory evidence.
+    versioning_basis:
+      schema_version_ref: capex.project_oracle_manifest_format.v1
+      fixture_compiler_version_ref: pending_fixture_release
+      policy_version_ref: CAPEX_THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK
+      prompt_eval_version_ref: pending_agent_lab_matrix
+      source_evidence_version_ref: pointer_policy_ref
+  - oracle_id: ORACLE-FORMAT-006
+    row_family: authority_lifecycle
+    fixture_tier: K3_mini
+    source_evidence_refs:
+      - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+    expected_behavior: Authority-basis changes stale current interpretation without deleting historical evidence.
+    expected_result: Reopen or stale behavior is visible as reviewed lifecycle evidence.
+    failure_condition: Later authority evidence silently closes, deletes, or overwrites historical state.
+    tp_gate_refs:
+      - TP-G04
+      - TP-G05
+      - TP-G11
+    automation_posture: automated_preferred
+    human_review_posture: required_before_fixture_release
+    rollback_remediation: Mark the lifecycle row invalid and require re-review.
+    versioning_basis:
+      schema_version_ref: capex.project_oracle_manifest_format.v1
+      fixture_compiler_version_ref: pending_fixture_release
+      policy_version_ref: CAPEX_THREE_PROJECT_FIXTURE_GOVERNANCE_RUNBOOK
+      prompt_eval_version_ref: pending_agent_lab_matrix
+      source_evidence_version_ref: authority_catalog_version
+  - oracle_id: ORACLE-FORMAT-007
+    row_family: raw_leakage_guard
+    fixture_tier: K3_shadow
+    source_evidence_refs:
+      - OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+    expected_behavior: Oracle rows include only sanitized aggregate outputs after leak scan.
+    expected_result: Raw leakage blocks repo copy and invalidates affected generated packs.
+    failure_condition: Raw project material appears in repo, CI logs, screenshots, or oracle rows.
+    tp_gate_refs:
+      - TP-G01
+      - TP-G10
+      - TP-G11
+    automation_posture: blocked_pending_evidence
+    human_review_posture: blocked_pending_evidence
+    rollback_remediation: Quarantine the output, remove copied evidence, and rerun leak scan after remediation.
+    versioning_basis:
+      schema_version_ref: capex.project_oracle_manifest_format.v1
+      fixture_compiler_version_ref: pending_fixture_release
+      policy_version_ref: OFF_REPO_FULL_CORPUS_RUNBOOK
+      prompt_eval_version_ref: pending_agent_lab_matrix
+      source_evidence_version_ref: aggregate_report_version
+  - oracle_id: ORACLE-FORMAT-008
+    row_family: no_overfitting_classification
+    fixture_tier: blind_baseline
+    source_evidence_refs:
+      - NO_OVERFITTING_REVIEW_CHECKPOINT.yaml
+    expected_behavior: Post-blind changes are classified before supporting future fixture or release claims.
+    expected_result: Fixture-specific or evidence-absent changes remain blocked until remediated or waived.
+    failure_condition: Holdout-only observations tune prompts, schemas, retrieval, or policies without review.
+    tp_gate_refs:
+      - TP-G08
+      - TP-G11
+      - TP-G12
+    automation_posture: advisory_only
+    human_review_posture: required_before_baseline_claim
+    rollback_remediation: Reject or quarantine the affected change and require reviewer classification.
+    versioning_basis:
+      schema_version_ref: capex.project_oracle_manifest_format.v1
+      fixture_compiler_version_ref: pending_fixture_release
+      policy_version_ref: NO_OVERFITTING_REVIEW_CHECKPOINT
+      prompt_eval_version_ref: frozen_prompt_eval_version
+      source_evidence_version_ref: no_overfitting_checkpoint_ref
+human_oracle_approval_contract:
+  required_fields:
+    - reviewer
+    - review_date
+    - decision
+    - source_evidence_refs
+    - residual_risk
+    - rollback_remediation
+  valid_decisions:
+    - approved_for_fixture_release_review
+    - rejected_pending_remediation
+    - blocked_pending_evidence
+    - waived_with_residual_risk
+  approval_authority: planning_evidence_only
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - official_pointer_creation
+  - approval_response_creation
+  - closure_snapshot_creation
+  - production_preflight_approval
+  - pilot_readiness_approval
+raw_data_boundary:
+  allowed_repo_material:
+    - sanitized oracle identifiers
+    - fixture tier names
+    - aggregate expectations
+    - source evidence references
+    - gate mappings
+    - human review posture
+    - rollback and remediation policy
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic

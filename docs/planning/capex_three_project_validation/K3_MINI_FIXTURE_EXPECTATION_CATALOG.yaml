@@ -5,6 +5,7 @@ source_task_id: TP-TASK-003
 fixture_tier: K3
 activation_posture: planning_only_no_capex_activation
 status: planning_evidence_recorded
+oracle_format_ref: PROJECT_ORACLE_MANIFEST_FORMAT.yaml
 source_evidence:
   package_name: k3_passes_9_11_full_synthesis_clean_pack.zip
   package_sha256: 03d052edc7d4b27f59f9fbcdceece57c077c388ec3fefb604a44f690966ca1e8

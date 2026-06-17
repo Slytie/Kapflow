@@ -1,0 +1,195 @@
+schema_version: capex.agent_lab_eval_matrix.v1
+matrix_id: agent_lab.eval_matrix.three_project_validation.v1
+owner_task: TASK-0594
+source_task_id: TP-TASK-006
+activation_posture: planning_only_no_capex_activation
+status: planning_evidence_recorded
+no_overfitting_checkpoint_ref: NO_OVERFITTING_REVIEW_CHECKPOINT.yaml
+gate_refs:
+  - TP-G01
+  - TP-G03
+  - TP-G04
+  - TP-G06
+  - TP-G07
+  - TP-G08
+  - TP-G09
+  - TP-G11
+  - TP-G12
+fixture_tiers:
+  - tier_id: K12
+    role: released_or_pending_real_project_fixture_oracles
+    evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+    allowed_eval_modes:
+      - oracle_regression
+      - invariant_probe
+      - no_false_closure_probe
+    current_status: planning_ready
+  - tier_id: K3_mini
+    role: mini_fixture_authority_lifecycle_regression
+    evidence_refs:
+      - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+    allowed_eval_modes:
+      - authority_lifecycle_probe
+      - invariant_probe
+      - no_false_closure_probe
+    current_status: planning_ready
+  - tier_id: K3_shadow
+    role: off_repo_shadow_regression
+    evidence_refs:
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+      - OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+    allowed_eval_modes:
+      - aggregate_shadow_report_review
+      - raw_leak_scan_review
+    current_status: blocked_pending_evidence
+  - tier_id: blind_baseline
+    role: holdout_baseline_after_freeze
+    evidence_refs:
+      - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+    allowed_eval_modes:
+      - frozen_baseline_run
+      - unsupported_claim_review
+      - missing_evidence_recall_review
+      - false_closure_review
+      - raw_leak_scan_review
+    current_status: blocked_pending_freeze_and_baseline
+status_vocabulary:
+  - planning_ready
+  - not_run
+  - advisory_report_recorded
+  - blocked_pending_evidence
+  - blocked_pending_freeze_and_baseline
+  - invalidated_pending_remediation
+lab_non_authority:
+  lab_output_authority: advisory_only
+  official_truth_mutation_allowed: false
+  required_tool_action_mode: ToolProposal_until_approved
+  required_human_review_before_repo_evidence: true
+  prohibited_direct_outputs:
+    - official_pointer
+    - approval_response
+    - closure_snapshot
+    - runtime_truth_mutation
+    - fixture_release_approval
+    - public_route_activation
+    - product_activation
+matrix_rows:
+  - matrix_row_id: LAB-EVAL-001
+    eval_family: source_ref_and_evidence_binding
+    fixture_tiers:
+      - K12
+      - K3_mini
+      - blind_baseline
+    expected_advisory_output: unresolved, empty, or cross-scope source refs are reported as defects, not repaired automatically.
+    required_evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+      - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+      - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+    gate_refs:
+      - TP-G03
+      - TP-G04
+      - TP-G07
+      - TP-G09
+      - TP-G11
+  - matrix_row_id: LAB-EVAL-002
+    eval_family: no_false_closure
+    fixture_tiers:
+      - K12
+      - K3_mini
+      - blind_baseline
+    expected_advisory_output: evidence presence, workpage state, settlement state, or lab confidence cannot close project state.
+    required_evidence_refs:
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+    gate_refs:
+      - TP-G07
+      - TP-G08
+      - TP-G09
+      - TP-G11
+  - matrix_row_id: LAB-EVAL-003
+    eval_family: pointer_and_officialness
+    fixture_tiers:
+      - K12
+      - K3_mini
+      - blind_baseline
+    expected_advisory_output: latest artifacts and lab outputs remain candidates only; pointer movement requires governed promotion outside the lab.
+    required_evidence_refs:
+      - K12_EXPECTED_OUTPUT_MANIFEST.yaml
+      - K3_MINI_FIXTURE_EXPECTATION_CATALOG.yaml
+    gate_refs:
+      - TP-G03
+      - TP-G04
+      - TP-G09
+      - TP-G11
+  - matrix_row_id: LAB-EVAL-004
+    eval_family: raw_leak_scan
+    fixture_tiers:
+      - K12
+      - K3_mini
+      - K3_shadow
+      - blind_baseline
+    expected_advisory_output: raw corpus leakage is reported as blocking evidence and invalidates affected generated packs.
+    required_evidence_refs:
+      - OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+      - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+    gate_refs:
+      - TP-G01
+      - TP-G06
+      - TP-G07
+      - TP-G09
+      - TP-G11
+  - matrix_row_id: LAB-EVAL-005
+    eval_family: no_overfitting_guard
+    fixture_tiers:
+      - K12
+      - K3_mini
+      - K3_shadow
+      - blind_baseline
+    expected_advisory_output: post-blind changes are classified before they can support fixture or release claims.
+    required_evidence_refs:
+      - BLIND_VALIDATION_FREEZE_PROTOCOL.yaml
+      - CROSS_PROJECT_INVARIANT_SCORECARD.yaml
+    gate_refs:
+      - TP-G08
+      - TP-G09
+      - TP-G11
+rollup_policy:
+  current_rollup_status: planning_ready_not_active
+  green_condition: Advisory lab reports may inform later review only after human review, leak-scan evidence, and cross-project scorecard update.
+  blocked_until:
+    - fixture_release_evidence
+    - blind_freeze_and_baseline_evidence
+    - no_overfitting_review
+    - ci_fixture_tier_policy
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - official_pointer_creation
+  - approval_response_creation
+  - closure_snapshot_creation
+  - production_preflight_approval
+  - pilot_readiness_approval
+raw_data_boundary:
+  allowed_repo_material:
+    - fixture tier names
+    - evidence contract file names
+    - aggregate advisory status
+    - gate mappings
+    - non-authority rules
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - project-specific hardcoded logic
+rollback_recovery:
+  lab_overreach_response: If Agent Lab output is used as official truth, invalidate the affected evidence and route the change through canonical human review.
+  leak_response: If raw restricted material appears in lab output, quarantine the output, remove derived packs, and require leak-scan evidence before reuse.
+  overfitting_response: If fixture-specific behavior is detected, mark affected matrix rows invalidated_pending_remediation and require no-overfitting review.

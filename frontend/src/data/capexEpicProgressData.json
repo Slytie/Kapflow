@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 396,
-    "done": 84,
+    "done": 90,
     "in_progress": 0,
-    "not_started": 307,
+    "not_started": 301,
     "blocked": 1,
     "needs_review": 4,
     "total": 396,
     "estimate": {
-      "percentComplete": 21.2,
-      "completedTasks": 84,
-      "remainingTasks": 312,
+      "percentComplete": 22.7,
+      "completedTasks": 90,
+      "remainingTasks": 306,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 52,
-      "completionTimestampCoverage": 61.9,
-      "etaDate": "2026-09-09",
+      "completedWithTimestamps": 58,
+      "completionTimestampCoverage": 64.4,
+      "etaDate": "2026-08-30",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-09-09",
+      "label": "ETA 2026-08-30",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -7780,10 +7780,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 66.7,
-        "etaDate": "2026-06-30",
+        "etaDate": "2026-06-29",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-30",
+        "label": "ETA 2026-06-29",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -12704,10 +12704,10 @@
         "remainingBlockedOrReviewTasks": 2,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-25",
+        "etaDate": "2026-06-24",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-25",
+        "label": "ETA 2026-06-24",
         "caveat": "2 blocked or needs-review task(s) remain."
       }
     },
@@ -14814,10 +14814,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-27",
+        "etaDate": "2026-06-26",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-27",
+        "label": "ETA 2026-06-26",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14849,9 +14849,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 3,
+        "done": 4,
         "in_progress": 0,
-        "not_started": 2,
+        "not_started": 1,
         "blocked": 0,
         "needs_review": 0,
         "total": 5
@@ -15050,9 +15050,9 @@
           "epicId": "EPIC-146",
           "title": "Add project-oracle manifest format",
           "plainPurpose": "Represent expected outputs, negative tests and human oracle approval consistently across K12/K3/blind.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task TP-TASK-009 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -15096,11 +15096,17 @@
             "original_depends_on": "TP-TASK-001",
             "recommended_source_branch": "capex-fixture/* or lab/capex-agent-tasks for agent-only work"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_three_project_validation/PROJECT_ORACLE_MANIFEST_FORMAT.yaml as planning evidence for TP-TASK-009.",
+            "The format covers K12, K3 mini, K3 shadow, and blind baseline tiers with row families for expected outputs, negative tests, human oracle approval, re-review triggers, pointer officialness, authority lifecycle, raw-leakage guards, and no-overfitting classification.",
+            "Added compatibility refs from the K12 expected-output manifest and K3 mini-fixture expectation catalog to the shared oracle format.",
+            "Added contract coverage in tests/contract/test_capex_real_project_acceptance.py for required top-level fields, oracle row fields, row-family coverage, human review posture, gate refs, raw-data boundary, and non-activation posture.",
+            "Closeout posture: planning evidence only. No oracle release, fixture release approval, blind baseline run, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added."
+          ],
           "taskPath": "codex/tasks/TASK-0597-add-project-oracle-manifest-format.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0661",
@@ -15166,11 +15172,11 @@
         }
       ],
       "estimate": {
-        "percentComplete": 60.0,
-        "completedTasks": 3,
-        "remainingTasks": 2,
+        "percentComplete": 80.0,
+        "completedTasks": 4,
+        "remainingTasks": 1,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 3,
+        "completedWithTimestamps": 4,
         "completionTimestampCoverage": 100.0,
         "etaDate": "2026-06-18",
         "etaConfidence": "medium",
@@ -15183,7 +15189,7 @@
       "id": "EPIC-147",
       "title": "CAPEX blind/lab evaluation",
       "plainPurpose": "Define blind validation and lab-eval protocols that prevent overfitting and preserve lab non-authority.",
-      "displayStatus": "not_started",
+      "displayStatus": "in_progress",
       "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
       "dependencies": [
         "EPIC-146",
@@ -15208,9 +15214,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 0,
+        "done": 4,
         "in_progress": 0,
-        "not_started": 5,
+        "not_started": 1,
         "blocked": 0,
         "needs_review": 0,
         "total": 5
@@ -15223,9 +15229,9 @@
           "epicId": "EPIC-147",
           "title": "Define blind validation freeze protocol",
           "plainPurpose": "Protect holdout value by freezing prompts, schemas, policies and evaluator criteria before first run.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task TP-TASK-004 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -15269,20 +15275,26 @@
             "original_depends_on": "TP-TASK-001",
             "recommended_source_branch": "capex-fixture/* or lab/capex-agent-tasks for agent-only work"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_three_project_validation/BLIND_VALIDATION_FREEZE_PROTOCOL.yaml as planning evidence for TP-TASK-004.",
+            "The protocol records freeze dimensions for runtime rules, prompt versions, retrieval recipes, schemas, tool registry, evaluator criteria, access controls, and baseline output custody before any blind baseline run.",
+            "The protocol records pre-run and first-run record requirements, post-blind change classification, Agent Lab non-authority boundaries, raw-data boundaries, rollback/remediation posture, and TP-G01, TP-G06, TP-G07, TP-G08, TP-G09, and TP-G12 mappings.",
+            "Added contract coverage in tests/contract/test_capex_real_project_acceptance.py for required freeze dimensions, access controls, baseline custody, leak-scan requirement, gate refs, raw-data boundary, and non-activation posture.",
+            "Closeout posture: planning evidence only. No blind baseline run, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, production-preflight approval, or blind tuning approval is added."
+          ],
           "taskPath": "codex/tasks/TASK-0592-define-blind-validation-freeze-protocol.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0593",
           "epicId": "EPIC-147",
           "title": "Create cross-project invariant scorecard",
           "plainPurpose": "Track K12/K3/blind performance against same non-negotiable invariants.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task TP-TASK-005 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -15326,20 +15338,26 @@
             "original_depends_on": "TP-TASK-001",
             "recommended_source_branch": "capex-fixture/* or lab/capex-agent-tasks for agent-only work"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_three_project_validation/CROSS_PROJECT_INVARIANT_SCORECARD.yaml as planning evidence for TP-TASK-005.",
+            "The scorecard records K12, K3 mini, K3 shadow, and blind-baseline fixture tiers; status vocabulary; waiver requirements; and invariant rows for source identity, source-ref sufficiency, no false closure, pointer officialness, stale/reopen behavior, authorization/project boundary, raw-leakage scan, generated-artifact authority, workpage non-authority, and no project-specific hardcoding.",
+            "The scorecard maps TP-G01, TP-G02, TP-G03, TP-G04, TP-G05, TP-G06, TP-G07, TP-G08, TP-G09, TP-G11, and TP-G12, while leaving rollup status blocked_pending_evidence because the score evidence has not been run or approved.",
+            "Added contract coverage in tests/contract/test_capex_real_project_acceptance.py for fixture tiers, invariant dimensions, status vocabulary, waiver fields, no green/waived default claims, gate refs, raw-data boundary, and non-activation posture.",
+            "Closeout posture: planning evidence only. No TP-G11 pass claim, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, production-preflight approval, or cross-project score approval is added."
+          ],
           "taskPath": "codex/tasks/TASK-0593-create-cross-project-invariant-scorecard.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0594",
           "epicId": "EPIC-147",
           "title": "Wire agent Lab eval matrix to K12/K3/blind fixture tiers",
           "plainPurpose": "Allow agent development in parallel without granting authority or overfitting.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task TP-TASK-006 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -15383,20 +15401,26 @@
             "original_depends_on": "TP-TASK-001",
             "recommended_source_branch": "capex-fixture/* or lab/capex-agent-tasks for agent-only work"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_three_project_validation/AGENT_LAB_EVAL_MATRIX.yaml as planning evidence for TP-TASK-006.",
+            "The matrix covers K12, K3 mini, K3 shadow, and blind baseline fixture tiers and references the K12 expected-output manifest, K3 expectation catalog, blind freeze protocol, and cross-project scorecard.",
+            "The matrix records Agent Lab non-authority boundaries: lab output is advisory only, tool actions remain proposals until approved, and lab output cannot create official pointers, approval responses, closure snapshots, runtime truth mutations, fixture release approval, public route activation, or product activation.",
+            "Added contract coverage in tests/contract/test_capex_real_project_acceptance.py for fixture tier coverage, evidence refs, status vocabulary, matrix rows, gate refs, raw-data boundary, and non-activation posture.",
+            "Closeout posture: planning evidence only. No Agent Lab execution, official truth mutation, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added."
+          ],
           "taskPath": "codex/tasks/TASK-0594-wire-agent-lab-eval-matrix-to-k12-k3-blind-fixture-tiers.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0596",
           "epicId": "EPIC-147",
           "title": "Add no-overfitting review checkpoint after blind baseline",
           "plainPurpose": "Force blind-run deltas to be generalizable, deferred, or rejected.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task TP-TASK-008 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -15440,11 +15464,17 @@
             "original_depends_on": "TP-TASK-001",
             "recommended_source_branch": "capex-fixture/* or lab/capex-agent-tasks for agent-only work"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_three_project_validation/NO_OVERFITTING_REVIEW_CHECKPOINT.yaml as planning evidence for TP-TASK-008.",
+            "The checkpoint records required post-blind-baseline review fields, affected fixture tiers, changed surfaces, classifications, decisions, rollback/remediation posture, and blocked-pending-baseline rollup state.",
+            "The checkpoint reuses the blind-freeze classification vocabulary: generalizable, fixture_specific, evidence_absent, deferred_module, and invalid_expectation.",
+            "Added contract coverage in tests/contract/test_capex_real_project_acceptance.py for required fields, classifications, gate refs, blocked status, raw-data boundary, and non-activation posture.",
+            "Closeout posture: planning evidence only. No blind baseline run, tuning approval, fixture release approval, TP-G08 pass claim, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added."
+          ],
           "taskPath": "codex/tasks/TASK-0596-add-no-overfitting-review-checkpoint-after-blind-baseline.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0598",
@@ -15505,15 +15535,15 @@
         }
       ],
       "estimate": {
-        "percentComplete": 0.0,
-        "completedTasks": 0,
-        "remainingTasks": 5,
+        "percentComplete": 80.0,
+        "completedTasks": 4,
+        "remainingTasks": 1,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 0,
-        "completionTimestampCoverage": 0.0,
+        "completedWithTimestamps": 4,
+        "completionTimestampCoverage": 100.0,
         "etaDate": "2026-06-18",
-        "etaConfidence": "low",
-        "etaSource": "global_completed_at",
+        "etaConfidence": "medium",
+        "etaSource": "epic_completed_at",
         "label": "ETA 2026-06-18",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
@@ -15522,7 +15552,7 @@
       "id": "EPIC-148",
       "title": "CAPEX off-repo full-corpus runs",
       "plainPurpose": "Plan capacity, restore, leak-scan, and full-corpus runbooks while keeping raw corpora off-repo.",
-      "displayStatus": "not_started",
+      "displayStatus": "in_progress",
       "reviewPosture": "Review posture follows task evidence and curated blocker overrides.",
       "dependencies": [
         "EPIC-145",
@@ -15545,9 +15575,9 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 0,
+        "done": 1,
         "in_progress": 0,
-        "not_started": 4,
+        "not_started": 3,
         "blocked": 0,
         "needs_review": 0,
         "total": 4
@@ -15734,9 +15764,9 @@
           "epicId": "EPIC-148",
           "title": "Add full-project off-repo runbook for Codex",
           "plainPurpose": "Tell Codex how to mount/process full corpora without committing data.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task TP-TASK-007 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -15779,20 +15809,26 @@
             "source_only_dependency_notes": "P0 blockers; fixture governance; no-raw-data policy",
             "recommended_source_branch": "capex-fixture/* or lab/capex-agent-tasks for agent-only work"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_three_project_validation/OFF_REPO_FULL_CORPUS_RUNBOOK.yaml as planning evidence for TP-TASK-007.",
+            "The runbook records repo-clean preflight, operator-owned quarantine, read-only raw-corpus mount, sanitized output directory, aggregate-only reports, leak scan before repo copy, reviewed repo copy, teardown, and rollback/remediation controls.",
+            "The runbook records capacity and restore placeholders as blocked_pending_evidence, maps TP-G01, TP-G10, TP-G11, TP-G12, PROD-PRE-G06, and PROD-PRE-G07, and does not claim full-corpus execution or gate closure.",
+            "Added contract coverage in tests/contract/test_capex_real_project_acceptance.py for workflow steps, capacity/restore placeholders, raw-data boundary, gate refs, and non-activation posture.",
+            "Closeout posture: planning evidence only. No full-corpus run, raw corpus import, fixture release approval, TP-G10 pass claim, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added."
+          ],
           "taskPath": "codex/tasks/TASK-0595-add-full-project-off-repo-runbook-for-codex.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         }
       ],
       "estimate": {
-        "percentComplete": 0.0,
-        "completedTasks": 0,
-        "remainingTasks": 4,
+        "percentComplete": 25.0,
+        "completedTasks": 1,
+        "remainingTasks": 3,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 0,
-        "completionTimestampCoverage": 0.0,
+        "completedWithTimestamps": 1,
+        "completionTimestampCoverage": 100.0,
         "etaDate": "2026-06-18",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
@@ -19842,10 +19878,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-07-06",
+        "etaDate": "2026-07-04",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-06",
+        "label": "ETA 2026-07-04",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -21584,10 +21620,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-25",
+        "etaDate": "2026-06-24",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-25",
+        "label": "ETA 2026-06-24",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -23285,10 +23321,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-25",
+        "etaDate": "2026-06-24",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-25",
+        "label": "ETA 2026-06-24",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

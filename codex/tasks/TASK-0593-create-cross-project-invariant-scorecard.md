@@ -2,7 +2,8 @@
 id: TASK-0593
 epic: EPIC-147
 title: "Create cross-project invariant scorecard"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: ["TASK-0589"]
@@ -60,3 +61,10 @@ Track K12/K3/blind performance against same non-negotiable invariants.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/CROSS_PROJECT_INVARIANT_SCORECARD.yaml` as planning evidence for `TP-TASK-005`.
+- The scorecard records K12, K3 mini, K3 shadow, and blind-baseline fixture tiers; status vocabulary; waiver requirements; and invariant rows for source identity, source-ref sufficiency, no false closure, pointer officialness, stale/reopen behavior, authorization/project boundary, raw-leakage scan, generated-artifact authority, workpage non-authority, and no project-specific hardcoding.
+- The scorecard maps `TP-G01`, `TP-G02`, `TP-G03`, `TP-G04`, `TP-G05`, `TP-G06`, `TP-G07`, `TP-G08`, `TP-G09`, `TP-G11`, and `TP-G12`, while leaving rollup status `blocked_pending_evidence` because the score evidence has not been run or approved.
+- Added contract coverage in `tests/contract/test_capex_real_project_acceptance.py` for fixture tiers, invariant dimensions, status vocabulary, waiver fields, no green/waived default claims, gate refs, raw-data boundary, and non-activation posture.
+- Closeout posture: planning evidence only. No TP-G11 pass claim, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, production-preflight approval, or cross-project score approval is added.

@@ -2,7 +2,8 @@
 id: TASK-0596
 epic: EPIC-147
 title: "Add no-overfitting review checkpoint after blind baseline"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: ["TASK-0589"]
@@ -60,3 +61,10 @@ Force blind-run deltas to be generalizable, deferred, or rejected.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/NO_OVERFITTING_REVIEW_CHECKPOINT.yaml` as planning evidence for `TP-TASK-008`.
+- The checkpoint records required post-blind-baseline review fields, affected fixture tiers, changed surfaces, classifications, decisions, rollback/remediation posture, and blocked-pending-baseline rollup state.
+- The checkpoint reuses the blind-freeze classification vocabulary: `generalizable`, `fixture_specific`, `evidence_absent`, `deferred_module`, and `invalid_expectation`.
+- Added contract coverage in `tests/contract/test_capex_real_project_acceptance.py` for required fields, classifications, gate refs, blocked status, raw-data boundary, and non-activation posture.
+- Closeout posture: planning evidence only. No blind baseline run, tuning approval, fixture release approval, `TP-G08` pass claim, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, or production-preflight approval is added.

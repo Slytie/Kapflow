@@ -2,7 +2,8 @@
 id: TASK-0592
 epic: EPIC-147
 title: "Define blind validation freeze protocol"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["qa"]
 reviewers: ["platform", "architect"]
 depends_on: ["TASK-0589"]
@@ -60,3 +61,10 @@ Protect holdout value by freezing prompts, schemas, policies and evaluator crite
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_three_project_validation/BLIND_VALIDATION_FREEZE_PROTOCOL.yaml` as planning evidence for `TP-TASK-004`.
+- The protocol records freeze dimensions for runtime rules, prompt versions, retrieval recipes, schemas, tool registry, evaluator criteria, access controls, and baseline output custody before any blind baseline run.
+- The protocol records pre-run and first-run record requirements, post-blind change classification, Agent Lab non-authority boundaries, raw-data boundaries, rollback/remediation posture, and `TP-G01`, `TP-G06`, `TP-G07`, `TP-G08`, `TP-G09`, and `TP-G12` mappings.
+- Added contract coverage in `tests/contract/test_capex_real_project_acceptance.py` for required freeze dimensions, access controls, baseline custody, leak-scan requirement, gate refs, raw-data boundary, and non-activation posture.
+- Closeout posture: planning evidence only. No blind baseline run, raw corpus import, public route, workflow pack activation, CAPEX runtime activation, CAPEX product activation, pilot readiness, production-preflight approval, or blind tuning approval is added.
