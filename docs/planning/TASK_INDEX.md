@@ -542,8 +542,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0579 | EPIC-136 | DONE | high | Add Product Goal and metric stack |
 | TASK-0580 | EPIC-136 | DONE | high | Add vertical-slice ladder and dependency register |
 | TASK-0581 | EPIC-143 | DONE | medium | Define workflow handoff manifest |
-| TASK-0582 | EPIC-136 | TODO | high | Define CAPEX Product Goal and metric stack |
-| TASK-0583 | EPIC-136 | TODO | high | Create CAPEX vertical-slice ladder |
+| TASK-0582 | EPIC-136 | DONE | high | Define CAPEX Product Goal and metric stack |
+| TASK-0583 | EPIC-136 | DONE | high | Create CAPEX vertical-slice ladder |
 | TASK-0584 | EPIC-136 | TODO | high | Add dependency register and risk-based milestone overlay |
 | TASK-0585 | EPIC-136 | TODO | medium | Add backlog hierarchy and story decomposition templates |
 | TASK-0586 | EPIC-136 | TODO | medium | Define delivery operating cadence |

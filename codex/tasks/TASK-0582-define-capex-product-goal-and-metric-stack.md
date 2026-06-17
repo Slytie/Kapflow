@@ -2,7 +2,8 @@
 id: TASK-0582
 epic: EPIC-136
 title: "Define CAPEX Product Goal and metric stack"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform", "security"]
 reviewers: ["architect", "qa"]
 depends_on: []
@@ -57,6 +58,12 @@ Create one-page Product Goal plus outcome, learning, flow, quality, and operabil
 - Source area: `delivery/product-governance`
 - Original depends_on: `none`
 - Recommended source branch: `analysis/master-delivery-safety`
+
+## Closeout evidence
+- Added `docs/planning/capex_delivery/MASTER_Product_Goal_and_Metrics.md` with the CAPEX product goal, repo planning signoff posture, metric principles, and explicit non-activation boundary.
+- Added `docs/planning/capex_delivery/Product_Goal_Metric_Stack.csv` covering outcome, learning, flow, quality, and operability metrics with guardrails and no velocity-only incentive.
+- Added semantic contract tests proving the product goal and metric stack are planning-only, measurable, guarded, and raw-corpus safe.
+- No runtime code, migrations, routes, workflow packs, frontend behavior, raw corpus import, pilot approval, production approval, or CAPEX product activation was introduced.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.

@@ -17,6 +17,11 @@ MP-PR000, V5-TASK-008, V5-TASK-009, SD-TASK-001, SD-TASK-002, SD-TASK-003, SD-TA
 - `V5-TASK-008` is a reconciled v5 historical alias for `TASK-0582`.
 - `V5-TASK-009` is a reconciled v5 historical alias for `TASK-0583`, `TASK-0584`.
 
+## Closed delivery-governance rows
+- `TASK-0582` is closed as of 2026-06-17 with `docs/planning/capex_delivery/MASTER_Product_Goal_and_Metrics.md` and `Product_Goal_Metric_Stack.csv`.
+- `TASK-0583` is closed as of 2026-06-17 with `docs/planning/capex_delivery/Vertical_Slice_Ladder.csv` covering `VS-00` through `VS-05`.
+- These closeouts are repo planning-governance evidence only; `TASK-0584` remains open for the dependency register and risk-based milestone overlay.
+
 ## Load first
 - `docs/planning/epics/EPIC-136.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`

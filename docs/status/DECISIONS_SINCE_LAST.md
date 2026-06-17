@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-17 (EPIC-136 delivery-governance closeout)
+- Product-goal decision: `TASK-0582` records the CAPEX Product Goal and guarded metric stack as repo planning-governance evidence under `docs/planning/capex_delivery/`.
+- Metric decision: CAPEX delivery metrics must cover outcome, learning, flow, quality, and operability, and no metric may reward velocity alone without a truth, quality, safety, or operability guardrail.
+- Slice-ladder decision: `TASK-0583` records `VS-00` through `VS-05` as the first vertical-slice ladder with entry/exit gates, metric refs, repo evidence refs, and planning-only activation posture.
+- Boundary decision: `TASK-0584` remains open for dependency register and risk-based milestone overlay work; this closeout adds no runtime code, migrations, routes, workflow pack activation, raw corpus import, pilot readiness, production readiness, or CAPEX product activation.
+
 ## 2026-06-17 (EPIC-142/143 sequence and workflow proposal closeout)
 - Sequence-formalism decision: `TASK-0570` records CAPEX closure and pointer transitions as non-commutative; later evidence, basis changes, or pointer activity must create new governed outcomes rather than retroactively rewriting earlier snapshots or pointer generations.
 - Workflow-routing decision: `TASK-0571` records procurement and CEO escalation as canonical task/approval-chain planning evidence, not editable workpage status.

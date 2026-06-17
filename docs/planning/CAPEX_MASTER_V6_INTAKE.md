@@ -341,6 +341,11 @@
 - Evidence: interface-burden unit and document contract tests passed on 2026-06-09.
 - Closeout posture: `NU-CB-P1-009` closes internal policy/prototype evidence only; public interface queues, workflow/workpage task routing, raw corpus use, and CAPEX runtime activation remain later gated work.
 
+## TASK-0582 / TASK-0583 closeout evidence
+- Added `docs/planning/capex_delivery/MASTER_Product_Goal_and_Metrics.md`, `Product_Goal_Metric_Stack.csv`, and `Vertical_Slice_Ladder.csv` as planning-governance evidence for `SD-TASK-001` and `SD-TASK-002`.
+- Evidence: CAPEX delivery-governance semantic contract tests cover the product goal, required metric categories, no velocity-only metric bias, exact `VS-00` through `VS-05` ladder rows, valid metric refs, and non-activation posture.
+- Closeout posture: `SD-TASK-001` and `SD-TASK-002` are planning-only closeouts. They do not activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, pilot readiness, production readiness, or the dependency/risk milestone overlay reserved for `SD-TASK-003`.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|

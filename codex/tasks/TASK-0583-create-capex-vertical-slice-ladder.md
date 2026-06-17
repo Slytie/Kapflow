@@ -2,7 +2,8 @@
 id: TASK-0583
 epic: EPIC-136
 title: "Create CAPEX vertical-slice ladder"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0582"]
@@ -57,6 +58,13 @@ Classify blocker proof, K12 learning slice, K12 closure slice, procurement escal
 - Source area: `delivery/backlog`
 - Original depends_on: `SD-TASK-001`
 - Recommended source branch: `analysis/master-delivery-safety`
+
+## Closeout evidence
+- Added `docs/planning/capex_delivery/Vertical_Slice_Ladder.csv` with exact `VS-00` through `VS-05` rows for blocker proof, K12 learning, K12 closure, procurement escalation MMF, pointer promotion, and validation holdout.
+- Each slice records entry gates, exit gates, metric refs, repo evidence refs, a planning-only activation posture, and a non-demo-theater guardrail.
+- Added semantic contract tests proving slice IDs are exact, metric refs are valid, every slice has entry/exit gates, and the ladder does not claim public runtime/product activation.
+- Left `TASK-0584` open for the dependency register and risk-based milestone overlay; this task closes only the vertical-slice ladder.
+- No runtime code, migrations, routes, workflow packs, frontend behavior, raw corpus import, pilot approval, production approval, or CAPEX product activation was introduced.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.

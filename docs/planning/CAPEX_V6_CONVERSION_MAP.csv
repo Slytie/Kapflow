@@ -348,8 +348,8 @@ V5-TASK-007,TASK-0578,EPIC-141,DONE,P0,,code/tests,,,,V5-GATE-007,Add SourceRef 
 V5-TASK-008,TASK-0579,EPIC-136,DONE,P0,,delivery/docs,,,,V5-GATE-008,Add Product Goal and metric stack,v5_carried_forward,historical_alias,TASK-0582
 V5-TASK-009,TASK-0580,EPIC-136,DONE,P0,,delivery/docs,,,,V5-GATE-009,Add vertical-slice ladder and dependency register,v5_carried_forward,historical_alias,TASK-0583;TASK-0584
 V5-TASK-010,TASK-0581,EPIC-143,DONE,P1,,runtime/catalog,,,,V5-GATE-010,Define workflow handoff manifest,v5_carried_forward,historical_alias,TASK-0566
-SD-TASK-001,TASK-0582,EPIC-136,TODO,P0,P0 Source freeze,delivery/product-governance,none,,,SD-GATE-001,Define CAPEX Product Goal and metric stack,capex_v6,active_task,
-SD-TASK-002,TASK-0583,EPIC-136,TODO,P0,P0/P1 planning,delivery/backlog,SD-TASK-001,TASK-0582,,SD-GATE-002,Create CAPEX vertical-slice ladder,capex_v6,active_task,
+SD-TASK-001,TASK-0582,EPIC-136,DONE,P0,P0 Source freeze,delivery/product-governance,none,,,SD-GATE-001,Define CAPEX Product Goal and metric stack,capex_v6,active_task,
+SD-TASK-002,TASK-0583,EPIC-136,DONE,P0,P0/P1 planning,delivery/backlog,SD-TASK-001,TASK-0582,,SD-GATE-002,Create CAPEX vertical-slice ladder,capex_v6,active_task,
 SD-TASK-003,TASK-0584,EPIC-136,TODO,P0,P0/P1 planning,delivery/dependencies,SD-TASK-001,TASK-0582,,SD-GATE-003,Add dependency register and risk-based milestone overlay,capex_v6,active_task,
 SD-TASK-004,TASK-0585,EPIC-136,TODO,P1,P0/P1 planning,delivery/backlog,SD-TASK-001,TASK-0582,,SD-GATE-004,Add backlog hierarchy and story decomposition templates,capex_v6,active_task,
 SD-TASK-005,TASK-0586,EPIC-136,TODO,P1,P0/P1 planning,delivery/cadence,SD-TASK-001;SD-TASK-003,TASK-0582;TASK-0584,,SD-GATE-005,Define delivery operating cadence,capex_v6,active_task,

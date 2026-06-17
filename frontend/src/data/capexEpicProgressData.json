@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 396,
-    "done": 74,
+    "done": 76,
     "in_progress": 0,
-    "not_started": 317,
+    "not_started": 315,
     "blocked": 1,
     "needs_review": 4,
     "total": 396,
     "estimate": {
-      "percentComplete": 18.7,
-      "completedTasks": 74,
-      "remainingTasks": 322,
+      "percentComplete": 19.2,
+      "completedTasks": 76,
+      "remainingTasks": 320,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 42,
-      "completionTimestampCoverage": 56.8,
-      "etaDate": "2026-10-02",
+      "completedWithTimestamps": 44,
+      "completionTimestampCoverage": 57.9,
+      "etaDate": "2026-09-27",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-10-02",
+      "label": "ETA 2026-09-27",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -82,9 +82,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 5,
+        "done": 7,
         "in_progress": 0,
-        "not_started": 7,
+        "not_started": 5,
         "blocked": 0,
         "needs_review": 0,
         "total": 12
@@ -266,9 +266,9 @@
           "epicId": "EPIC-136",
           "title": "Define CAPEX Product Goal and metric stack",
           "plainPurpose": "Create one-page Product Goal plus outcome, learning, flow, quality, and operability metrics.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task SD-TASK-001 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -311,20 +311,25 @@
             "original_depends_on": "none",
             "recommended_source_branch": "analysis/master-delivery-safety"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_delivery/MASTER_Product_Goal_and_Metrics.md with the CAPEX product goal, repo planning signoff posture, metric principles, and explicit non-activation boundary.",
+            "Added docs/planning/capex_delivery/Product_Goal_Metric_Stack.csv covering outcome, learning, flow, quality, and operability metrics with guardrails and no velocity-only incentive.",
+            "Added semantic contract tests proving the product goal and metric stack are planning-only, measurable, guarded, and raw-corpus safe.",
+            "No runtime code, migrations, routes, workflow packs, frontend behavior, raw corpus import, pilot approval, production approval, or CAPEX product activation was introduced."
+          ],
           "taskPath": "codex/tasks/TASK-0582-define-capex-product-goal-and-metric-stack.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0583",
           "epicId": "EPIC-136",
           "title": "Create CAPEX vertical-slice ladder",
           "plainPurpose": "Classify blocker proof, K12 learning slice, K12 closure slice, procurement escalation MMF, pointer promotion slice, validation holdout.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task SD-TASK-002 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -368,11 +373,17 @@
             "original_depends_on": "SD-TASK-001",
             "recommended_source_branch": "analysis/master-delivery-safety"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_delivery/Vertical_Slice_Ladder.csv with exact VS-00 through VS-05 rows for blocker proof, K12 learning, K12 closure, procurement escalation MMF, pointer promotion, and validation holdout.",
+            "Each slice records entry gates, exit gates, metric refs, repo evidence refs, a planning-only activation posture, and a non-demo-theater guardrail.",
+            "Added semantic contract tests proving slice IDs are exact, metric refs are valid, every slice has entry/exit gates, and the ladder does not claim public runtime/product activation.",
+            "Left TASK-0584 open for the dependency register and risk-based milestone overlay; this task closes only the vertical-slice ladder.",
+            "No runtime code, migrations, routes, workflow packs, frontend behavior, raw corpus import, pilot approval, production approval, or CAPEX product activation was introduced."
+          ],
           "taskPath": "codex/tasks/TASK-0583-create-capex-vertical-slice-ladder.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0584",
@@ -788,16 +799,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 41.7,
-        "completedTasks": 5,
-        "remainingTasks": 7,
+        "percentComplete": 58.3,
+        "completedTasks": 7,
+        "remainingTasks": 5,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 2,
-        "completionTimestampCoverage": 40.0,
-        "etaDate": "2026-06-19",
-        "etaConfidence": "low",
-        "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-19",
+        "completedWithTimestamps": 4,
+        "completionTimestampCoverage": 57.1,
+        "etaDate": "2026-06-27",
+        "etaConfidence": "medium",
+        "etaSource": "epic_completed_at",
+        "label": "ETA 2026-06-27",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -7739,10 +7750,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 66.7,
-        "etaDate": "2026-07-04",
+        "etaDate": "2026-07-03",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-04",
+        "label": "ETA 2026-07-03",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -14773,10 +14784,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-29",
+        "etaDate": "2026-06-28",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-29",
+        "label": "ETA 2026-06-28",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -19785,10 +19796,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-07-10",
+        "etaDate": "2026-07-09",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-10",
+        "label": "ETA 2026-07-09",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
