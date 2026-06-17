@@ -27,6 +27,10 @@ source_refs:
     path: docs/planning/capex_production_preflight/P0_ACTIVATION_BLOCKER_REVIEW.yaml
   - kind: planning
     path: docs/planning/capex_production_preflight/THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml
+  - kind: planning
+    path: docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml
+  - kind: planning
+    path: docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml
 workflows: []
 workpages: []
 side_effects: []
@@ -118,7 +122,7 @@ readiness_prerequisites:
       - docs/planning/epics/EPIC-151.md
       - docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md
   - prerequisite_id: capex.production_preflight
-    description: Production-preflight master review plus P0 blocker and three-project evidence reviews exist as no-go/blocked planning evidence through TASK-0601; release, capacity, restore, pilot, raw-data quarantine, and remaining gate-specific production-preflight evidence remain blocked or future scope.
+    description: Production-preflight master review plus P0 blocker, three-project, raw-data quarantine, and capacity/restore/full-corpus reviews exist as no-go/blocked planning evidence through TASK-0603; release, pilot, activation-gate, review-tier/CI, and final go/no-go evidence remain blocked or future scope.
     status: open
     task_refs:
       - TASK-0244
@@ -126,6 +130,8 @@ readiness_prerequisites:
       - TASK-0599
       - TASK-0600
       - TASK-0601
+      - TASK-0602
+      - TASK-0603
     source_refs:
       - docs/status/CURRENT_FOCUS.md
       - docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md
@@ -133,6 +139,8 @@ readiness_prerequisites:
       - docs/planning/capex_production_preflight/MASTER_Production_Preflight_Review.md
       - docs/planning/capex_production_preflight/P0_ACTIVATION_BLOCKER_REVIEW.yaml
       - docs/planning/capex_production_preflight/THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml
+      - docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml
+      - docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml
 disabled_capabilities:
   - capability_id: capex.runtime_activation
     description: CAPEX runtime/product activation is disabled.

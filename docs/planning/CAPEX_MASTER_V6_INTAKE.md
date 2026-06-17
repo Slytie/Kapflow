@@ -400,6 +400,12 @@
 - Evidence: CAPEX production-preflight contract tests cover P0 blocker families, open-blocker fail-closed status, three-project evidence coverage for `PROD-PRE-G02..G05`, no approved waivers, raw-data boundaries, and non-activation posture.
 - Closeout posture: `PP-TASK-002` and `PP-TASK-003` are review closeouts only. They do not pass `PROD-PRE-G01..G05`, approve waivers, activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, blind baseline execution, pilot readiness, production readiness, final go/no-go approval, or product activation.
 
+## TASK-0602 / TASK-0603 closeout evidence
+- Added `docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-004`.
+- Added `docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-005`.
+- Evidence: CAPEX production-preflight contract tests cover raw-data leak-scan surface coverage, missing generated/release/CI/log/off-repo copy evidence, capacity/backup/restore/full-corpus evidence categories, missing execution/rehearsal/metrics evidence, no approved waivers, raw-data boundaries, and non-activation posture.
+- Closeout posture: `PP-TASK-004` and `PP-TASK-005` are review closeouts only. They do not pass `PROD-PRE-G06..G07`, approve waivers, run off-repo corpora, execute restore rehearsals, activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, pilot readiness, production readiness, final go/no-go approval, or product activation.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|

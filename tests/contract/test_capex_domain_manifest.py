@@ -111,6 +111,8 @@ def test_capex_domain_manifest_prerequisites_link_future_tasks() -> None:
         "TASK-0599",
         "TASK-0600",
         "TASK-0601",
+        "TASK-0602",
+        "TASK-0603",
         "TASK-0283",
         "TASK-0289",
     } <= prerequisite_task_refs
@@ -129,6 +131,8 @@ def test_capex_domain_manifest_keeps_production_preflight_open() -> None:
     assert "TASK-0599" in production_preflight["task_refs"]
     assert "TASK-0600" in production_preflight["task_refs"]
     assert "TASK-0601" in production_preflight["task_refs"]
+    assert "TASK-0602" in production_preflight["task_refs"]
+    assert "TASK-0603" in production_preflight["task_refs"]
     assert (
         "docs/planning/capex_production_preflight/"
         "MASTER_Production_Preflight_Review.md"
@@ -141,10 +145,16 @@ def test_capex_domain_manifest_keeps_production_preflight_open() -> None:
         "docs/planning/capex_production_preflight/"
         "THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml"
     ) in production_preflight["source_refs"]
+    assert (
+        "docs/planning/capex_production_preflight/"
+        "RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml"
+    ) in production_preflight["source_refs"]
+    assert (
+        "docs/planning/capex_production_preflight/"
+        "CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml"
+    ) in production_preflight["source_refs"]
     assert "no-go/blocked planning evidence" in production_preflight["description"]
-    assert "remaining gate-specific production-preflight evidence" in (
-        production_preflight["description"]
-    )
+    assert "final go/no-go evidence" in production_preflight["description"]
 
 
 def test_capex_domain_manifest_has_no_raw_corpus_paths_or_content() -> None:

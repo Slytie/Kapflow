@@ -562,8 +562,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0599 | EPIC-152 | DONE | high | Run production preflight readiness review |
 | TASK-0600 | EPIC-152 | DONE | high | Verify P0 activation blockers are closed or explicitly waived |
 | TASK-0601 | EPIC-152 | DONE | high | Verify three-project evidence package |
-| TASK-0602 | EPIC-152 | TODO | high | Verify raw-data quarantine and leak-scan evidence |
-| TASK-0603 | EPIC-152 | TODO | high | Verify capacity, backup, restore, and off-repo full-corpus run evidence |
+| TASK-0602 | EPIC-152 | DONE | high | Verify raw-data quarantine and leak-scan evidence |
+| TASK-0603 | EPIC-152 | DONE | high | Verify capacity, backup, restore, and off-repo full-corpus run evidence |
 | TASK-0604 | EPIC-152 | TODO | high | Verify release bundle, migration lanes, activation gates, and rollback/compensation evidence |
 | TASK-0605 | EPIC-152 | TODO | high | Verify semantic MR, CODEOWNERS, review-tier, and CI gates are active |
 | TASK-0606 | EPIC-152 | TODO | high | Produce production preflight go/no-go memorandum |

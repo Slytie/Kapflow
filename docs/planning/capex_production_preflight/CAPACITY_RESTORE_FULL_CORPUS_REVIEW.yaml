@@ -1,0 +1,95 @@
+schema_version: capex.production_preflight_gate_review.v1
+review_id: capex.production_preflight.capacity_restore_full_corpus_review.v1
+owner_task: TASK-0603
+source_task_id: PP-TASK-005
+activation_posture: planning_only_no_capex_activation
+overall_status: no_go_blocked_pending_evidence
+gate_refs:
+  - PROD-PRE-G07
+approved_waivers: []
+future_waiver_required_fields:
+  - owner
+  - reason
+  - residual_risk
+  - expiry_or_review_date
+  - affected_gate
+reviewed_evidence_contracts:
+  - evidence_id: off_repo_full_corpus_runbook
+    status: planning_contract_recorded
+    blocking: true
+    evidence_refs:
+      - docs/planning/capex_three_project_validation/OFF_REPO_FULL_CORPUS_RUNBOOK.yaml
+    blocked_reason: Runbook exists, but no realistic full-corpus run report is recorded.
+  - evidence_id: pilot_storage_gate_checklist
+    status: planning_checklist_recorded
+    blocking: true
+    evidence_refs:
+      - docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md
+      - tests/contract/test_capex_pilot_storage_gate_checklist.py
+    blocked_reason: Checklist exists and remains blocked pending real pilot storage evidence or waiver.
+  - evidence_id: backup_restore_runbook
+    status: rehearsal_basis_recorded
+    blocking: true
+    evidence_refs:
+      - docs/ops/runbooks/backup_and_restore.md
+      - tests/contract/test_backup_restore_runbook_docs.py
+    blocked_reason: Runbook provides the basis only; no completed restore rehearsal record exists.
+  - evidence_id: predeploy_backup_skeleton
+    status: validate_only_skeleton_recorded
+    blocking: true
+    evidence_refs:
+      - scripts/prepare_predeploy_backup.py
+      - tests/unit/test_predeploy_backup_manifest.py
+      - tests/contract/test_capex_release_backup_readiness.py
+    blocked_reason: Predeploy backup skeleton validates a manifest only and does not copy, archive, restore, upload, or mutate runtime state.
+  - evidence_id: release_backup_readiness_tests
+    status: planning_readiness_tests_recorded
+    blocking: true
+    evidence_refs:
+      - tests/contract/test_capex_release_backup_readiness.py
+      - tests/unit/test_release_image_build.py
+      - tests/unit/test_repo_assurance_release.py
+    blocked_reason: Release and backup readiness tests exist, but they are not capacity, full-corpus, or restore-rehearsal evidence.
+missing_evidence:
+  - realistic_full_corpus_run_report
+  - ingest_extraction_projection_search_metrics
+  - backup_set_capture_record
+  - restore_rehearsal_report
+  - post_restore_auth_before_read_artifact_check
+  - capacity_metrics
+  - no_raw_leakage_report_for_full_corpus_run
+  - explicit_gate_waiver_evidence
+rollup:
+  reviewed_contract_count: 5
+  blocking_contract_count: 5
+  result_reason: Capacity/restore/full-corpus review is complete, but PROD-PRE-G07 remains no-go pending real execution, backup, restore, capacity, and leak-scan evidence.
+raw_data_boundary:
+  allowed_repo_material:
+    - task ids
+    - gate ids
+    - sanitized evidence references
+    - aggregate run status
+    - capacity metric labels without project data
+    - package basenames and digests
+    - waiver field requirements
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - mounted raw corpus paths
+    - project-specific hardcoded logic
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - waiver_approval
+  - full_corpus_run_completion_claim
+  - restore_rehearsal_completion_claim
+  - capacity_pass_claim
+  - production_preflight_approval
+  - pilot_readiness_approval
+  - final_go_no_go_approval

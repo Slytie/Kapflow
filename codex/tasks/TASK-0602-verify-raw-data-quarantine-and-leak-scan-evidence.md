@@ -2,7 +2,8 @@
 id: TASK-0602
 epic: EPIC-152
 title: "Verify raw-data quarantine and leak-scan evidence"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform", "sre"]
 reviewers: ["security", "qa"]
 depends_on: ["TASK-0589", "TASK-0590", "TASK-0591", "TASK-0592", "TASK-0593", "TASK-0594", "TASK-0595", "TASK-0596", "TASK-0597", "TASK-0598"]
@@ -61,3 +62,10 @@ Confirm no raw K3/K12/blind data in repo, CI, logs, screenshots, planning packs,
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-004` and `PROD-PRE-G06`.
+- The review covers repo tracked files, planning packs, generated packs, release bundles, CI logs, screenshots/logs, and the off-repo reviewed-copy boundary.
+- Current repo/planning evidence is reviewed where raw-marker contract coverage exists, while generated-pack, release-bundle, CI-log, screenshot/log, and full off-repo reviewed-copy leak-scan evidence remains missing and blocking.
+- Updated the master production-preflight review so `PROD-PRE-G06` is reviewed but remains `no_go_blocked_pending_evidence`.
+- Closeout posture: review evidence only. No raw corpus import, complete leak-scan pass, waiver approval, production-preflight pass, pilot readiness, public route, workflow pack activation, CAPEX runtime activation, or CAPEX product activation is added.

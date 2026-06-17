@@ -11,6 +11,8 @@ from tests.helpers.repo_paths import REPO_ROOT
 PREFLIGHT_DIR = REPO_ROOT / "docs/planning/capex_production_preflight"
 P0_REVIEW_PATH = PREFLIGHT_DIR / "P0_ACTIVATION_BLOCKER_REVIEW.yaml"
 THREE_PROJECT_REVIEW_PATH = PREFLIGHT_DIR / "THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml"
+RAW_DATA_REVIEW_PATH = PREFLIGHT_DIR / "RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml"
+CAPACITY_REVIEW_PATH = PREFLIGHT_DIR / "CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml"
 EXPECTED_P0_FAMILIES = {
     "approval_response_neutrality",
     "artifact_auth_before_read",
@@ -35,6 +37,22 @@ EXPECTED_THREE_PROJECT_REFS = {
     "PROJECT_ORACLE_MANIFEST_FORMAT.yaml",
     "FIXTURE_TIER_CI_POLICY.yaml",
 }
+EXPECTED_RAW_DATA_SURFACES = {
+    "repo_tracked_files",
+    "planning_packs",
+    "generated_packs",
+    "release_bundles",
+    "ci_logs",
+    "screenshots_and_logs",
+    "off_repo_reviewed_copy_boundary",
+}
+EXPECTED_CAPACITY_CONTRACTS = {
+    "off_repo_full_corpus_runbook",
+    "pilot_storage_gate_checklist",
+    "backup_restore_runbook",
+    "predeploy_backup_skeleton",
+    "release_backup_readiness_tests",
+}
 FORBIDDEN_CLAIMS = (
     "runtime activation approved",
     "product activation approved",
@@ -45,6 +63,9 @@ FORBIDDEN_CLAIMS = (
     "waiver approved",
     "fixture release approved",
     "raw corpus import approved",
+    "leak scan passes for all surfaces",
+    "restore proof approved",
+    "capacity pass approved",
 )
 
 
@@ -158,3 +179,62 @@ def test_three_project_evidence_review_covers_g02_to_g05_without_pass_claims() -
         "explicit_gate_waiver_evidence",
     }
     assert review["rollup"]["passed_gate_count"] == 0
+
+
+def test_raw_data_quarantine_review_covers_surfaces_and_blocks_missing_evidence() -> None:
+    review = _load_yaml(RAW_DATA_REVIEW_PATH)
+
+    assert review["schema_version"] == "capex.production_preflight_gate_review.v1"
+    assert review["owner_task"] == "TASK-0602"
+    assert review["source_task_id"] == "PP-TASK-004"
+    assert review["gate_refs"] == ["PROD-PRE-G06"]
+    _assert_review_boundary(review, RAW_DATA_REVIEW_PATH)
+
+    surfaces = review["reviewed_surfaces"]
+    assert {row["surface_id"] for row in surfaces} == EXPECTED_RAW_DATA_SURFACES
+    assert review["rollup"]["reviewed_surface_count"] == len(EXPECTED_RAW_DATA_SURFACES)
+    assert review["rollup"]["blocking_surface_count"] == sum(
+        1 for row in surfaces if row["blocking"] is True
+    )
+    assert any(row["blocking"] is True for row in surfaces)
+    assert all(row["evidence_refs"] for row in surfaces)
+    assert {
+        "generated_pack_leak_scan_report",
+        "release_bundle_leak_scan_report",
+        "ci_log_leak_scan_report",
+        "screenshot_log_leak_scan_report",
+        "full_corpus_reviewed_copy_attestation",
+    } <= set(review["missing_evidence"])
+    assert "leak_scan_pass_claim_for_all_surfaces" in review["cannot_be_used_for"]
+
+
+def test_capacity_restore_review_blocks_until_real_execution_evidence_exists() -> None:
+    review = _load_yaml(CAPACITY_REVIEW_PATH)
+
+    assert review["schema_version"] == "capex.production_preflight_gate_review.v1"
+    assert review["owner_task"] == "TASK-0603"
+    assert review["source_task_id"] == "PP-TASK-005"
+    assert review["gate_refs"] == ["PROD-PRE-G07"]
+    _assert_review_boundary(review, CAPACITY_REVIEW_PATH)
+
+    contracts = review["reviewed_evidence_contracts"]
+    assert {row["evidence_id"] for row in contracts} == EXPECTED_CAPACITY_CONTRACTS
+    assert review["rollup"]["reviewed_contract_count"] == len(EXPECTED_CAPACITY_CONTRACTS)
+    assert review["rollup"]["blocking_contract_count"] == sum(
+        1 for row in contracts if row["blocking"] is True
+    )
+    assert all(row["blocking"] is True for row in contracts)
+    assert all(row["evidence_refs"] for row in contracts)
+    assert {
+        "realistic_full_corpus_run_report",
+        "ingest_extraction_projection_search_metrics",
+        "backup_set_capture_record",
+        "restore_rehearsal_report",
+        "post_restore_auth_before_read_artifact_check",
+        "capacity_metrics",
+    } <= set(review["missing_evidence"])
+    assert {
+        "full_corpus_run_completion_claim",
+        "restore_rehearsal_completion_claim",
+        "capacity_pass_claim",
+    } <= set(review["cannot_be_used_for"])

@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 396,
-    "done": 94,
+    "done": 96,
     "in_progress": 0,
-    "not_started": 297,
+    "not_started": 295,
     "blocked": 1,
     "needs_review": 4,
     "total": 396,
     "estimate": {
-      "percentComplete": 23.7,
-      "completedTasks": 94,
-      "remainingTasks": 302,
+      "percentComplete": 24.2,
+      "completedTasks": 96,
+      "remainingTasks": 300,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 62,
-      "completionTimestampCoverage": 66.0,
-      "etaDate": "2026-08-24",
+      "completedWithTimestamps": 64,
+      "completionTimestampCoverage": 66.7,
+      "etaDate": "2026-08-22",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-24",
+      "label": "ETA 2026-08-22",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -19884,10 +19884,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-07-03",
+        "etaDate": "2026-07-02",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-03",
+        "label": "ETA 2026-07-02",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -23363,9 +23363,9 @@
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv"
       ],
       "counts": {
-        "done": 3,
+        "done": 5,
         "in_progress": 0,
-        "not_started": 5,
+        "not_started": 3,
         "blocked": 0,
         "needs_review": 0,
         "total": 8
@@ -23600,9 +23600,9 @@
           "epicId": "EPIC-152",
           "title": "Verify raw-data quarantine and leak-scan evidence",
           "plainPurpose": "Confirm no raw K3/K12/blind data in repo, CI, logs, screenshots, planning packs, generated packs, or release bundles.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task PP-TASK-004 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -23657,20 +23657,26 @@
             "source_only_dependency_notes": "P0 blocker remediation; release/migration/activation governance",
             "recommended_source_branch": "release-candidate/* or activation/*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml as no-go / blocked review evidence for PP-TASK-004 and PROD-PRE-G06.",
+            "The review covers repo tracked files, planning packs, generated packs, release bundles, CI logs, screenshots/logs, and the off-repo reviewed-copy boundary.",
+            "Current repo/planning evidence is reviewed where raw-marker contract coverage exists, while generated-pack, release-bundle, CI-log, screenshot/log, and full off-repo reviewed-copy leak-scan evidence remains missing and blocking.",
+            "Updated the master production-preflight review so PROD-PRE-G06 is reviewed but remains no_go_blocked_pending_evidence.",
+            "Closeout posture: review evidence only. No raw corpus import, complete leak-scan pass, waiver approval, production-preflight pass, pilot readiness, public route, workflow pack activation, CAPEX runtime activation, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0602-verify-raw-data-quarantine-and-leak-scan-evidence.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0603",
           "epicId": "EPIC-152",
           "title": "Verify capacity, backup, restore, and off-repo full-corpus run evidence",
           "plainPurpose": "Confirm at least one realistic full-corpus run and restore path are proven before controlled pilot.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task PP-TASK-005 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -23725,11 +23731,17 @@
             "source_only_dependency_notes": "P0 blocker remediation; release/migration/activation governance",
             "recommended_source_branch": "release-candidate/* or activation/*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml as no-go / blocked review evidence for PP-TASK-005 and PROD-PRE-G07.",
+            "The review covers the off-repo full-corpus runbook, pilot storage gate checklist, backup/restore runbook, predeploy backup skeleton, and release/backup readiness tests.",
+            "Realistic full-corpus execution, ingest/extraction/projection/search metrics, backup set capture, restore rehearsal, post-restore auth-before-read proof, capacity metrics, and full-corpus no-raw-leakage evidence remain missing and blocking.",
+            "Updated the master production-preflight review so PROD-PRE-G07 is reviewed but remains no_go_blocked_pending_evidence.",
+            "Closeout posture: review evidence only. No off-repo corpus execution, restore rehearsal execution, capacity pass, waiver approval, production-preflight pass, pilot readiness, public route, workflow pack activation, CAPEX runtime activation, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0603-verify-capacity-backup-restore-and-off-repo-full-corpus-run-evidence.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0604",
@@ -23937,16 +23949,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 37.5,
-        "completedTasks": 3,
-        "remainingTasks": 5,
+        "percentComplete": 62.5,
+        "completedTasks": 5,
+        "remainingTasks": 3,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 3,
+        "completedWithTimestamps": 5,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-19",
+        "etaDate": "2026-06-18",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-06-19",
+        "label": "ETA 2026-06-18",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     }

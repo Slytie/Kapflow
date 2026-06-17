@@ -2,7 +2,8 @@
 id: TASK-0603
 epic: EPIC-152
 title: "Verify capacity, backup, restore, and off-repo full-corpus run evidence"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform", "sre"]
 reviewers: ["security", "qa"]
 depends_on: ["TASK-0589", "TASK-0590", "TASK-0591", "TASK-0592", "TASK-0593", "TASK-0594", "TASK-0595", "TASK-0596", "TASK-0597", "TASK-0598"]
@@ -61,3 +62,10 @@ Confirm at least one realistic full-corpus run and restore path are proven befor
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-005` and `PROD-PRE-G07`.
+- The review covers the off-repo full-corpus runbook, pilot storage gate checklist, backup/restore runbook, predeploy backup skeleton, and release/backup readiness tests.
+- Realistic full-corpus execution, ingest/extraction/projection/search metrics, backup set capture, restore rehearsal, post-restore auth-before-read proof, capacity metrics, and full-corpus no-raw-leakage evidence remain missing and blocking.
+- Updated the master production-preflight review so `PROD-PRE-G07` is reviewed but remains `no_go_blocked_pending_evidence`.
+- Closeout posture: review evidence only. No off-repo corpus execution, restore rehearsal execution, capacity pass, waiver approval, production-preflight pass, pilot readiness, public route, workflow pack activation, CAPEX runtime activation, or CAPEX product activation is added.

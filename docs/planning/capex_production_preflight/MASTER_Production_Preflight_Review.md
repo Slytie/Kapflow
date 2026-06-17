@@ -10,6 +10,8 @@ approved_waivers: []
 supporting_review_refs:
   - docs/planning/capex_production_preflight/P0_ACTIVATION_BLOCKER_REVIEW.yaml
   - docs/planning/capex_production_preflight/THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml
+  - docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml
+  - docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml
 gate_reviews:
   - gate_id: PROD-PRE-G01
     status: reviewed_no_go_blocked_pending_evidence
@@ -32,13 +34,13 @@ gate_reviews:
     reason_code: blind_validation_reviewed_missing_signed_freeze_or_baseline
     evidence_ref: docs/planning/capex_production_preflight/THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml
   - gate_id: PROD-PRE-G06
-    status: blocked_pending_task
-    reason_code: raw_data_quarantine_and_leak_scan_pending
-    pending_task: TASK-0602
+    status: reviewed_no_go_blocked_pending_evidence
+    reason_code: raw_data_quarantine_reviewed_missing_complete_leak_scan_evidence
+    evidence_ref: docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml
   - gate_id: PROD-PRE-G07
-    status: blocked_pending_task
-    reason_code: capacity_backup_restore_full_corpus_pending
-    pending_task: TASK-0603
+    status: reviewed_no_go_blocked_pending_evidence
+    reason_code: capacity_restore_reviewed_missing_full_corpus_and_restore_evidence
+    evidence_ref: docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml
   - gate_id: PROD-PRE-G08
     status: blocked_pending_task
     reason_code: release_migration_activation_rollback_pending
@@ -62,8 +64,6 @@ rollback_posture:
   capex_disabled: true
   preserve_evidence_trail: true
   route_later_gate_checks_to:
-    - TASK-0602
-    - TASK-0603
     - TASK-0604
     - TASK-0605
     - TASK-0606
@@ -91,8 +91,8 @@ CAPEX runtime/product behavior.
 - Overall status: `no_go_blocked_pending_evidence`
 - Activation posture: `planning_only_no_capex_activation`
 - Approved waivers: none
-- `PROD-PRE-G01..G05` now have supporting no-go / blocked review evidence.
-- Later unresolved gate-specific checks remain assigned to `TASK-0602` through `TASK-0606`.
+- `PROD-PRE-G01..G07` now have supporting no-go / blocked review evidence.
+- Later unresolved gate-specific checks remain assigned to `TASK-0604` through `TASK-0606`.
 
 ## Boundary
 

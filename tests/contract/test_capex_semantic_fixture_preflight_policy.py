@@ -138,6 +138,10 @@ def test_production_preflight_master_review_is_no_go_and_blocked() -> None:
         "P0_ACTIVATION_BLOCKER_REVIEW.yaml",
         "docs/planning/capex_production_preflight/"
         "THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml",
+        "docs/planning/capex_production_preflight/"
+        "RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml",
+        "docs/planning/capex_production_preflight/"
+        "CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml",
     }
     assert [row["gate_id"] for row in frontmatter["gate_reviews"]] == (
         EXPECTED_PROD_PRE_GATES
@@ -164,10 +168,16 @@ def test_production_preflight_master_review_is_no_go_and_blocked() -> None:
             "docs/planning/capex_production_preflight/"
             "THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml"
         ),
+        "PROD-PRE-G06": (
+            "docs/planning/capex_production_preflight/"
+            "RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml"
+        ),
+        "PROD-PRE-G07": (
+            "docs/planning/capex_production_preflight/"
+            "CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml"
+        ),
     }
     expected_pending_tasks = {
-        "PROD-PRE-G06": "TASK-0602",
-        "PROD-PRE-G07": "TASK-0603",
         "PROD-PRE-G08": "TASK-0604",
         "PROD-PRE-G09": "TASK-0605",
         "PROD-PRE-G10": "TASK-0606",
@@ -191,8 +201,6 @@ def test_production_preflight_master_review_is_no_go_and_blocked() -> None:
     assert frontmatter["rollback_posture"]["recommendation"] == "defer_no_go"
     assert frontmatter["rollback_posture"]["capex_disabled"] is True
     assert set(frontmatter["rollback_posture"]["route_later_gate_checks_to"]) == {
-        "TASK-0602",
-        "TASK-0603",
         "TASK-0604",
         "TASK-0605",
         "TASK-0606",
