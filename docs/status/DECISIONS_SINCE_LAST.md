@@ -2,6 +2,18 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-17 (EPIC-140+ review tasks 9-10 repair)
+- Control-plane decision: task status truth is now enforced between `docs/planning/TASK_INDEX.md` and task frontmatter, and DONE/COMPLETED tasks may not depend on open tasks unless a valid machine-readable `dependency_exceptions` entry exists.
+- Progress-ownership decision: `frontend/src/data/capexEpicProgressData.json` remains the repo-owned generated CAPEX progress data source; `capex-progress-check` validates freshness and is part of the CAPEX semantic verification lane.
+- Hygiene decision: the review-identified root editor debris filenames are removed and narrowly forbidden by repo assurance without broadening cleanup to ignored local caches.
+- Evidence decision: EPIC-140 second-order review repairs are complete for foundation scope with scoped final-gate evidence; this is not CAPEX runtime activation, public route activation, raw corpus import, or product activation.
+
+## 2026-06-17 (EPIC-140+ review tasks 7-8 repair)
+- Workpage-dispatch decision: internal CAPEX workpage command dispatch now requires `activation_state=active` and `activation_policy=workpage_command_dispatch_v1`; planning-only, disabled, or policy-mismatched families fail closed before command effects.
+- Idempotency decision: guarded workpage command envelopes use shared command-receipt storage scoped by project/workpage/command/snapshot, replay exact duplicate idempotency keys without handler re-entry, and reject same-key/different-payload attempts.
+- Audit decision: CAPEX invariant audit hard-gates workpage activation/idempotency guardrails and first-class red-team regression coverage for revocation, artifact identity, provenance, SourceRef, and official pointer isolation.
+- Activation decision: this repair adds internal guardrails and audit/tests only; it adds no public CAPEX workpage API, frontend route, authored CAPEX workflow/workpage activation, raw corpus import, or CAPEX product activation.
+
 ## 2026-06-10 (EPIC-140+ review tasks 5-6 repair)
 - Artifact-identity decision: project-scoped artifact officialness uses persisted `artifact_versions.project_id`; workflow-run project inference is allowed only for initial stamping/backfill, not for authorization at promotion time.
 - Provenance-isolation decision: project-scoped provenance edges persist `artifact_provenance_edges.project_id` and fail closed unless input/output artifacts and any workflow context share the same project.

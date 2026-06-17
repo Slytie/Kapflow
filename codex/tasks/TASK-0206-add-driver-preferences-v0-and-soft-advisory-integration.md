@@ -2,7 +2,7 @@
 id: TASK-0206
 epic: EPIC-131
 title: "Add driver-preferences-v0 and integrate it as a soft advisory schedule input"
-status: TODO
+status: DONE
 owners: ["backend", "frontend"]
 reviewers: ["pm", "qa"]
 depends_on: ["TASK-0202"]

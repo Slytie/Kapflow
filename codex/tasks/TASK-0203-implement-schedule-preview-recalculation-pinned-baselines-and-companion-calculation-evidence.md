@@ -2,7 +2,7 @@
 id: TASK-0203
 epic: EPIC-131
 title: "Implement schedule preview recalculation, pinned baselines, and companion calculation evidence"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0202"]

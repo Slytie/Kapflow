@@ -141,11 +141,27 @@ CAPEX_INVARIANT_REGISTRY: tuple[CapexInvariant, ...] = (
         evaluator=lambda repo_root: _check_capex_interface_burden_source(repo_root),
     ),
     CapexInvariant(
+        invariant_id="capex.redteam.workpage_command_activation_idempotency",
+        title="Workpage command activation and idempotency fail closed",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0237", "TASK-0567", "TASK-0568"),
+        description="Internal CAPEX workpage command dispatch must require active policy and replay command receipts before handler effects.",
+        evaluator=lambda repo_root: _check_capex_workpage_command_guardrails(repo_root),
+    ),
+    CapexInvariant(
+        invariant_id="capex.redteam.project_security_probe_coverage",
+        title="Project security red-team probes are first-class regressions",
+        gate_mode="hard_gate",
+        task_refs=("TASK-0237", "TASK-0265", "TASK-0564", "TASK-0568"),
+        description="Revocation, artifact identity, provenance, SourceRef, and pointer isolation probes must live in focused tests.",
+        evaluator=lambda repo_root: _check_capex_project_security_probe_coverage(repo_root),
+    ),
+    CapexInvariant(
         invariant_id="capex.known_gap.capex_activation_downstream_governance",
         title="CAPEX activation and downstream governance gates",
         gate_mode="known_gap",
         task_refs=("TASK-0263", "TASK-0385", "TASK-0386", "TASK-0387", "TASK-0388", "TASK-0389", "TASK-0390", "TASK-0563", "TASK-0566", "TASK-0567"),
-        description="The durable project anchor, direct memberships, first project child APIs, selector/dashboard slice, project-scope helper, official pointer-family substrate, domain manifests, approval-effect registry shadow parity, project authorization CED, projection-backed AuthorizedProjectsQuery, physical authorization projection runtime state, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, W1 closeout review, handoff manifest foundation, and projection stale-command foundation exist, but pointer-promotion policy checks, real pilot storage evidence or waiver, source governance dependencies, authored CAPEX workflow packs, public CAPEX workpages, and activation remain blocked.",
+        description="The durable project anchor, direct memberships, first project child APIs, selector/dashboard slice, project-scope helper, official pointer-family substrate, domain manifests, approval-effect registry shadow parity, project authorization CED, projection-backed AuthorizedProjectsQuery, physical authorization projection runtime state, storage/blob custody CED, pilot storage gate checklist, W1 code pattern register, W1 closeout review, handoff manifest foundation, projection stale-command foundation, and internal workpage command activation/idempotency guards exist, but pointer-promotion policy checks, real pilot storage evidence or waiver, source governance dependencies, authored CAPEX workflow packs, public CAPEX workpages, and activation remain blocked.",
     ),
     CapexInvariant(
         invariant_id="capex.known_gap.source_occurrence_sourceref",
@@ -917,6 +933,97 @@ def _check_capex_interface_burden_source(repo_root: Path) -> AuditEvaluation:
         in unit_test_text
         and "test_capex_interface_burden_policy_records_conservation_states"
         in contract_test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={"missing_markers": missing},
+    )
+
+
+def _check_capex_workpage_command_guardrails(repo_root: Path) -> AuditEvaluation:
+    source_text = (
+        repo_root / "src/onetruth/capex_platform/workpage_projection_commands.py"
+    ).read_text(encoding="utf-8")
+    test_text = (
+        repo_root / "tests/unit/test_capex_workpage_command_envelope.py"
+    ).read_text(encoding="utf-8")
+    execute_body = source_text.split("def execute_guarded_workpage_command", 1)[-1]
+    receipt_body = source_text.split("def _execute_with_workpage_command_receipt", 1)[-1]
+    receipt_lookup_before_operation = (
+        "get_command_receipt(" in receipt_body
+        and "result = operation()" in receipt_body
+        and receipt_body.index("get_command_receipt(")
+        < receipt_body.index("result = operation()")
+    )
+    required_markers = {
+        "activation_contract": "class WorkpageCommandActivation" in source_text
+        and "WORKPAGE_COMMAND_DISPATCH_POLICY" in source_text
+        and "activation: WorkpageCommandActivation" in execute_body,
+        "activation_disabled_error": "workpage_command_activation_disabled" in source_text,
+        "activation_policy_error": "workpage_command_activation_policy_mismatch" in source_text,
+        "receipt_store": "WORKPAGE_COMMAND_RECEIPT_NAME" in source_text
+        and "capex.workpages.command-envelope.execute" in source_text
+        and "create_command_receipt(" in source_text,
+        "receipt_lookup_before_operation": receipt_lookup_before_operation,
+        "receipt_mismatch_error": "workpage_command_receipt_mismatch" in source_text,
+        "activation_tests": "test_workpage_command_activation_fails_closed_before_operation"
+        in test_text,
+        "idempotency_tests": "test_workpage_command_idempotency_replays_receipt_without_handler_reentry"
+        in test_text
+        and "test_workpage_command_same_idempotency_key_with_changed_payload_fails_closed"
+        in test_text,
+    }
+    missing = [key for key, present in required_markers.items() if not present]
+    return AuditEvaluation(
+        passed=not missing,
+        details={"missing_markers": missing},
+    )
+
+
+def _check_capex_project_security_probe_coverage(repo_root: Path) -> AuditEvaluation:
+    authorized_text = (
+        repo_root / "tests/unit/test_capex_authorized_projects_query.py"
+    ).read_text(encoding="utf-8")
+    access_api_text = (
+        repo_root / "tests/runtime/api/test_capex_project_access_api.py"
+    ).read_text(encoding="utf-8")
+    pointer_unit_text = (
+        repo_root / "tests/unit/test_capex_official_pointer_families.py"
+    ).read_text(encoding="utf-8")
+    pointer_api_text = (
+        repo_root / "tests/runtime/api/test_capex_project_official_pointer_api.py"
+    ).read_text(encoding="utf-8")
+    provenance_text = (
+        repo_root / "tests/unit/test_artifact_provenance_dag.py"
+    ).read_text(encoding="utf-8")
+    source_ref_text = (
+        repo_root / "tests/unit/test_capex_source_occurrence_resolver.py"
+    ).read_text(encoding="utf-8")
+    required_markers = {
+        "revocation_projection_stale_unit": "test_authorized_projects_query_fails_closed_when_projection_is_stale_after_revocation"
+        in authorized_text
+        and "test_revoke_then_regrant_uses_live_direct_membership_role" in authorized_text
+        and "test_authorized_projects_visibility_sql_preserves_no_project_rows"
+        in authorized_text,
+        "revocation_api": "test_capex_project_membership_revoke_api_fails_closed_without_refresh_gap"
+        in access_api_text,
+        "artifact_identity": "test_artifact_versions_capture_project_identity_and_reject_mismatch"
+        in pointer_unit_text
+        and "test_project_official_pointer_fails_closed_on_artifact_project_identity_mismatch"
+        in pointer_unit_text,
+        "provenance_isolation": "test_provenance_edges_persist_same_project_identity"
+        in provenance_text
+        and "test_provenance_edges_reject_cross_project_and_project_to_null_edges"
+        in provenance_text,
+        "source_ref_isolation": "test_same_digest_in_two_projects_creates_distinct_project_scoped_occurrences"
+        in source_ref_text
+        and "test_source_occurrence_relations_remain_inactive_until_same_project_policy_exists"
+        in source_ref_text,
+        "pointer_api_isolation": "test_capex_project_official_pointer_routes_promote_and_scope_snapshots"
+        in pointer_api_text
+        and "test_capex_project_official_pointer_route_fails_closed_on_artifact_project_mismatch"
+        in pointer_api_text,
     }
     missing = [key for key, present in required_markers.items() if not present]
     return AuditEvaluation(

@@ -22,34 +22,34 @@ describe("CapexEpicProgressPage", () => {
     expect(within(page).getByRole("heading", { name: "CAPEX Epic Progress" })).toBeInTheDocument();
     const summary = screen.getByRole("region", { name: "CAPEX progress summary" });
     const metrics = within(summary).getByRole("group", { name: "CAPEX progress metrics" });
-    expect(within(metrics).getByText("379")).toBeInTheDocument();
-    expect(within(metrics).getByText("17.2%")).toBeInTheDocument();
-    expect(within(metrics).getByText("314")).toBeInTheDocument();
+    expect(within(metrics).getByText("396")).toBeInTheDocument();
+    expect(within(metrics).getByText("18.2%")).toBeInTheDocument();
+    expect(within(metrics).getByText("324")).toBeInTheDocument();
 
     const roadmapProgress = screen.getByRole("region", { name: "CAPEX roadmap progress" });
     const roadmapProgressBar = within(roadmapProgress).getByRole("progressbar", {
       name: "CAPEX roadmap completion"
     });
-    expect(roadmapProgressBar).toHaveAttribute("aria-valuenow", "17.2");
+    expect(roadmapProgressBar).toHaveAttribute("aria-valuenow", "18.2");
     expect(roadmapProgressBar).toHaveAttribute(
       "aria-valuetext",
-      "17.2% complete, 314 remaining"
+      "18.2% complete, 324 remaining"
     );
-    expect(within(roadmapProgress).getByText("65 completed")).toBeInTheDocument();
-    expect(within(roadmapProgress).getByText("314 remaining")).toBeInTheDocument();
+    expect(within(roadmapProgress).getByText("72 completed")).toBeInTheDocument();
+    expect(within(roadmapProgress).getByText("324 remaining")).toBeInTheDocument();
 
     const completionTrend = screen.getByRole("region", { name: "CAPEX completion over time" });
     const trendLine = within(completionTrend).getByRole("img", {
       name: "CAPEX completion trend line"
     });
-    expect(trendLine).toHaveAttribute("data-point-count", "6");
-    expect(trendLine).toHaveAttribute("data-projection-date", "2026-08-05");
-    expect(within(completionTrend).getByText("17.2% current")).toBeInTheDocument();
-    expect(within(completionTrend).getByText("33 timestamped completions")).toBeInTheDocument();
+    expect(trendLine).toHaveAttribute("data-point-count", "7");
+    expect(trendLine).toHaveAttribute("data-projection-date", "2026-10-08");
+    expect(within(completionTrend).getByText("18.2% current")).toBeInTheDocument();
+    expect(within(completionTrend).getByText("40 timestamped completions")).toBeInTheDocument();
     expect(within(completionTrend).getByText("100%")).toBeInTheDocument();
     expect(within(completionTrend).getByText("32 undated baseline")).toBeInTheDocument();
-    expect(within(completionTrend).getByText("65 done")).toBeInTheDocument();
-    expect(within(completionTrend).getByText("Jun 09 to ETA Aug 05 at 100%")).toBeInTheDocument();
+    expect(within(completionTrend).getByText("72 done")).toBeInTheDocument();
+    expect(within(completionTrend).getByText("Jun 17 to ETA Oct 08 at 100%")).toBeInTheDocument();
 
     const timeline = screen.getByTestId("capex-epic-timeline");
     expect(within(timeline).getByRole("button", { name: /EPIC-136/i })).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe("CapexEpicProgressPage", () => {
     await user.click(screen.getByRole("button", { name: /EPIC-145/i }));
 
     expect(
-      screen.getByRole("heading", { name: "CAPEX K12/K3 fixture governance" })
+      screen.getByRole("heading", { name: "CAPEX real-project fixture governance" })
     ).toBeInTheDocument();
     expect(screen.getByText("TASK-0470")).toBeInTheDocument();
     const epicEstimate = screen.getByRole("region", { name: "EPIC-145 completion estimate" });
@@ -104,7 +104,7 @@ describe("CapexEpicProgressPage", () => {
     renderCapexProgress("/demo/capex/epic-progress?epic=EPIC-145&task=TASK-0470");
 
     expect(
-      screen.getByRole("heading", { name: "CAPEX K12/K3 fixture governance" })
+      screen.getByRole("heading", { name: "CAPEX real-project fixture governance" })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Define capex.sensitivity_manifest.v1 schema" })

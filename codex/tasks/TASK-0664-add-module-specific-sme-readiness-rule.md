@@ -3,6 +3,7 @@ id: TASK-0664
 epic: EPIC-136
 title: "Add module-specific SME readiness rule"
 status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["capex-product", "capex-architecture"]
 reviewers: ["engineering-pm", "capex-sme"]
 depends_on: ["TASK-0648"]

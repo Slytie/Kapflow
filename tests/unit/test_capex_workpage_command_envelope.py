@@ -5,6 +5,8 @@ import sqlite3
 import pytest
 
 from onetruth.capex_platform.workpage_projection_commands import (
+    WORKPAGE_COMMAND_DISPATCH_POLICY,
+    WorkpageCommandActivation,
     WorkpageCommandEnvelope,
     WorkpageCommandEnvelopeError,
     execute_guarded_workpage_command,
@@ -96,6 +98,13 @@ def _envelope(snapshot: dict[str, object], *, cursor: str | None = None) -> Work
     )
 
 
+def _active_activation() -> WorkpageCommandActivation:
+    return WorkpageCommandActivation(
+        activation_state="active",
+        activation_policy=WORKPAGE_COMMAND_DISPATCH_POLICY,
+    )
+
+
 def test_valid_command_envelope_allows_mutation_callback() -> None:
     connection = _connection()
     try:
@@ -113,6 +122,7 @@ def test_valid_command_envelope_allows_mutation_callback() -> None:
         result = execute_guarded_workpage_command(
             connection,
             _envelope(snapshot),
+            activation=_active_activation(),
             signing_key=SIGNING_KEY,
             now_iso=NOW,
             operation=_operation,
@@ -184,6 +194,7 @@ def test_command_envelope_rejects_stale_or_invalid_projection_before_mutation(
             execute_guarded_workpage_command(
                 connection,
                 envelope,
+                activation=_active_activation(),
                 signing_key=SIGNING_KEY,
                 now_iso="2026-06-08T02:00:00Z" if mutation == "expired" else NOW,
                 operation=_operation,
@@ -191,6 +202,163 @@ def test_command_envelope_rejects_stale_or_invalid_projection_before_mutation(
 
         assert exc_info.value.code == expected_code
         assert calls == 0
+    finally:
+        connection.close()
+
+
+@pytest.mark.parametrize(
+    ("activation", "expected_code"),
+    [
+        (
+            WorkpageCommandActivation(
+                activation_state="planning_only",
+                activation_policy=WORKPAGE_COMMAND_DISPATCH_POLICY,
+            ),
+            "workpage_command_activation_disabled",
+        ),
+        (
+            WorkpageCommandActivation(
+                activation_state="disabled",
+                activation_policy=WORKPAGE_COMMAND_DISPATCH_POLICY,
+            ),
+            "workpage_command_activation_disabled",
+        ),
+        (
+            WorkpageCommandActivation(
+                activation_state="active",
+                activation_policy="capex.experimental.policy",
+            ),
+            "workpage_command_activation_policy_mismatch",
+        ),
+    ],
+)
+def test_workpage_command_activation_fails_closed_before_operation(
+    activation: WorkpageCommandActivation,
+    expected_code: str,
+) -> None:
+    connection = _connection()
+    try:
+        snapshot = _snapshot(connection)
+        calls = 0
+
+        def _operation(_snapshot: dict[str, object]) -> dict[str, object]:
+            nonlocal calls
+            calls += 1
+            return {"mutated": True}
+
+        with pytest.raises(WorkpageCommandEnvelopeError) as exc_info:
+            execute_guarded_workpage_command(
+                connection,
+                _envelope(snapshot),
+                activation=activation,
+                signing_key=SIGNING_KEY,
+                now_iso=NOW,
+                operation=_operation,
+            )
+
+        assert exc_info.value.code == expected_code
+        assert calls == 0
+        assert connection.execute("SELECT COUNT(*) AS count FROM command_receipts").fetchone()[
+            "count"
+        ] == 0
+    finally:
+        connection.close()
+
+
+def test_workpage_command_idempotency_replays_receipt_without_handler_reentry() -> None:
+    connection = _connection()
+    try:
+        snapshot = _snapshot(connection)
+        envelope = _envelope(snapshot)
+        calls = 0
+
+        def _operation(validated_snapshot: dict[str, object]) -> dict[str, object]:
+            nonlocal calls
+            calls += 1
+            return {
+                "projection_snapshot_id": validated_snapshot["projection_snapshot_id"],
+                "handler_calls": calls,
+            }
+
+        first = execute_guarded_workpage_command(
+            connection,
+            envelope,
+            activation=_active_activation(),
+            signing_key=SIGNING_KEY,
+            now_iso=NOW,
+            operation=_operation,
+            include_receipt=True,
+        )
+        mark_projection_snapshot_stale(
+            connection,
+            projection_snapshot_id=SNAPSHOT_ID,
+            stale_reason="basis_ref_changed:source_occurrence:so-command",
+            stale_at="2026-06-08T00:30:00Z",
+        )
+        second = execute_guarded_workpage_command(
+            connection,
+            envelope,
+            activation=_active_activation(),
+            signing_key=SIGNING_KEY,
+            now_iso="2026-06-08T02:00:00Z",
+            operation=_operation,
+            include_receipt=True,
+        )
+
+        assert calls == 1
+        assert first["idempotent_replay"] is False
+        assert second["idempotent_replay"] is True
+        assert second["result"] == first["result"]
+        assert second["receipt"] == first["receipt"]
+        assert connection.execute("SELECT COUNT(*) AS count FROM command_receipts").fetchone()[
+            "count"
+        ] == 1
+    finally:
+        connection.close()
+
+
+def test_workpage_command_same_idempotency_key_with_changed_payload_fails_closed() -> None:
+    connection = _connection()
+    try:
+        snapshot = _snapshot(connection)
+        envelope = _envelope(snapshot)
+        calls = 0
+
+        def _operation(_snapshot: dict[str, object]) -> dict[str, object]:
+            nonlocal calls
+            calls += 1
+            return {"handler_calls": calls}
+
+        execute_guarded_workpage_command(
+            connection,
+            envelope,
+            activation=_active_activation(),
+            signing_key=SIGNING_KEY,
+            now_iso=NOW,
+            operation=_operation,
+        )
+        changed_envelope = WorkpageCommandEnvelope(
+            **{
+                **envelope.__dict__,
+                "payload": {"subject_ref": "source_occurrence:so-different"},
+            }
+        )
+
+        with pytest.raises(WorkpageCommandEnvelopeError) as exc_info:
+            execute_guarded_workpage_command(
+                connection,
+                changed_envelope,
+                activation=_active_activation(),
+                signing_key=SIGNING_KEY,
+                now_iso=NOW,
+                operation=_operation,
+            )
+
+        assert exc_info.value.code == "workpage_command_receipt_mismatch"
+        assert calls == 1
+        assert connection.execute("SELECT COUNT(*) AS count FROM command_receipts").fetchone()[
+            "count"
+        ] == 1
     finally:
         connection.close()
 

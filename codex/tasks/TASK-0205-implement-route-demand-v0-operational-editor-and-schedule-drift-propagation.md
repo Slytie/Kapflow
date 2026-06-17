@@ -2,7 +2,7 @@
 id: TASK-0205
 epic: EPIC-131
 title: "Implement route-demand-v0 operational editor and propagate route-demand changes into schedule drift"
-status: TODO
+status: DONE
 owners: ["backend", "frontend"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0202"]

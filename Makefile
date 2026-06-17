@@ -35,7 +35,7 @@ LAB_VM_REMOTE_VIEWER_TOKEN_ENV ?= LAB_VIEWER_SMOKE_TOKEN
 LAB_VM_DEPLOY_OUTPUT ?= $(CURDIR)/.tmp/lab-vm-deploy/lab_vm_deploy_report.json
 LAB_VM_DEPLOY_SECRET_REF_ARGS ?=
 
-.PHONY: lint test assurance-fast schema-validate trace-validate unit contract replay acceptance runtime runtime-api platform-substrate-tests logistics-regression-tests capex-semantic-tests workpage-mutation-smoke security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle release-source-bundle handoff-source-bundle release-image predeploy-backup-manifest lab-auth-smoke lab-vm-deploy-plan lab-vm-deploy generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-workpages-smoke frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
+.PHONY: lint test assurance-fast schema-validate trace-validate unit contract replay acceptance runtime runtime-api platform-substrate-tests logistics-regression-tests capex-progress-check capex-semantic-tests workpage-mutation-smoke security property integration integration-openai integration-openai-weekly-stage04 logistics-weekly-stage04-pilot clean-source-bundle release-source-bundle handoff-source-bundle release-image predeploy-backup-manifest lab-auth-smoke lab-vm-deploy-plan lab-vm-deploy generated-check frontend-snapshots frontend-snapshots-check frontend-install frontend-typecheck frontend-test frontend-workpages-smoke frontend-build ci-fast-backend ci-runtime-required ci-backend ci release-confidence release-confidence-validation release-confidence-demo-export release-confidence-projection-coherence release-confidence-logistics-weekly-live release-confidence-certification-manifest
 .PHONY: doctor backend-lint python-lint frontend-ci
 
 doctor:
@@ -82,7 +82,10 @@ platform-substrate-tests:
 logistics-regression-tests:
 	PYTHONPATH=src $(PYTEST) -m logistics_regression tests/contract/test_logistics_control_layer_contracts.py tests/contract/test_logistics_definition_contracts.py tests/contract/test_logistics_docs_inventory.py tests/contract/test_logistics_operational_cadence_runbook_docs.py tests/contract/test_logistics_workpage_demo_runbook_docs.py tests/runtime/scenarios/test_logistics_weekly_to_live_golden_slice.py tests/runtime/scenarios/test_logistics_three_workflow_demo_story_seed.py tests/runtime/test_logistics_handoff_runtime.py tests/security/isolation/test_logistics_handoff_cross_scope_runtime.py
 
-capex-semantic-tests:
+capex-progress-check:
+	$(PYTHON) scripts/validate_capex_epic_progress_data.py frontend/src/data/capexEpicProgressData.json
+
+capex-semantic-tests: capex-progress-check
 	PYTHONPATH=src $(PYTEST) -m capex_semantic tests/contract tests/unit
 
 workpage-mutation-smoke:

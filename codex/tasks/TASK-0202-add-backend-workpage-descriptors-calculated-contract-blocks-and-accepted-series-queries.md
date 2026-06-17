@@ -2,7 +2,7 @@
 id: TASK-0202
 epic: EPIC-131
 title: "Add backend workpage descriptors, calculated contract blocks, and accepted-series queries"
-status: TODO
+status: DONE
 owners: ["backend"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0201"]

@@ -2,7 +2,7 @@
 id: TASK-0204
 epic: EPIC-131
 title: "Redesign schedule-v0 frontend for live heatmap recalculation, driver metrics, compliance status, and version rails"
-status: TODO
+status: DONE
 owners: ["frontend"]
 reviewers: ["design", "qa"]
 depends_on: ["TASK-0203"]

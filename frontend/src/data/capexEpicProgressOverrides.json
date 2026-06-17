@@ -2,7 +2,7 @@
   "meta": {
     "title": "CAPEX Epic Progress",
     "subtitle": "Plain-language roadmap for the repo-native CAPEX planning backlog.",
-    "lastUpdated": "2026-06-09",
+    "lastUpdated": "2026-06-17",
     "localOnly": true,
     "sourceNote": "Generated from docs/planning/epics and codex/tasks with curated review-posture overrides.",
     "codexRule": "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
@@ -47,7 +47,7 @@
     },
     "EPIC-140": {
       "displayStatus": "done",
-      "reviewPosture": "EPIC-140 project/access foundation plus SME-RP scope/RACI addenda are closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, rebuildable authorization projections, TASK-0649 capex_scope planning truth, and TASK-0650 RACI role-permission planning truth; CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates."
+      "reviewPosture": "EPIC-140 project/access foundation plus SME-RP scope/RACI addenda are closed with project anchors, direct memberships, project child APIs, selector/dashboard, project-scope helper, official pointer families, domain manifests, W1 closeout evidence, rebuildable authorization projections, TASK-0649 capex_scope planning truth, TASK-0650 RACI role-permission planning truth, and the second-order review repair evidence in docs/planning/EPIC140_REVIEW_FINAL_GATE_EVIDENCE.md; CAPEX activation remains blocked by later source-governance, workflow/workpage, storage evidence or waiver, release/capacity, and production-preflight gates."
     },
     "EPIC-141": {
       "reviewPosture": "EPIC-141 source occurrence resolver plus TASK-0652 source-context/trust planning contract are closed; broader corpus ingest, extraction, evidence binding, source occurrence relations, raw-data governance, and review/backlog items remain open."

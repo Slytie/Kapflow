@@ -2,7 +2,7 @@
 id: TASK-0207
 epic: EPIC-131
 title: "Close the epic with regressions, docs, compatibility cleanup, and deferred-item markers"
-status: TODO
+status: DONE
 owners: ["qa", "backend", "frontend"]
 reviewers: ["architect"]
 depends_on: ["TASK-0203", "TASK-0204", "TASK-0205", "TASK-0206"]

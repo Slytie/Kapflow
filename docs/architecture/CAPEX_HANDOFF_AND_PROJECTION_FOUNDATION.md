@@ -24,6 +24,8 @@ Missing manifests, pointer generation drift, unresolved SourceRefs, stale/reopen
 
 Signed projection cursors bind snapshot ID, tenant/domain/project scope, basis hash, issue time, and expiry. Workpage command envelopes must carry the signed cursor and expected basis hash. Invalid signatures, expired cursors, scope mismatches, stale/superseded snapshots, and basis mismatch must reject before any mutation callback runs.
 
+Internal workpage command dispatch also requires an explicit active activation contract: `activation_state=active` and `activation_policy=workpage_command_dispatch_v1`. Planning-only, disabled, or policy-mismatched command families fail closed before mutation. Accepted command envelopes use shared command-receipt storage keyed by project/workpage/command/snapshot so duplicate idempotency keys replay the stored result without invoking the handler again, while same-key/different-payload requests fail closed.
+
 Workpage projections remain advisory read models. Commands must still mutate canonical runtime truth through existing command/event/artifact/pointer surfaces and shared command receipt idempotency.
 
 ## Rollback Posture

@@ -8,12 +8,21 @@ import hashlib
 import hmac
 import json
 import sqlite3
-from typing import Any, Callable
+from typing import Any, Callable, Literal
+from uuid import uuid4
 
+from onetruth.infrastructure.events.event_store import (
+    create_command_receipt,
+    get_command_receipt,
+)
 from onetruth.infrastructure.repositories.capex_workpage_projections import get_projection_snapshot
 
 
 CURSOR_SCHEMA_VERSION = "capex.workpage_projection_cursor.v1"
+WORKPAGE_COMMAND_DISPATCH_POLICY = "workpage_command_dispatch_v1"
+WORKPAGE_COMMAND_RECEIPT_NAME = "capex.workpages.command-envelope.execute"
+
+WorkpageCommandActivationState = Literal["planning_only", "disabled", "active"]
 
 
 @dataclass(frozen=True)
@@ -54,6 +63,12 @@ class WorkpageCommandEnvelope:
     signed_cursor: str
     expected_basis_hash: str
     payload: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class WorkpageCommandActivation:
+    activation_state: WorkpageCommandActivationState
+    activation_policy: str
 
 
 class WorkpageCommandEnvelopeError(ValueError):
@@ -198,17 +213,210 @@ def execute_guarded_workpage_command(
     connection: sqlite3.Connection,
     envelope: WorkpageCommandEnvelope,
     *,
+    activation: WorkpageCommandActivation,
     signing_key: str,
     now_iso: str,
     operation: Callable[[dict[str, Any]], dict[str, Any]],
+    include_receipt: bool = False,
 ) -> dict[str, Any]:
-    snapshot = validate_workpage_command_envelope(
-        connection,
-        envelope,
-        signing_key=signing_key,
-        now_iso=now_iso,
+    _require_activation(
+        activation,
+        required_activation_policy=WORKPAGE_COMMAND_DISPATCH_POLICY,
     )
-    return operation(snapshot)
+    _require_envelope(envelope)
+    receipt = _prepare_workpage_command_receipt(
+        envelope,
+        activation=activation,
+        required_activation_policy=WORKPAGE_COMMAND_DISPATCH_POLICY,
+    )
+
+    def _operation() -> dict[str, Any]:
+        snapshot = validate_workpage_command_envelope(
+            connection,
+            envelope,
+            signing_key=signing_key,
+            now_iso=now_iso,
+        )
+        return operation(snapshot)
+
+    result, replay = _execute_with_workpage_command_receipt(
+        connection,
+        receipt=receipt,
+        operation=_operation,
+    )
+    if not include_receipt:
+        return result
+    return {
+        "result": result,
+        "idempotent_replay": replay,
+        "receipt": {
+            "command_name": receipt.command_name,
+            "scope_key": receipt.scope_key,
+            "idempotency_key": receipt.idempotency_key,
+        },
+    }
+
+
+@dataclass(frozen=True)
+class _WorkpageCommandReceiptContext:
+    command_name: str
+    scope_key: str
+    idempotency_key: str
+    request_fingerprint: str
+    tenant_id: str
+    domain_id: str
+
+
+@dataclass(frozen=True)
+class _TransactionFrame:
+    savepoint_name: str | None
+
+
+def _require_activation(
+    activation: WorkpageCommandActivation,
+    *,
+    required_activation_policy: str,
+) -> None:
+    if activation.activation_state != "active":
+        raise WorkpageCommandEnvelopeError(
+            "workpage_command_activation_disabled",
+            {"activation_state": activation.activation_state},
+        )
+    if activation.activation_policy != required_activation_policy:
+        raise WorkpageCommandEnvelopeError(
+            "workpage_command_activation_policy_mismatch",
+            {
+                "activation_policy": activation.activation_policy,
+                "required_activation_policy": required_activation_policy,
+            },
+        )
+
+
+def _prepare_workpage_command_receipt(
+    envelope: WorkpageCommandEnvelope,
+    *,
+    activation: WorkpageCommandActivation,
+    required_activation_policy: str,
+) -> _WorkpageCommandReceiptContext:
+    fingerprint_payload = {
+        "tenant_id": envelope.tenant_id,
+        "domain_id": envelope.domain_id,
+        "project_id": envelope.project_id,
+        "workpage_kind": envelope.workpage_kind,
+        "command_type": envelope.command_type,
+        "actor_id": envelope.actor_id,
+        "actor_type": envelope.actor_type,
+        "projection_snapshot_id": envelope.projection_snapshot_id,
+        "signed_cursor": envelope.signed_cursor,
+        "expected_basis_hash": envelope.expected_basis_hash,
+        "payload": envelope.payload,
+        "activation_policy": activation.activation_policy,
+        "required_activation_policy": required_activation_policy,
+    }
+    return _WorkpageCommandReceiptContext(
+        command_name=WORKPAGE_COMMAND_RECEIPT_NAME,
+        scope_key=_command_scope_key(
+            (
+                envelope.project_id,
+                envelope.workpage_kind,
+                envelope.command_type,
+                envelope.projection_snapshot_id,
+            )
+        ),
+        idempotency_key=envelope.idempotency_key,
+        request_fingerprint=hashlib.sha256(
+            _canonical_json(fingerprint_payload).encode("utf-8")
+        ).hexdigest(),
+        tenant_id=envelope.tenant_id,
+        domain_id=envelope.domain_id,
+    )
+
+
+def _execute_with_workpage_command_receipt(
+    connection: sqlite3.Connection,
+    *,
+    receipt: _WorkpageCommandReceiptContext,
+    operation: Callable[[], dict[str, Any]],
+) -> tuple[dict[str, Any], bool]:
+    frame = _begin_transaction(connection)
+    try:
+        existing = get_command_receipt(
+            connection,
+            command_name=receipt.command_name,
+            scope_key=receipt.scope_key,
+            idempotency_key=receipt.idempotency_key,
+        )
+        if existing is not None:
+            if existing["request_fingerprint"] != receipt.request_fingerprint:
+                raise WorkpageCommandEnvelopeError(
+                    "workpage_command_receipt_mismatch",
+                    {
+                        "command_name": receipt.command_name,
+                        "scope_key": receipt.scope_key,
+                        "idempotency_key": receipt.idempotency_key,
+                    },
+                )
+            _rollback_transaction(connection, frame)
+            return dict(existing["result_json"]), True
+
+        result = operation()
+        create_command_receipt(
+            connection,
+            command_name=receipt.command_name,
+            scope_key=receipt.scope_key,
+            idempotency_key=receipt.idempotency_key,
+            request_fingerprint=receipt.request_fingerprint,
+            result_json=result,
+            tenant_id=receipt.tenant_id,
+            domain_id=receipt.domain_id,
+            workflow_run_id=None,
+        )
+        _commit_transaction(connection, frame)
+        return result, False
+    except sqlite3.IntegrityError:
+        _rollback_transaction(connection, frame)
+        existing = get_command_receipt(
+            connection,
+            command_name=receipt.command_name,
+            scope_key=receipt.scope_key,
+            idempotency_key=receipt.idempotency_key,
+        )
+        if existing is not None and existing["request_fingerprint"] == receipt.request_fingerprint:
+            return dict(existing["result_json"]), True
+        raise
+    except Exception:
+        _rollback_transaction(connection, frame)
+        raise
+
+
+def _begin_transaction(connection: sqlite3.Connection) -> _TransactionFrame:
+    if connection.in_transaction:
+        savepoint_name = f"sp_workpage_command_{uuid4().hex}"
+        connection.execute(f"SAVEPOINT {savepoint_name}")
+        return _TransactionFrame(savepoint_name=savepoint_name)
+    connection.execute("BEGIN IMMEDIATE")
+    return _TransactionFrame(savepoint_name=None)
+
+
+def _commit_transaction(
+    connection: sqlite3.Connection,
+    frame: _TransactionFrame,
+) -> None:
+    if frame.savepoint_name is None:
+        connection.commit()
+        return
+    connection.execute(f"RELEASE SAVEPOINT {frame.savepoint_name}")
+
+
+def _rollback_transaction(
+    connection: sqlite3.Connection,
+    frame: _TransactionFrame,
+) -> None:
+    if frame.savepoint_name is None:
+        connection.rollback()
+        return
+    connection.execute(f"ROLLBACK TO SAVEPOINT {frame.savepoint_name}")
+    connection.execute(f"RELEASE SAVEPOINT {frame.savepoint_name}")
 
 
 def _require_envelope(envelope: WorkpageCommandEnvelope) -> None:
@@ -242,6 +450,11 @@ def _canonical_json(value: Any) -> str:
     return json.dumps(value, separators=(",", ":"), sort_keys=True, ensure_ascii=True)
 
 
+def _command_scope_key(parts: tuple[Any, ...]) -> str:
+    normalized = [None if value is None else str(value) for value in parts]
+    return _canonical_json(normalized)
+
+
 def _base64url(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
@@ -257,7 +470,9 @@ def _parse_iso(value: str) -> datetime:
 
 __all__ = [
     "CURSOR_SCHEMA_VERSION",
+    "WORKPAGE_COMMAND_DISPATCH_POLICY",
     "ProjectionCursor",
+    "WorkpageCommandActivation",
     "WorkpageCommandEnvelope",
     "WorkpageCommandEnvelopeError",
     "execute_guarded_workpage_command",

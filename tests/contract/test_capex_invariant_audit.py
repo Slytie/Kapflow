@@ -11,6 +11,8 @@ from onetruth.application.services.capex_invariant_audit import (
     CAPEX_INVARIANT_REGISTRY,
     CapexInvariant,
     _check_approval_response_hook_source,
+    _check_capex_project_security_probe_coverage,
+    _check_capex_workpage_command_guardrails,
     _check_workpage_default_registry_source,
     capex_invariant_audit_exit_code,
     run_capex_invariant_audit,
@@ -24,7 +26,7 @@ def test_capex_invariant_registry_has_expected_gate_modes() -> None:
     modes = {entry.gate_mode for entry in CAPEX_INVARIANT_REGISTRY}
 
     assert modes == {"hard_gate", "known_gap"}
-    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 14
+    assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "hard_gate") == 16
     assert sum(1 for entry in CAPEX_INVARIANT_REGISTRY if entry.gate_mode == "known_gap") == 3
     assert all(entry.task_refs for entry in CAPEX_INVARIANT_REGISTRY)
 
@@ -41,8 +43,8 @@ def test_capex_invariant_audit_report_records_known_gaps_without_failing(
     assert manifest["status"] == "passed"
     assert capex_invariant_audit_exit_code(manifest) == 0
     assert manifest["summary"] == {
-        "total": 17,
-        "hard_gate_passed": 14,
+        "total": 19,
+        "hard_gate_passed": 16,
         "hard_gate_failed": 0,
         "known_gaps": 3,
         "advisory": 0,
@@ -59,6 +61,8 @@ def test_capex_invariant_audit_report_records_known_gaps_without_failing(
     assert statuses["capex.pr011.lab_vm_deploy_pipeline"] == "passed"
     assert statuses["capex.nu008.semantic_tests_codeowners"] == "passed"
     assert statuses["capex.nu009.interface_burden_conserved"] == "passed"
+    assert statuses["capex.redteam.workpage_command_activation_idempotency"] == "passed"
+    assert statuses["capex.redteam.project_security_probe_coverage"] == "passed"
     details = {
         check["invariant_id"]: check["details"] for check in manifest["checks"]
     }
@@ -131,6 +135,55 @@ DEFAULT_WORKPAGE_ACTION_REGISTRY = WorkpageActionRegistry((LOGISTICS_WORKPAGE_AC
     assert "LOGISTICS_WORKPAGE_ACTION_PACK" in evaluation.details[
         "action_default_forbidden_hits"
     ]
+
+
+def test_capex_audit_rejects_missing_workpage_command_activation_and_idempotency(
+    tmp_path: Path,
+) -> None:
+    repo_root = _minimal_audit_repo(tmp_path)
+    _write_repo_file(
+        repo_root,
+        "src/onetruth/capex_platform/workpage_projection_commands.py",
+        """
+def execute_guarded_workpage_command(connection, envelope, *, signing_key, now_iso, operation):
+    snapshot = validate_workpage_command_envelope(connection, envelope, signing_key=signing_key, now_iso=now_iso)
+    return operation(snapshot)
+""",
+    )
+    _write_repo_file(
+        repo_root,
+        "tests/unit/test_capex_workpage_command_envelope.py",
+        """
+def test_valid_command_envelope_allows_mutation_callback(): pass
+""",
+    )
+
+    evaluation = _check_capex_workpage_command_guardrails(repo_root)
+
+    assert not evaluation.passed
+    assert "activation_contract" in evaluation.details["missing_markers"]
+    assert "receipt_lookup_before_operation" in evaluation.details["missing_markers"]
+    assert "idempotency_tests" in evaluation.details["missing_markers"]
+
+
+def test_capex_audit_rejects_missing_project_security_probe_tests(tmp_path: Path) -> None:
+    repo_root = _minimal_audit_repo(tmp_path)
+    for relative_path in (
+        "tests/unit/test_capex_authorized_projects_query.py",
+        "tests/runtime/api/test_capex_project_access_api.py",
+        "tests/unit/test_capex_official_pointer_families.py",
+        "tests/runtime/api/test_capex_project_official_pointer_api.py",
+        "tests/unit/test_artifact_provenance_dag.py",
+        "tests/unit/test_capex_source_occurrence_resolver.py",
+    ):
+        _write_repo_file(repo_root, relative_path, "def test_placeholder(): pass")
+
+    evaluation = _check_capex_project_security_probe_coverage(repo_root)
+
+    assert not evaluation.passed
+    assert "revocation_projection_stale_unit" in evaluation.details["missing_markers"]
+    assert "artifact_identity" in evaluation.details["missing_markers"]
+    assert "source_ref_isolation" in evaluation.details["missing_markers"]
 
 
 def test_capex_invariant_audit_fails_only_for_hard_gate_failure(tmp_path: Path) -> None:

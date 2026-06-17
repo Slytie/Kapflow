@@ -274,6 +274,12 @@ def test_makefile_exposes_fast_and_runtime_ci_slices() -> None:
     assert "schema-validate: assurance-fast" in makefile_text
     assert "$(VALIDATOR) --domain traces" in makefile_text
     assert "backend-lint: assurance-fast python-lint" in makefile_text
+    assert "capex-progress-check:" in makefile_text
+    assert (
+        "$(PYTHON) scripts/validate_capex_epic_progress_data.py frontend/src/data/capexEpicProgressData.json"
+        in makefile_text
+    )
+    assert "capex-semantic-tests: capex-progress-check" in makefile_text
     assert "frontend-workpages-smoke:" in makefile_text
     assert "cd frontend && npm run test:workpages" in makefile_text
     assert "ci-fast-backend: backend-lint contract unit workpage-mutation-smoke security" in makefile_text

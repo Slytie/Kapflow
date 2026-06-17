@@ -42,13 +42,30 @@ def test_capex_epic_progress_data_is_current() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_capex_epic_progress_data_matches_regenerated_output() -> None:
+    validator = _load_validator_module()
+
+    assert _load_data() == validator.build_data()
+
+
+def test_capex_epic_progress_data_records_repo_owned_local_rule() -> None:
+    meta = _load_data()["meta"]
+
+    assert meta["localOnly"] is True
+    assert meta["lastUpdated"] == "2026-06-17"
+    assert (
+        meta["codexRule"]
+        == "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
+    )
+
+
 def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     data = _load_data()
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
-    assert data["summary"]["estimate"]["remainingTasks"] == 325
-    assert data["summary"]["estimate"]["etaDate"] == "2026-07-29"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-07-29"
+    assert data["summary"]["estimate"]["remainingTasks"] == 324
+    assert data["summary"]["estimate"]["etaDate"] == "2026-10-08"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-10-08"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
