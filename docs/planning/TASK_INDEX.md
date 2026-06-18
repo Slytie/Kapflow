@@ -564,10 +564,10 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0601 | EPIC-152 | DONE | high | Verify three-project evidence package |
 | TASK-0602 | EPIC-152 | DONE | high | Verify raw-data quarantine and leak-scan evidence |
 | TASK-0603 | EPIC-152 | DONE | high | Verify capacity, backup, restore, and off-repo full-corpus run evidence |
-| TASK-0604 | EPIC-152 | TODO | high | Verify release bundle, migration lanes, activation gates, and rollback/compensation evidence |
-| TASK-0605 | EPIC-152 | TODO | high | Verify semantic MR, CODEOWNERS, review-tier, and CI gates are active |
-| TASK-0606 | EPIC-152 | TODO | high | Produce production preflight go/no-go memorandum |
-| TASK-0607 | EPIC-150 | TODO | high | Freeze EPIC-150 stage model and MVP/non-MVP boundary |
+| TASK-0604 | EPIC-152 | DONE | high | Verify release bundle, migration lanes, activation gates, and rollback/compensation evidence |
+| TASK-0605 | EPIC-152 | DONE | high | Verify semantic MR, CODEOWNERS, review-tier, and CI gates are active |
+| TASK-0606 | EPIC-152 | DONE | high | Produce production preflight go/no-go memorandum |
+| TASK-0607 | EPIC-150 | DONE | high | Freeze EPIC-150 stage model and MVP/non-MVP boundary |
 | TASK-0608 | EPIC-150 | TODO | high | Define SourceRootBinding, FolderTreeSnapshot, SyncRun, and source-root state model |
 | TASK-0609 | EPIC-150 | TODO | medium | Specify browser folder / ZIP import MVP protocol |
 | TASK-0610 | EPIC-150 | TODO | high | Specify manual resync and snapshot/delta reconciliation |

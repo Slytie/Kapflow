@@ -63,9 +63,11 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     data = _load_data()
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
-    assert data["summary"]["estimate"]["remainingTasks"] == 300
-    assert data["summary"]["estimate"]["etaDate"] == "2026-08-22"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-22"
+    assert data["summary"]["taskCount"] == 432
+    assert data["summary"]["estimate"]["completedTasks"] == 100
+    assert data["summary"]["estimate"]["remainingTasks"] == 332
+    assert data["summary"]["estimate"]["etaDate"] == "2026-08-24"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-24"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
@@ -73,6 +75,14 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     assert epic139["counts"]["done"] == 22
     assert epic139["counts"]["needs_review"] == 0
     assert epic139["estimate"]["label"] == "Complete"
+
+    epic150 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-150")
+    assert epic150["displayStatus"] == "in_progress"
+    assert epic150["taskCount"] == 66
+    assert epic150["counts"]["done"] == 1
+    assert epic150["counts"]["not_started"] == 65
+    task_ids = {task["id"] for task in epic150["tasks"]}
+    assert {"TASK-0607", "TASK-0642"} <= task_ids
 
 
 def test_epic139_redo_final_acceptance_releases_red_interlocks() -> None:
@@ -91,7 +101,7 @@ def test_epic139_redo_final_acceptance_releases_red_interlocks() -> None:
     assert task_statuses["TASK-0647"] == "done"
 
     assert epics["EPIC-143"]["displayStatus"] == "in_progress"
-    assert epics["EPIC-150"]["displayStatus"] == "not_started"
+    assert epics["EPIC-150"]["displayStatus"] == "in_progress"
     assert epics["EPIC-151"]["displayStatus"] == "in_progress"
     for epic_id in ("EPIC-143", "EPIC-150", "EPIC-151"):
         assert "Gated while EPIC-139 remains RED" not in epics[epic_id]["reviewPosture"]

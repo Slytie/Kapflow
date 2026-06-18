@@ -12,6 +12,9 @@ supporting_review_refs:
   - docs/planning/capex_production_preflight/THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml
   - docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml
   - docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml
+  - docs/planning/capex_production_preflight/RELEASE_MIGRATION_ACTIVATION_ROLLBACK_REVIEW.yaml
+  - docs/planning/capex_production_preflight/SEMANTIC_REVIEW_CI_GATE_REVIEW.yaml
+  - docs/planning/capex_production_preflight/PRODUCTION_PREFLIGHT_GO_NO_GO_MEMO.md
 gate_reviews:
   - gate_id: PROD-PRE-G01
     status: reviewed_no_go_blocked_pending_evidence
@@ -42,17 +45,17 @@ gate_reviews:
     reason_code: capacity_restore_reviewed_missing_full_corpus_and_restore_evidence
     evidence_ref: docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml
   - gate_id: PROD-PRE-G08
-    status: blocked_pending_task
-    reason_code: release_migration_activation_rollback_pending
-    pending_task: TASK-0604
+    status: reviewed_no_go_blocked_pending_evidence
+    reason_code: release_migration_activation_rollback_reviewed_missing_approval_and_rehearsal_evidence
+    evidence_ref: docs/planning/capex_production_preflight/RELEASE_MIGRATION_ACTIVATION_ROLLBACK_REVIEW.yaml
   - gate_id: PROD-PRE-G09
-    status: blocked_pending_task
-    reason_code: semantic_codeowners_review_ci_pending
-    pending_task: TASK-0605
+    status: reviewed_no_go_blocked_pending_evidence
+    reason_code: semantic_codeowners_ci_reviewed_missing_hosted_enforcement_evidence
+    evidence_ref: docs/planning/capex_production_preflight/SEMANTIC_REVIEW_CI_GATE_REVIEW.yaml
   - gate_id: PROD-PRE-G10
-    status: blocked_pending_task
-    reason_code: final_go_no_go_memo_pending
-    pending_task: TASK-0606
+    status: final_no_go_decision_recorded
+    reason_code: final_go_no_go_memo_records_no_go_pending_evidence_and_waivers
+    evidence_ref: docs/planning/capex_production_preflight/PRODUCTION_PREFLIGHT_GO_NO_GO_MEMO.md
 future_waiver_required_fields:
   - owner
   - reason
@@ -63,10 +66,7 @@ rollback_posture:
   recommendation: defer_no_go
   capex_disabled: true
   preserve_evidence_trail: true
-  route_later_gate_checks_to:
-    - TASK-0604
-    - TASK-0605
-    - TASK-0606
+  route_later_gate_checks_to: []
 cannot_be_used_for:
   - capex_runtime_activation
   - product_activation
@@ -91,12 +91,11 @@ CAPEX runtime/product behavior.
 - Overall status: `no_go_blocked_pending_evidence`
 - Activation posture: `planning_only_no_capex_activation`
 - Approved waivers: none
-- `PROD-PRE-G01..G07` now have supporting no-go / blocked review evidence.
-- Later unresolved gate-specific checks remain assigned to `TASK-0604` through `TASK-0606`.
+- `PROD-PRE-G01..G09` now have supporting no-go / blocked review evidence.
+- `PROD-PRE-G10` has a final no-go memo; no production-preflight pass is recorded.
 
 ## Boundary
 
-CAPEX remains disabled. Production-like pilot readiness requires the later gate
-tasks and final go/no-go memorandum to close or explicitly waive the blocked
-evidence with owner, reason, residual risk, expiry/review date, and affected
-gate.
+CAPEX remains disabled. Production-like pilot readiness requires future
+production-preflight evidence or explicit waiver of blocked evidence with owner,
+reason, residual risk, expiry/review date, and affected gate.

@@ -20,7 +20,10 @@ PP-TASK-001, PP-TASK-002, PP-TASK-003, PP-TASK-004, PP-TASK-005, PP-TASK-006, PP
 - `TASK-0601` is closed as of 2026-06-17 with `docs/planning/capex_production_preflight/THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml`.
 - `TASK-0602` is closed as of 2026-06-17 with `docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml`.
 - `TASK-0603` is closed as of 2026-06-17 with `docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml`.
-- These reviews are no-go / blocked planning evidence only; `TASK-0604` through `TASK-0606` remain open for release, review-tier/CI, and final go/no-go checks.
+- `TASK-0604` is closed as of 2026-06-17 with `docs/planning/capex_production_preflight/RELEASE_MIGRATION_ACTIVATION_ROLLBACK_REVIEW.yaml`.
+- `TASK-0605` is closed as of 2026-06-17 with `docs/planning/capex_production_preflight/SEMANTIC_REVIEW_CI_GATE_REVIEW.yaml`.
+- `TASK-0606` is closed as of 2026-06-17 with `docs/planning/capex_production_preflight/PRODUCTION_PREFLIGHT_GO_NO_GO_MEMO.md`.
+- These reviews and memo are no-go / blocked planning evidence only; EPIC-152 is complete without production-preflight approval.
 
 ## Non-negotiable invariants
 - One truth system: official claims come only from immutable objects, append-only events, and audited pointers.

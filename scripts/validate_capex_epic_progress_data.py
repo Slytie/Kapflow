@@ -121,8 +121,10 @@ def _mapping(section: str) -> dict[str, str]:
 def _task_ids_from_epic_sections(sections: dict[str, str], text: str) -> list[str]:
     task_ids: list[str] = []
     source_sections = [
-        sections.get("Task stack", ""),
-        sections.get("Historical/reconciled aliases", ""),
+        value
+        for heading, value in sections.items()
+        if heading.lower().endswith("task stack")
+        or heading == "Historical/reconciled aliases"
     ]
     if not any(source_sections):
         source_sections = [text]
@@ -199,7 +201,11 @@ def _task_record(
         "id": task_id,
         "epicId": str(frontmatter.get("epic", "")),
         "title": str(frontmatter.get("title", task_id)),
-        "plainPurpose": _first_sentence(sections.get("Scope", "")) or _first_sentence(sections.get("Why", "")),
+        "plainPurpose": (
+            _first_sentence(sections.get("Scope", ""))
+            or _first_sentence(sections.get("Why", ""))
+            or _first_sentence(sections.get("Objective", ""))
+        ),
         "sourceStatus": source_status,
         "displayStatus": display_status,
         "statusReason": status_reason,

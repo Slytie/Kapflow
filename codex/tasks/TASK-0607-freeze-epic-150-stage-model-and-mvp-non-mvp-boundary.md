@@ -2,7 +2,8 @@
 id: TASK-0607
 epic: EPIC-150
 title: Freeze EPIC-150 stage model and MVP/non-MVP boundary
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: [capex-platform]
 reviewers: [backend, security, capex-architecture]
 depends_on: [EPIC-139, EPIC-140, EPIC-141]
@@ -87,3 +88,9 @@ Exact repo paths must be confirmed before editing. Use existing repo conventions
 - Snippets are patterns, not patches.
 - Stage 3 persistent desktop-agent behavior is disabled unless separately activated.
 - If this task reveals a contradiction with EPIC-139/140/141/144/145/147, stop and raise an architecture decision before implementation.
+
+## Closeout evidence
+- Added `docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml` as planning-only evidence for source rows `DST-001` and `DFS-D01`.
+- The contract freezes Stage 1 manual folder/ZIP/user-selected upload, Stage 2 manual resync with immutable snapshots/deltas and PM review, and Stage 3 deferred controlled-pilot desktop/connector options where watcher events are hints only.
+- The contract records MVP/non-MVP boundaries and non-authority rules: folder paths/names, content digests, watcher events, local deletions, AI proposals, and reviewed baselines cannot create official project truth.
+- Closeout posture: planning boundary only. No runtime tables, migrations, routes, public UI, desktop sync activation, desktop agent activation, raw corpus import, reviewed baseline creation, official pointer creation, CAPEX runtime activation, or CAPEX product activation is added.

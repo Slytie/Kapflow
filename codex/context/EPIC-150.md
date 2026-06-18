@@ -11,6 +11,7 @@ DOC-001, DOC-002, DOC-003, SAFE-002, RF-011, RF-012, ARCH-W7-SL-001, ARCH-W7-SL-
 - `docs/planning/epics/EPIC-150.md`
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
+- `docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 
@@ -53,6 +54,9 @@ Stage model:
 - Stage 1 MVP: manual browser folder import, ZIP import, or user-selected folder upload; no persistent background watcher.
 - Stage 2 MVP+: manual resync of a previously registered source root; new `FolderTreeSnapshot` and `SourceOccurrenceDelta` objects are produced, and PM review is required before downstream baseline update.
 - Stage 3 deferred controlled pilot: desktop companion app, local service, cloud connector, or server-mounted folder. Watcher events are hints only and must be reconciled against snapshots.
+
+Closed planning evidence:
+- `TASK-0607` - DONE 2026-06-17. `docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml` freezes the stage/MVP boundary and non-authority rules without activating desktop sync, CAPEX runtime behavior, raw corpus import, or product/public surfaces.
 
 Runtime concepts:
 - `SourceRootBinding`: project-scoped source-root identity. Path is a redacted locator/display hint.

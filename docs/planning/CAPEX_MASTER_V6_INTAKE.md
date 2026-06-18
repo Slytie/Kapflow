@@ -406,6 +406,17 @@
 - Evidence: CAPEX production-preflight contract tests cover raw-data leak-scan surface coverage, missing generated/release/CI/log/off-repo copy evidence, capacity/backup/restore/full-corpus evidence categories, missing execution/rehearsal/metrics evidence, no approved waivers, raw-data boundaries, and non-activation posture.
 - Closeout posture: `PP-TASK-004` and `PP-TASK-005` are review closeouts only. They do not pass `PROD-PRE-G06..G07`, approve waivers, run off-repo corpora, execute restore rehearsals, activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, pilot readiness, production readiness, final go/no-go approval, or product activation.
 
+## TASK-0604 / TASK-0605 closeout evidence
+- Added `docs/planning/capex_production_preflight/RELEASE_MIGRATION_ACTIVATION_ROLLBACK_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-006`.
+- Added `docs/planning/capex_production_preflight/SEMANTIC_REVIEW_CI_GATE_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-007`.
+- Evidence: CAPEX production-preflight contract tests cover release/migration/activation/rollback evidence families, missing release-candidate review, missing production migration rehearsal, missing feature-gate/activation evidence, missing rollback/compensation rehearsal, CODEOWNERS and semantic-lane repo evidence, missing hosted branch-protection and required-check evidence, no approved waivers, raw-data boundaries, and non-activation posture.
+- Closeout posture: `PP-TASK-006` and `PP-TASK-007` are review closeouts only. They do not pass `PROD-PRE-G08..G09`, approve waivers, approve release, approve migration, approve activation, claim hosted CI enforcement, execute rollback rehearsals, activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, pilot readiness, production readiness, final go/no-go approval, or product activation.
+
+## TASK-0606 closeout evidence
+- Added `docs/planning/capex_production_preflight/PRODUCTION_PREFLIGHT_GO_NO_GO_MEMO.md` as final no-go memorandum evidence for `PP-TASK-008`.
+- Evidence: CAPEX production-preflight contract tests cover memo frontmatter, `PROD-PRE-G10`, no-go recommendation, residual blocker refs, absent engineering/product/data-governance/security production signoff, no approved waivers, raw-data boundaries, and non-activation posture.
+- Closeout posture: `PP-TASK-008` is a memo-writing closeout only. It records a final no-go recommendation and does not pass production preflight, approve waivers, approve release, approve migration, approve activation, authorize pilot readiness, authorize production readiness, activate CAPEX runtime/product behavior, public routes, workflow packs, raw corpus import, fixture release, or product activation.
+
 ## Current-code blocker mappings
 | Blocker | CAPEX task refs | Current repo surface |
 |---|---|---|

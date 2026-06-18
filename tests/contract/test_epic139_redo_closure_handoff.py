@@ -49,7 +49,10 @@ def test_epic139_redo_closure_handoff_progress_stays_done() -> None:
         assert task_statuses[task_id] == "done"
 
     assert epics["EPIC-140"]["displayStatus"] == "done"
-    assert "EPIC-140 project/access work is closed" in epics["EPIC-140"]["reviewPosture"]
+    assert (
+        "EPIC-140 project/access foundation plus SME-RP scope/RACI addenda are closed"
+        in epics["EPIC-140"]["reviewPosture"]
+    )
     assert "CAPEX activation remains blocked" in epics["EPIC-140"]["reviewPosture"]
 
 
@@ -57,7 +60,7 @@ def test_epic139_red_interlocks_remain_lifted_after_closure_handoff() -> None:
     epics = {epic["id"]: epic for epic in _load_data()["epics"]}
 
     assert epics["EPIC-143"]["displayStatus"] == "in_progress"
-    assert epics["EPIC-150"]["displayStatus"] == "not_started"
+    assert epics["EPIC-150"]["displayStatus"] == "in_progress"
     assert epics["EPIC-151"]["displayStatus"] == "in_progress"
     for epic_id in ("EPIC-143", "EPIC-150", "EPIC-151"):
         assert "Gated while EPIC-139 remains RED" not in epics[epic_id]["reviewPosture"]

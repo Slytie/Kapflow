@@ -2,7 +2,8 @@
 id: TASK-0606
 epic: EPIC-152
 title: "Produce production preflight go/no-go memorandum"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform", "sre"]
 reviewers: ["security", "qa"]
 depends_on: ["TASK-0589", "TASK-0590", "TASK-0591", "TASK-0592", "TASK-0593", "TASK-0594", "TASK-0595", "TASK-0596", "TASK-0597", "TASK-0598"]
@@ -61,3 +62,9 @@ Compile evidence, residual risks, waivers, and explicit recommendation: go, cond
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_production_preflight/PRODUCTION_PREFLIGHT_GO_NO_GO_MEMO.md` as final no-go memo evidence for `PP-TASK-008` and `PROD-PRE-G10`.
+- The memo references the master production-preflight review and `PROD-PRE-G01..G09` supporting reviews, records `recommendation: no_go`, records no approved waivers, and records absent engineering/product/data-governance/security production signoff.
+- Updated the master production-preflight review so `PROD-PRE-G10` is `final_no_go_decision_recorded` while `overall_status` remains `no_go_blocked_pending_evidence`.
+- Closeout posture: memo evidence only. No production-preflight pass, conditional go, waiver approval, pilot readiness, release approval, migration approval, activation approval, public route, workflow pack activation, raw corpus import, CAPEX runtime activation, or CAPEX product activation is added.

@@ -7,6 +7,9 @@ This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. I
 
 ## Status
 Imported as TODO backlog unless an individual task records completed repo evidence.
+The desktop source-root addendum is now started for planning scope only:
+`TASK-0607` closes the stage/MVP-boundary contract, while `TASK-0608+`
+remain open.
 
 ## In scope
 - Source task families/counts: ARCH:24, DOC:3, RF:2, SAFE:1.
@@ -28,6 +31,7 @@ Context pack:
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
 - `docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv`
+- `docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml`
 
 ## Task stack
 - `TASK-0308` (`DOC-001`) - Restructure documentation tree
@@ -73,7 +77,9 @@ This addendum restores the EPIC-150 desktop folder source-root pack from
 `TASK-0624`, but those IDs are already occupied in this repo, so the restored
 task stack is represented as `TASK-0607` through `TASK-0642`.
 
-Status: draft / proposed addendum. It does not activate CAPEX runtime behavior.
+Status: planning addendum in progress. `TASK-0607` records the stage model and
+MVP/non-MVP boundary as a repo-native planning contract. It does not activate
+CAPEX runtime behavior.
 
 Summary: create the PM-facing desktop folder intake and resync experience for
 CAPEX project corpora. A PM may select a desktop folder, folder set, ZIP, or
@@ -117,8 +123,8 @@ Additional dependencies:
 - EPIC-147 - no-false-closure, semantic, scale, and AI-agent Lab test harnesses.
 - Platform safety prerequisite - artifact/blob custody and auth-before-read must remain proven before desktop source-root evidence can be bound.
 
-Desktop source-root task stack:
-- `TASK-0607` - Freeze EPIC-150 stage model and MVP/non-MVP boundary.
+## Desktop Source-Root Task Stack
+- `TASK-0607` - Freeze EPIC-150 stage model and MVP/non-MVP boundary. - DONE 2026-06-17.
 - `TASK-0608` - Define source-root runtime model and state machine.
 - `TASK-0609` - Specify manual folder/ZIP import protocol.
 - `TASK-0610` - Specify manual resync and delta reconciliation.
@@ -136,9 +142,24 @@ Desktop source-root task stack:
 - `TASK-0622` - Define sensitive/licensed/personal-source triage.
 - `TASK-0623` - Define sync conflict review and stale/reopen propagation.
 - `TASK-0624` - Specify projection freshness and stale-command guards for sync review.
-- `TASK-0625` through `TASK-0630` - Add P0 negative and correctness tests.
-- `TASK-0631` through `TASK-0634` - Add leak prevention, desktop-agent activation, and security gates.
-- `TASK-0635` through `TASK-0642` - Add connector options, project fixture tests, CODEOWNERS, overkill guards, and snippet integration.
+- `TASK-0625` - Add duplicate digest / multiple occurrence tests.
+- `TASK-0626` - Add AI proposal cannot create reviewed baseline tests.
+- `TASK-0627` - Add local deletion does not delete evidence tests.
+- `TASK-0628` - Add path redaction and leak-sentinel tests.
+- `TASK-0629` - Add watcher failure and observation completeness tests.
+- `TASK-0630` - Add modified/moved/renamed conflict tests.
+- `TASK-0631` - Add content-safe logging and telemetry policy hooks.
+- `TASK-0632` - Add leak-scan surfaces for exports, screenshots, generated packs, and CI artifacts.
+- `TASK-0633` - Run desktop-agent feasibility spike and activation-gate design.
+- `TASK-0634` - Define desktop-agent signing, update, support, permission, and endpoint-security gates.
+- `TASK-0635` - Evaluate cloud/server connector path as alternative to desktop agent.
+- `TASK-0636` - Add K12/K3/blind validation coverage for desktop source-root behavior.
+- `TASK-0637` - Add CODEOWNERS / specialist review gates for desktop source-root code.
+- `TASK-0638` - Curate and annotate desktop-sync snippet usage for Codex.
+- `TASK-0639` - Define performance and scale smoke tests for source-root snapshot/resync.
+- `TASK-0640` - Add overkill guards: no bidirectional sync, no writeback, no full DMS/sync-platform adoption.
+- `TASK-0641` - Refine PM UX for Source Roots, Sync Monitor, and Review Queue.
+- `TASK-0642` - Define EPIC-150 to EPIC-141 handoff for SourceRef resolution.
 
 Acceptance gates:
 - Folder import creates source occurrences without treating folder names as truth.

@@ -113,6 +113,9 @@ def test_capex_domain_manifest_prerequisites_link_future_tasks() -> None:
         "TASK-0601",
         "TASK-0602",
         "TASK-0603",
+        "TASK-0604",
+        "TASK-0605",
+        "TASK-0606",
         "TASK-0283",
         "TASK-0289",
     } <= prerequisite_task_refs
@@ -133,6 +136,9 @@ def test_capex_domain_manifest_keeps_production_preflight_open() -> None:
     assert "TASK-0601" in production_preflight["task_refs"]
     assert "TASK-0602" in production_preflight["task_refs"]
     assert "TASK-0603" in production_preflight["task_refs"]
+    assert "TASK-0604" in production_preflight["task_refs"]
+    assert "TASK-0605" in production_preflight["task_refs"]
+    assert "TASK-0606" in production_preflight["task_refs"]
     assert (
         "docs/planning/capex_production_preflight/"
         "MASTER_Production_Preflight_Review.md"
@@ -153,8 +159,20 @@ def test_capex_domain_manifest_keeps_production_preflight_open() -> None:
         "docs/planning/capex_production_preflight/"
         "CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml"
     ) in production_preflight["source_refs"]
+    assert (
+        "docs/planning/capex_production_preflight/"
+        "RELEASE_MIGRATION_ACTIVATION_ROLLBACK_REVIEW.yaml"
+    ) in production_preflight["source_refs"]
+    assert (
+        "docs/planning/capex_production_preflight/"
+        "SEMANTIC_REVIEW_CI_GATE_REVIEW.yaml"
+    ) in production_preflight["source_refs"]
+    assert (
+        "docs/planning/capex_production_preflight/"
+        "PRODUCTION_PREFLIGHT_GO_NO_GO_MEMO.md"
+    ) in production_preflight["source_refs"]
     assert "no-go/blocked planning evidence" in production_preflight["description"]
-    assert "final go/no-go evidence" in production_preflight["description"]
+    assert "recommendation is no-go" in production_preflight["description"]
 
 
 def test_capex_domain_manifest_has_no_raw_corpus_paths_or_content() -> None:

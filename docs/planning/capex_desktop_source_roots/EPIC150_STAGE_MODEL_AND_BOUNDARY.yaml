@@ -1,0 +1,122 @@
+schema_version: capex.desktop_source_root_stage_model.v1
+contract_id: capex.desktop_source_root.stage_model_and_boundary.v1
+owner_task: TASK-0607
+source_rows:
+  - DST-001
+  - DFS-D01
+activation_posture: planning_only_no_capex_activation
+overall_status: planning_boundary_recorded
+stage_model:
+  - stage_id: stage_1_mvp_manual_import
+    name: Stage 1 MVP manual import
+    posture: planned_not_activated
+    allowed_inputs:
+      - browser_folder_selection
+      - zip_import
+      - user_selected_folder_upload
+    required_review: pm_reviews_observation_before_baseline_use
+    forbidden_shortcuts:
+      - persistent_background_watcher
+      - bidirectional_sync
+      - desktop_writeback
+      - folder_path_as_project_truth
+      - ai_proposal_as_reviewed_baseline
+  - stage_id: stage_2_mvp_plus_manual_resync
+    name: Stage 2 MVP+ manual resync
+    posture: future_planning_only
+    allowed_inputs:
+      - manual_resync_of_registered_source_root
+      - immutable_folder_tree_snapshot
+      - source_occurrence_delta
+    required_review: pm_review_before_reviewed_baseline_update
+    forbidden_shortcuts:
+      - automatic_baseline_update
+      - local_deletion_as_evidence_deletion
+      - digest_collapse_across_folder_context
+      - watcher_event_as_freshness_complete
+  - stage_id: stage_3_deferred_controlled_pilot
+    name: Stage 3 deferred controlled pilot
+    posture: deferred_until_later_activation_gate
+    allowed_inputs:
+      - desktop_companion_app
+      - local_service
+      - cloud_connector
+      - server_mounted_folder
+    required_review: full_snapshot_reconciliation_before_truth_change
+    forbidden_shortcuts:
+      - watcher_event_as_truth
+      - partial_delta_as_complete_observation
+      - raw_path_leak_to_logs_prompts_exports
+      - production_or_pilot_activation_without_gate
+mvp_boundary:
+  included:
+    - manual_source_root_registration_planning
+    - immutable_snapshot_and_delta_concepts
+    - pm_review_before_baseline_update_rule
+    - redacted_path_locator_rule
+    - observation_proposal_review_chain
+  excluded:
+    - runtime_tables_or_migrations
+    - public_api_routes
+    - frontend_routes
+    - persistent_desktop_agent
+    - bidirectional_sync_or_writeback
+    - raw_corpus_import
+    - reviewed_baseline_mutation
+    - official_pointer_promotion
+non_authority_rules:
+  folder_paths_and_names: cannot_create_project_truth
+  content_digests: cannot_collapse_source_occurrence_context
+  watcher_events: hints_only_must_reconcile_against_snapshots
+  local_deletions: create_missing_or_stale_review_state_not_evidence_deletion
+  ai_proposals: draft_only_until_pm_review
+  reviewed_baseline: cannot_create_official_pointer_without_governed_promotion
+required_future_tasks:
+  - TASK-0608
+  - TASK-0609
+  - TASK-0610
+  - TASK-0611
+  - TASK-0612
+  - TASK-0613
+  - TASK-0614
+  - TASK-0615
+  - TASK-0616
+  - TASK-0617
+  - TASK-0618
+  - TASK-0619
+  - TASK-0620
+  - TASK-0621
+  - TASK-0622
+  - TASK-0623
+  - TASK-0624
+raw_data_boundary:
+  allowed_repo_material:
+    - task ids
+    - source row ids
+    - sanitized stage names
+    - conceptual source-root object names
+    - non-authority rules
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - absolute local paths
+    - usernames or machine names from local paths
+    - screenshots or logs containing source content
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - desktop_sync_activation
+  - desktop_agent_activation
+  - bidirectional_sync
+  - writeback_to_source_root
+  - watcher_authority
+  - local_deletion_authority
+  - ai_proposal_authority
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval
+  - pilot_readiness_approval

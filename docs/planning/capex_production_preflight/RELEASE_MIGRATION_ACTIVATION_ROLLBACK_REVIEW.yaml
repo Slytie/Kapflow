@@ -1,0 +1,101 @@
+schema_version: capex.production_preflight_gate_review.v1
+review_id: capex.production_preflight.release_migration_activation_rollback_review.v1
+owner_task: TASK-0604
+source_task_id: PP-TASK-006
+activation_posture: planning_only_no_capex_activation
+overall_status: no_go_blocked_pending_evidence
+gate_refs:
+  - PROD-PRE-G08
+approved_waivers: []
+future_waiver_required_fields:
+  - owner
+  - reason
+  - residual_risk
+  - expiry_or_review_date
+  - affected_gate
+reviewed_evidence_families:
+  - family_id: release_bundle_manifest
+    status: repo_mechanics_recorded_blocking_production_review
+    blocking: true
+    evidence_refs:
+      - scripts/export_clean_source_bundle.py
+      - scripts/release_bundle_provenance.py
+      - tests/contract/test_release_source_bundle_export.py
+      - tests/contract/test_clean_source_bundle_export.py
+    blocked_reason: Release-source bundle mechanics and provenance tests exist, but no CAPEX release-candidate review record is present.
+  - family_id: migration_lane_evidence
+    status: parity_evidence_recorded_blocking_production_lane
+    blocking: true
+    evidence_refs:
+      - alembic/
+      - tests/integration/test_migration_bootstrap_parity.py
+      - tests/integration/test_capex_project_schema_parity.py
+      - tests/integration/test_capex_project_authorization_schema_parity.py
+    blocked_reason: Alembic/bootstrap parity exists, but no production migration lane rehearsal or approval record is present for CAPEX activation.
+  - family_id: activation_gate_manifest
+    status: disabled_domain_manifest_recorded
+    blocking: true
+    evidence_refs:
+      - docs/domains/capex/domain.yaml
+      - docs/architecture/CAPEX_PROJECT_AUTHORIZATION_CED.md
+      - docs/planning/capex_three_project_validation/FIXTURE_TIER_CI_POLICY.yaml
+    blocked_reason: CAPEX disabled-capability posture is explicit, but no feature-gate pass or activation approval record exists.
+  - family_id: rollback_compensation_plan
+    status: runbook_basis_recorded_blocking_rehearsal
+    blocking: true
+    evidence_refs:
+      - docs/ops/runbooks/rollback_and_deploy.md
+      - docs/ops/runbooks/backup_and_restore.md
+      - tests/contract/test_backup_restore_runbook_docs.py
+      - tests/contract/test_capex_release_backup_readiness.py
+    blocked_reason: Rollback and restore runbooks exist, but no CAPEX-specific rollback, compensation, or restore rehearsal is recorded.
+  - family_id: release_approval_waiver_trail
+    status: no_approved_waiver_or_release_signoff
+    blocking: true
+    evidence_refs:
+      - docs/planning/capex_production_preflight/MASTER_Production_Preflight_Review.md
+      - docs/planning/epics/EPIC-152.md
+    blocked_reason: No release signoff, activation signoff, or explicit waiver evidence is recorded for PROD-PRE-G08.
+missing_evidence:
+  - capex_release_candidate_review_record
+  - production_migration_lane_rehearsal
+  - activation_approval_record
+  - feature_gate_pass_record
+  - capex_rollback_compensation_rehearsal
+  - explicit_gate_waiver_evidence
+rollup:
+  reviewed_family_count: 5
+  blocking_family_count: 5
+  result_reason: Release, migration, activation, and rollback evidence review is complete, but PROD-PRE-G08 remains no-go pending production-facing review, rehearsal, approval, and waiver evidence.
+raw_data_boundary:
+  allowed_repo_material:
+    - task ids
+    - gate ids
+    - sanitized evidence references
+    - release evidence category labels
+    - migration lane status labels
+    - activation posture labels
+    - waiver field requirements
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - mounted raw corpus paths
+    - project-specific hardcoded logic
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - waiver_approval
+  - release_approval
+  - migration_approval
+  - activation_approval
+  - rollback_rehearsal_completion_claim
+  - compensation_rehearsal_completion_claim
+  - production_preflight_approval
+  - pilot_readiness_approval
+  - final_go_no_go_approval

@@ -2,7 +2,8 @@
 id: TASK-0604
 epic: EPIC-152
 title: "Verify release bundle, migration lanes, activation gates, and rollback/compensation evidence"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform", "sre"]
 reviewers: ["security", "qa"]
 depends_on: ["TASK-0589", "TASK-0590", "TASK-0591", "TASK-0592", "TASK-0593", "TASK-0594", "TASK-0595", "TASK-0596", "TASK-0597", "TASK-0598"]
@@ -61,3 +62,10 @@ Confirm deployment != activation and truth-mutating features are default-off unt
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_production_preflight/RELEASE_MIGRATION_ACTIVATION_ROLLBACK_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-006` and `PROD-PRE-G08`.
+- The review covers release bundle manifest/provenance mechanics, Alembic/bootstrap migration parity evidence, disabled CAPEX activation posture, rollback/restore runbook basis, and the release approval/waiver trail.
+- CAPEX release-candidate review, production migration lane rehearsal, activation approval, feature-gate pass evidence, rollback/compensation rehearsal, and explicit gate waiver evidence remain missing and blocking.
+- Updated the master production-preflight review so `PROD-PRE-G08` is reviewed but remains `no_go_blocked_pending_evidence`.
+- Closeout posture: review evidence only. No release approval, migration approval, activation approval, waiver approval, production-preflight pass, pilot readiness, public route, workflow pack activation, CAPEX runtime activation, or CAPEX product activation is added.

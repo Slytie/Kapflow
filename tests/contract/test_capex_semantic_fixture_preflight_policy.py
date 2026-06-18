@@ -142,6 +142,12 @@ def test_production_preflight_master_review_is_no_go_and_blocked() -> None:
         "RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml",
         "docs/planning/capex_production_preflight/"
         "CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml",
+        "docs/planning/capex_production_preflight/"
+        "RELEASE_MIGRATION_ACTIVATION_ROLLBACK_REVIEW.yaml",
+        "docs/planning/capex_production_preflight/"
+        "SEMANTIC_REVIEW_CI_GATE_REVIEW.yaml",
+        "docs/planning/capex_production_preflight/"
+        "PRODUCTION_PREFLIGHT_GO_NO_GO_MEMO.md",
     }
     assert [row["gate_id"] for row in frontmatter["gate_reviews"]] == (
         EXPECTED_PROD_PRE_GATES
@@ -176,11 +182,14 @@ def test_production_preflight_master_review_is_no_go_and_blocked() -> None:
             "docs/planning/capex_production_preflight/"
             "CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml"
         ),
-    }
-    expected_pending_tasks = {
-        "PROD-PRE-G08": "TASK-0604",
-        "PROD-PRE-G09": "TASK-0605",
-        "PROD-PRE-G10": "TASK-0606",
+        "PROD-PRE-G08": (
+            "docs/planning/capex_production_preflight/"
+            "RELEASE_MIGRATION_ACTIVATION_ROLLBACK_REVIEW.yaml"
+        ),
+        "PROD-PRE-G09": (
+            "docs/planning/capex_production_preflight/"
+            "SEMANTIC_REVIEW_CI_GATE_REVIEW.yaml"
+        ),
     }
     for row in frontmatter["gate_reviews"]:
         assert row["reason_code"], row
@@ -188,8 +197,12 @@ def test_production_preflight_master_review_is_no_go_and_blocked() -> None:
             assert row["status"] == "reviewed_no_go_blocked_pending_evidence", row
             assert row["evidence_ref"] == expected_review_refs[row["gate_id"]]
         else:
-            assert row["status"] == "blocked_pending_task", row
-            assert row["pending_task"] == expected_pending_tasks[row["gate_id"]]
+            assert row["gate_id"] == "PROD-PRE-G10", row
+            assert row["status"] == "final_no_go_decision_recorded", row
+            assert row["evidence_ref"] == (
+                "docs/planning/capex_production_preflight/"
+                "PRODUCTION_PREFLIGHT_GO_NO_GO_MEMO.md"
+            )
 
     assert set(frontmatter["future_waiver_required_fields"]) >= {
         "owner",
@@ -200,11 +213,7 @@ def test_production_preflight_master_review_is_no_go_and_blocked() -> None:
     }
     assert frontmatter["rollback_posture"]["recommendation"] == "defer_no_go"
     assert frontmatter["rollback_posture"]["capex_disabled"] is True
-    assert set(frontmatter["rollback_posture"]["route_later_gate_checks_to"]) == {
-        "TASK-0604",
-        "TASK-0605",
-        "TASK-0606",
-    }
+    assert frontmatter["rollback_posture"]["route_later_gate_checks_to"] == []
     assert set(frontmatter["cannot_be_used_for"]) >= {
         "capex_runtime_activation",
         "product_activation",

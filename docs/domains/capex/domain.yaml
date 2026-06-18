@@ -122,7 +122,7 @@ readiness_prerequisites:
       - docs/planning/epics/EPIC-151.md
       - docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md
   - prerequisite_id: capex.production_preflight
-    description: Production-preflight master review plus P0 blocker, three-project, raw-data quarantine, and capacity/restore/full-corpus reviews exist as no-go/blocked planning evidence through TASK-0603; release, pilot, activation-gate, review-tier/CI, and final go/no-go evidence remain blocked or future scope.
+    description: Production-preflight master review plus P0 blocker, three-project, raw-data quarantine, capacity/restore/full-corpus, release/migration/activation/rollback, semantic review/CI gate, and final go/no-go memo evidence exist as no-go/blocked planning evidence through TASK-0606; production preflight remains open because the memo recommendation is no-go and blocked evidence is not waived.
     status: open
     task_refs:
       - TASK-0244
@@ -132,6 +132,9 @@ readiness_prerequisites:
       - TASK-0601
       - TASK-0602
       - TASK-0603
+      - TASK-0604
+      - TASK-0605
+      - TASK-0606
     source_refs:
       - docs/status/CURRENT_FOCUS.md
       - docs/planning/CAPEX_PLATFORM_FOUNDATION_V0.md
@@ -141,6 +144,9 @@ readiness_prerequisites:
       - docs/planning/capex_production_preflight/THREE_PROJECT_EVIDENCE_PACKAGE_REVIEW.yaml
       - docs/planning/capex_production_preflight/RAW_DATA_QUARANTINE_LEAK_SCAN_REVIEW.yaml
       - docs/planning/capex_production_preflight/CAPACITY_RESTORE_FULL_CORPUS_REVIEW.yaml
+      - docs/planning/capex_production_preflight/RELEASE_MIGRATION_ACTIVATION_ROLLBACK_REVIEW.yaml
+      - docs/planning/capex_production_preflight/SEMANTIC_REVIEW_CI_GATE_REVIEW.yaml
+      - docs/planning/capex_production_preflight/PRODUCTION_PREFLIGHT_GO_NO_GO_MEMO.md
 disabled_capabilities:
   - capability_id: capex.runtime_activation
     description: CAPEX runtime/product activation is disabled.

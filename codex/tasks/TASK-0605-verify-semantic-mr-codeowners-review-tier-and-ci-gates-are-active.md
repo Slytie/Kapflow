@@ -2,7 +2,8 @@
 id: TASK-0605
 epic: EPIC-152
 title: "Verify semantic MR, CODEOWNERS, review-tier, and CI gates are active"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform", "sre"]
 reviewers: ["security", "qa"]
 depends_on: ["TASK-0589", "TASK-0590", "TASK-0591", "TASK-0592", "TASK-0593", "TASK-0594", "TASK-0595", "TASK-0596", "TASK-0597", "TASK-0598"]
@@ -61,3 +62,10 @@ Confirm P0/P1/P2 branch and review controls prevent unsafe CAPEX runtime changes
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_production_preflight/SEMANTIC_REVIEW_CI_GATE_REVIEW.yaml` as no-go / blocked review evidence for `PP-TASK-007` and `PROD-PRE-G09`.
+- The review covers repo CODEOWNERS entries, `make capex-semantic-tests`, the GitHub Actions CAPEX semantic lane, the CAPEX invariant audit, semantic-review planning evidence, documented CI expectations, and review-tier expectations.
+- Hosted branch-protection proof, required-check enforcement evidence, semantic MR gate logs, review-tier enforcement proof, CAPEX runtime-change CI pass records, and explicit gate waiver evidence remain missing and blocking.
+- Updated the master production-preflight review so `PROD-PRE-G09` is reviewed but remains `no_go_blocked_pending_evidence`.
+- Closeout posture: review evidence only. No hosted CI enforcement claim, branch-protection claim, review-tier approval, waiver approval, production-preflight pass, pilot readiness, public route, workflow pack activation, CAPEX runtime activation, or CAPEX product activation is added.

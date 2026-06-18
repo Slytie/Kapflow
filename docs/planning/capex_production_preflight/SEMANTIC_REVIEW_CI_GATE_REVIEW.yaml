@@ -1,0 +1,100 @@
+schema_version: capex.production_preflight_gate_review.v1
+review_id: capex.production_preflight.semantic_review_ci_gate_review.v1
+owner_task: TASK-0605
+source_task_id: PP-TASK-007
+activation_posture: planning_only_no_capex_activation
+overall_status: no_go_blocked_pending_evidence
+gate_refs:
+  - PROD-PRE-G09
+approved_waivers: []
+future_waiver_required_fields:
+  - owner
+  - reason
+  - residual_risk
+  - expiry_or_review_date
+  - affected_gate
+reviewed_gate_families:
+  - family_id: codeowners
+    status: repo_owner_entries_recorded
+    blocking: true
+    evidence_refs:
+      - .github/CODEOWNERS
+      - tests/contract/test_capex_semantic_codeowners_gates.py
+    blocked_reason: CODEOWNERS entries exist, but no hosted required-review or branch-protection proof is recorded.
+  - family_id: capex_semantic_test_lane
+    status: repo_lane_recorded
+    blocking: true
+    evidence_refs:
+      - Makefile
+      - .github/workflows/main.yml
+      - tests/contract/test_capex_semantic_codeowners_gates.py
+    blocked_reason: The Make and GitHub Actions lane exists, but no production-preflight required-check enforcement evidence is recorded.
+  - family_id: capex_invariant_audit
+    status: repo_audit_recorded
+    blocking: true
+    evidence_refs:
+      - scripts/run_capex_invariant_audit.py
+      - tests/contract/test_capex_invariant_audit.py
+    blocked_reason: The audit is repo-native evidence, but no hosted gate enforcement or production-preflight pass record is present.
+  - family_id: semantic_merge_review
+    status: planning_and_test_evidence_only
+    blocking: true
+    evidence_refs:
+      - docs/planning/CAPEX_CB2_SEMANTIC_TEST_BACKLOG.yaml
+      - tests/contract/test_capex_semantic_test_suite.py
+    blocked_reason: Semantic safety backlog and tests exist, but no semantic merge review log or release-candidate review evidence is recorded.
+  - family_id: review_tier_rules
+    status: unresolved_operator_scope
+    blocking: true
+    evidence_refs:
+      - docs/ops/ci_required_checks.md
+      - docs/domains/capex/domain.yaml
+    blocked_reason: Review-tier expectations are documented, but no active production review-tier enforcement proof is recorded.
+  - family_id: hosted_ci_required_checks
+    status: repo_workflow_recorded_blocking_hosted_settings
+    blocking: true
+    evidence_refs:
+      - .github/workflows/main.yml
+      - docs/ops/ci_required_checks.md
+    blocked_reason: Repo workflows exist, but hosted required-check and branch-protection settings are external operator evidence and are not recorded here.
+missing_evidence:
+  - hosted_branch_protection_evidence
+  - github_required_check_enforcement_evidence
+  - semantic_mr_gate_log
+  - review_tier_enforcement_proof
+  - capex_runtime_change_ci_pass_record
+  - explicit_gate_waiver_evidence
+rollup:
+  reviewed_family_count: 6
+  blocking_family_count: 6
+  result_reason: Semantic review and CI gate review is complete, but PROD-PRE-G09 remains no-go pending hosted enforcement, semantic merge-review, review-tier, CI pass, and waiver evidence.
+raw_data_boundary:
+  allowed_repo_material:
+    - task ids
+    - gate ids
+    - sanitized evidence references
+    - CI lane names
+    - review category labels
+    - waiver field requirements
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - screenshots or logs containing source content
+    - hosted CI logs containing source content
+    - project-specific hardcoded logic
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - fixture_release_approval
+  - waiver_approval
+  - ci_enforcement_claim
+  - hosted_branch_protection_claim
+  - semantic_merge_gate_pass_claim
+  - required_check_enforcement_claim
+  - production_preflight_approval
+  - pilot_readiness_approval
+  - final_go_no_go_approval
