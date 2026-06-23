@@ -1,0 +1,101 @@
+schema_version: capex.workflow_catalog.proposal.v1
+proposal_id: capex.lifecycle_stage_state.workflow.v1
+title: CAPEX Lifecycle Stage State workflow
+activation_posture: planning_only_no_capex_activation
+catalog_surface: planning_only_capex_workflow_catalog
+source_task_ref: TASK-0285
+source_row: WFLOW-003
+acceptance_gates:
+  - NU-003
+depends_on:
+  repo_tasks:
+    - TASK-0284
+workflow_basis:
+  corpus_baseline_workflow_schema_version: capex.corpus_baseline.workflow_outputs.v1
+  required_basis_refs:
+    - corpus_baseline_workflow_id
+    - packet_register_id
+canonical_outputs:
+  - lifecycle_stage_state
+  - stage_readiness_matrix
+  - lifecycle_navigation_flags
+lifecycle_stage_state:
+  schema_version: capex.lifecycle_stage_state.v1
+  derived_navigation_only: true
+  official_truth: false
+  duplicate_stage_ids_allowed: false
+  stages:
+    - intake
+    - baseline
+    - planning_procurement
+    - execution_delivery
+    - commissioning_closeout
+    - post_closeout
+stage_readiness_matrix:
+  schema_version: capex.stage_readiness_matrix.v1
+  states:
+    - not_started
+    - in_progress
+    - ready
+    - blocked_missing_evidence
+    - blocked_conflict
+    - ai_draft_only
+  ready_requires_evidence: true
+  ai_draft_can_make_ready: false
+lifecycle_navigation_flags:
+  schema_version: capex.lifecycle_navigation_flags.v1
+  missing_stage_evidence_flag_required: true
+  conflicting_lifecycle_evidence_flag_required: true
+  ai_draft_cannot_set_lifecycle_stage_flag_required: true
+officialness_policy:
+  stage_is_truth: false
+  stage_is_derived_navigation: true
+  stage_advances_waterfall_gate: false
+  ai_draft_sets_lifecycle_stage: false
+  reviewed_metadata_is_pointer_truth: false
+truth_effects:
+  creates_workflow_run: false
+  creates_tasks: false
+  creates_approvals: false
+  creates_closure_snapshots: false
+  creates_reviewed_baseline: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - authored_workflow_pack
+  - public_api_route
+  - frontend_route
+  - workpage_route
+  - project_state_snapshot_workflow
+  - physical_closure_snapshot_creation
+  - reviewed_baseline_creation
+  - official_pointer_creation
+raw_data_boundary:
+  allowed_repo_material:
+    - source_refs
+    - stage_ids
+    - sanitized_stage_summaries
+    - aggregate_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_stage_text
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - authored_workflow_pack_activation
+  - raw_corpus_import
+  - official_stage_truth
+  - waterfall_gate_authority
+  - reviewed_baseline_creation
+  - closure_snapshot_creation
+  - evidence_sufficiency_claim
+  - official_pointer_creation
+  - production_preflight_approval

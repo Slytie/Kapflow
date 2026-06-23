@@ -1,0 +1,90 @@
+schema_version: capex.source_ingest.performance_contract.v1
+contract_id: capex.batch_artifact_link_provenance_hydration.v1
+title: CAPEX batch artifact link/provenance hydration
+owner_task: TASK-0273
+source_row: INGEST-008
+activation_posture: planning_only_no_capex_activation
+acceptance_gates:
+  - AT-SCALE-006
+depends_on:
+  repo_tasks:
+    - TASK-0263
+performance_surface:
+  repository_helper: onetruth.infrastructure.repositories.artifact_relation_hydration
+  shared_loader: hydrate_artifact_relations_for_versions
+  project_page_loader: list_artifact_versions_page_with_relations
+  max_page_size: 500
+  max_batch_hydration_ids: 5000
+  sql_chunk_size: 500
+source_output:
+  batch_loaders: true
+  paginated_list_detail_split: true
+  shared_relation_loader: true
+  query_count_tests_required: true
+  five_thousand_artifact_evidence_required: true
+relation_families:
+  artifact_links:
+    batch_loaded: true
+    per_artifact_loop_allowed: false
+    deterministic_order:
+      - artifact_version_id
+      - created_at
+      - subject_kind
+      - subject_id
+  artifact_provenance_edges:
+    output_side_batch_loaded: true
+    per_artifact_loop_allowed: false
+    deterministic_order:
+      - output_artifact_version_id
+      - edge_order
+      - edge_type
+      - input_artifact_version_id
+      - edge_id
+scope_policy:
+  tenant_scope_required_when_available: true
+  domain_scope_required_when_available: true
+  project_scope_required_for_capex_project_pages: true
+  missing_or_cross_scope_artifacts_fail_closed: true
+query_plan_policy:
+  unbounded_page_reads_allowed: false
+  n_plus_one_relation_loading_allowed: false
+  new_migration_required: false
+  existing_indexes_relied_on:
+    - ix_artifact_versions_project_scope
+    - artifact_links primary key on artifact_version_id
+    - ix_artifact_provenance_edges_output
+not_implemented_in_this_task:
+  - public_api_route
+  - frontend_route
+  - migration
+  - event_registry_change
+  - search_runtime
+  - vector_store
+  - raw_corpus_import
+  - production_activation
+raw_data_boundary:
+  allowed_repo_material:
+    - artifact_version_ids
+    - workflow_run_ids
+    - project_ids
+    - relation_counts
+    - query_count_evidence
+    - sanitized storage refs
+    - sha256 digests
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_document_text
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - raw_corpus_import
+  - reviewed_baseline_creation
+  - evidence_sufficiency_claim
+  - official_pointer_creation
+  - production_preflight_approval

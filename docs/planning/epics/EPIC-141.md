@@ -6,7 +6,7 @@ Build the content identity, source occurrence, extraction, and evidence-binding 
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0564` is closed as of 2026-06-08 with physical source occurrence/runtime resolver evidence, `TASK-0266` is closed as of 2026-06-17 with staged corpus ingest architecture and guardrail evidence, `TASK-0267` is closed as of 2026-06-17 with deterministic content-identity/source-inventory evidence, `TASK-0268` is closed as of 2026-06-17 with source occurrence register evidence, `TASK-0269` is closed as of 2026-06-17 with role assignment and packet register artifact evidence, `TASK-0270` is closed as of 2026-06-17 with document manifest and extraction-state register artifact evidence, `TASK-0271` is closed as of 2026-06-23 with text extraction/page manifest contract evidence, `TASK-0272` is closed as of 2026-06-23 with chunk/search/evidence-binding index contract evidence, and `TASK-0652` is closed with the SME-RP source occurrence context and trust contract. Batch artifact link/provenance hydration, async processing, parser/OCR runtime, and source occurrence relation work remain open.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0564` is closed as of 2026-06-08 with physical source occurrence/runtime resolver evidence, `TASK-0266` is closed as of 2026-06-17 with staged corpus ingest architecture and guardrail evidence, `TASK-0267` is closed as of 2026-06-17 with deterministic content-identity/source-inventory evidence, `TASK-0268` is closed as of 2026-06-17 with source occurrence register evidence, `TASK-0269` is closed as of 2026-06-17 with role assignment and packet register artifact evidence, `TASK-0270` is closed as of 2026-06-17 with document manifest and extraction-state register artifact evidence, `TASK-0271` is closed as of 2026-06-23 with text extraction/page manifest contract evidence, `TASK-0272` is closed as of 2026-06-23 with chunk/search/evidence-binding index contract evidence, `TASK-0273` is closed as of 2026-06-23 with batch artifact link/provenance hydration evidence, `TASK-0274` is closed as of 2026-06-23 with planning-only async document-processing job runtime evidence, and `TASK-0652` is closed with the SME-RP source occurrence context and trust contract. Parser/OCR runtime, physical ingest-job tables, queue workers, and source occurrence relation work remain open.
 
 ## In scope
 - Source task families/counts: ARCH:38, INGEST:9, NU:1, RF:3, SME-RP:1, V5:1.
@@ -39,8 +39,8 @@ Context pack:
 - `TASK-0270` (`INGEST-005`) - Document manifest and extraction-state artifact - DONE 2026-06-17
 - `TASK-0271` (`INGEST-006`) - Text extraction and page manifest contracts - DONE 2026-06-23
 - `TASK-0272` (`INGEST-007`) - Chunk/search/evidence-binding index - DONE 2026-06-23
-- `TASK-0273` (`INGEST-008`) - Batch artifact link/provenance hydration
-- `TASK-0274` (`INGEST-009`) - Async job runtime for document processing
+- `TASK-0273` (`INGEST-008`) - Batch artifact link/provenance hydration - DONE 2026-06-23
+- `TASK-0274` (`INGEST-009`) - Async job runtime for document processing - DONE 2026-06-23
 - `TASK-0372` (`RF-004`) - Artifact list pagination adapter
 - `TASK-0373` (`RF-005`) - Batch relation hydration
 - `TASK-0374` (`RF-006`) - Bulk ingest adapter seam

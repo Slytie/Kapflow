@@ -67,10 +67,6 @@
       "displayStatus": "blocked",
       "statusReason": "The deploy lane exists, but live lab VM execute-and-smoke evidence is still missing."
     },
-    "TASK-0273": {
-      "displayStatus": "needs_review",
-      "statusReason": "Needs fresh check because the first project-scoped API foundation is closed and this task can now be reassessed against batch artifact provenance scope."
-    },
     "TASK-0280": {
       "displayStatus": "needs_review",
       "statusReason": "Needs fresh check because project-scoped official pointer families are now present, while promotion request and policy checks remain later scope."

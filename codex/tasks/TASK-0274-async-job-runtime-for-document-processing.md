@@ -2,7 +2,8 @@
 id: TASK-0274
 epic: EPIC-141
 title: "Async job runtime for document processing"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0236", "TASK-0239", "TASK-0266"]

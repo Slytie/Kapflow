@@ -11,24 +11,24 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 432,
-    "done": 116,
+    "done": 120,
     "in_progress": 0,
-    "not_started": 311,
+    "not_started": 308,
     "blocked": 1,
-    "needs_review": 4,
+    "needs_review": 3,
     "total": 432,
     "estimate": {
-      "percentComplete": 26.9,
-      "completedTasks": 116,
-      "remainingTasks": 316,
-      "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 84,
-      "completionTimestampCoverage": 72.4,
-      "etaDate": "2026-09-06",
+      "percentComplete": 27.8,
+      "completedTasks": 120,
+      "remainingTasks": 312,
+      "remainingBlockedOrReviewTasks": 4,
+      "completedWithTimestamps": 88,
+      "completionTimestampCoverage": 73.3,
+      "etaDate": "2026-09-02",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-09-06",
-      "caveat": "5 blocked or needs-review task(s) remain."
+      "label": "ETA 2026-09-02",
+      "caveat": "4 blocked or needs-review task(s) remain."
     }
   },
   "activationBlockers": [
@@ -4733,7 +4733,7 @@
       "id": "EPIC-141",
       "title": "CAPEX source occurrence and evidence",
       "plainPurpose": "Build the content identity, source occurrence, extraction, and evidence-binding foundations.",
-      "displayStatus": "needs_review",
+      "displayStatus": "in_progress",
       "reviewPosture": "EPIC-141 source occurrence resolver plus TASK-0652 source-context/trust planning contract are closed; broader corpus ingest, extraction, evidence binding, source occurrence relations, raw-data governance, and review/backlog items remain open.",
       "dependencies": [
         "EPIC-140",
@@ -4757,11 +4757,11 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 10,
+        "done": 12,
         "in_progress": 0,
-        "not_started": 42,
+        "not_started": 41,
         "blocked": 0,
-        "needs_review": 1,
+        "needs_review": 0,
         "total": 53
       },
       "taskCount": 53,
@@ -5209,9 +5209,9 @@
           "epicId": "EPIC-141",
           "title": "Batch artifact link/provenance hydration",
           "plainPurpose": "Eliminate N+1 link loading on CAPEX pages.",
-          "sourceStatus": "TODO",
-          "displayStatus": "needs_review",
-          "statusReason": "Needs fresh check because the first project-scoped API foundation is closed and this task can now be reassessed against batch artifact provenance scope.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task INGEST-008 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5255,20 +5255,26 @@
             "original_depends_on": "PROJ-003",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_source_ingest/BATCH_ARTIFACT_LINK_PROVENANCE_HYDRATION_CONTRACT.yaml to record the INGEST-008 / AT-SCALE-006 performance contract, bounded page policy, shared relation loader, raw-data boundary, and non-activation posture.",
+            "Added onetruth.infrastructure.repositories.artifact_relation_hydration with project-scoped paginated artifact listing plus batch artifact link/provenance hydration helpers.",
+            "Rewired existing artifact read/list surfaces that loaded links per artifact to use the shared batch loader without adding routes or changing public payload shapes.",
+            "Added query-count and 5k synthetic artifact unit coverage in tests/unit/test_capex_artifact_relation_hydration.py, plus ingest contract closeout coverage.",
+            "Closeout posture: this task closes repository/query-shape evidence only. It adds no raw corpus import, frontend route, public route, migration, event-registry change, official pointer creation, reviewed baseline creation, search/vector runtime, production approval, or CAPEX runtime/product activation."
+          ],
           "taskPath": "codex/tasks/TASK-0273-batch-artifact-link-provenance-hydration.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0274",
           "epicId": "EPIC-141",
           "title": "Async job runtime for document processing",
           "plainPurpose": "Support retry/resume/cancel/progress for large corpus jobs.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task INGEST-009 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5316,9 +5322,9 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0274-async-job-runtime-for-document-processing.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0372",
@@ -7809,17 +7815,17 @@
         }
       ],
       "estimate": {
-        "percentComplete": 18.9,
-        "completedTasks": 10,
-        "remainingTasks": 43,
-        "remainingBlockedOrReviewTasks": 1,
-        "completedWithTimestamps": 9,
-        "completionTimestampCoverage": 90.0,
-        "etaDate": "2026-09-07",
+        "percentComplete": 22.6,
+        "completedTasks": 12,
+        "remainingTasks": 41,
+        "remainingBlockedOrReviewTasks": 0,
+        "completedWithTimestamps": 11,
+        "completionTimestampCoverage": 91.7,
+        "etaDate": "2026-08-22",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-09-07",
-        "caveat": "1 blocked or needs-review task(s) remain."
+        "label": "ETA 2026-08-22",
+        "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
     {
@@ -9914,9 +9920,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 9,
+        "done": 11,
         "in_progress": 0,
-        "not_started": 6,
+        "not_started": 4,
         "blocked": 0,
         "needs_review": 0,
         "total": 15
@@ -10055,9 +10061,9 @@
           "epicId": "EPIC-143",
           "title": "Lifecycle Stage State workflow",
           "plainPurpose": "Map project to CAPEX lifecycle navigation without waterfall truth.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task WFLOW-003 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -10101,11 +10107,17 @@
             "original_depends_on": "WFLOW-002",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_workflow_catalog/lifecycle_stage_state_workflow.yaml for the WFLOW-003 Lifecycle Stage State workflow planning contract.",
+            "Added onetruth.capex_platform.lifecycle_stage_state_workflow to produce deterministic lifecycle_stage_state, stage_readiness_matrix, and lifecycle_navigation_flags outputs from Corpus Baseline source refs and sanitized stage observations.",
+            "The helper treats lifecycle stages as derived navigation only: stage rows are not official truth, AI drafts cannot make a stage ready, missing evidence fails open, and conflicting evidence produces non-authoritative flags.",
+            "Added focused lifecycle workflow unit coverage in tests/unit/test_capex_lifecycle_stage_state_workflow.py, plus workflow catalog contract coverage and raw-corpus marker bans.",
+            "Closeout posture: this task closes planning/internal output-shape evidence only. It adds no authored workflow pack, workpage, public route, frontend route, closure snapshot, reviewed baseline creation, official pointer creation, waterfall gate authority, production approval, or CAPEX runtime/product activation."
+          ],
           "taskPath": "codex/tasks/TASK-0285-lifecycle-stage-state-workflow.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0286",
@@ -10300,9 +10312,9 @@
           "epicId": "EPIC-143",
           "title": "Project State Snapshot workflow",
           "plainPurpose": "Synthesize reviewed project state across corpus, commitments, assumptions, interfaces, flags and pointers.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task WFLOW-007 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -10351,9 +10363,9 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0289-project-state-snapshot-workflow.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0566",
@@ -10835,16 +10847,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 60.0,
-        "completedTasks": 9,
-        "remainingTasks": 6,
+        "percentComplete": 73.3,
+        "completedTasks": 11,
+        "remainingTasks": 4,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 7,
-        "completionTimestampCoverage": 77.8,
-        "etaDate": "2026-07-07",
+        "completedWithTimestamps": 9,
+        "completionTimestampCoverage": 81.8,
+        "etaDate": "2026-06-30",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-07-07",
+        "label": "ETA 2026-06-30",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14885,10 +14897,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-07-02",
+        "etaDate": "2026-07-01",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-02",
+        "label": "ETA 2026-07-01",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -19955,10 +19967,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-07-10",
+        "etaDate": "2026-07-09",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-10",
+        "label": "ETA 2026-07-09",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -27438,10 +27450,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-30",
+        "etaDate": "2026-06-29",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-30",
+        "label": "ETA 2026-06-29",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

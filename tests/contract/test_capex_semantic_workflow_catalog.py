@@ -33,6 +33,16 @@ OWNER_INTERFACE_PATH = (
     / "docs/planning/capex_workflow_catalog/"
     "owner_interface_resolution_workflow.yaml"
 )
+LIFECYCLE_STAGE_STATE_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_workflow_catalog/"
+    "lifecycle_stage_state_workflow.yaml"
+)
+PROJECT_STATE_SNAPSHOT_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_workflow_catalog/"
+    "project_state_snapshot_workflow.yaml"
+)
 ANNEX_B_PATH = (
     REPO_ROOT
     / "docs/planning/capex_real_project_acceptance/"
@@ -78,6 +88,18 @@ def _assumption_closure() -> dict[str, Any]:
 
 def _owner_interface() -> dict[str, Any]:
     loaded = yaml.safe_load(OWNER_INTERFACE_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _lifecycle_stage_state() -> dict[str, Any]:
+    loaded = yaml.safe_load(LIFECYCLE_STAGE_STATE_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _project_state_snapshot() -> dict[str, Any]:
+    loaded = yaml.safe_load(PROJECT_STATE_SNAPSHOT_PATH.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
 
@@ -438,6 +460,166 @@ def test_owner_interface_contract_preserves_responsibility_boundaries() -> None:
 
 def test_owner_interface_contract_contains_no_raw_corpus_markers() -> None:
     lowered = OWNER_INTERFACE_PATH.read_text(encoding="utf-8").lower()
+
+    for marker in RAW_CORPUS_MARKERS:
+        assert marker not in lowered
+
+
+def test_lifecycle_stage_state_contract_is_planning_only_catalog_evidence() -> None:
+    proposal = _lifecycle_stage_state()
+
+    assert proposal["schema_version"] == "capex.workflow_catalog.proposal.v1"
+    assert proposal["proposal_id"] == "capex.lifecycle_stage_state.workflow.v1"
+    assert proposal["source_task_ref"] == "TASK-0285"
+    assert proposal["source_row"] == "WFLOW-003"
+    assert proposal["activation_posture"] == "planning_only_no_capex_activation"
+    assert proposal["acceptance_gates"] == ["NU-003"]
+    assert proposal["depends_on"]["repo_tasks"] == ["TASK-0284"]
+    assert proposal["canonical_outputs"] == [
+        "lifecycle_stage_state",
+        "stage_readiness_matrix",
+        "lifecycle_navigation_flags",
+    ]
+
+
+def test_lifecycle_stage_state_contract_preserves_navigation_boundary() -> None:
+    proposal = _lifecycle_stage_state()
+
+    assert proposal["lifecycle_stage_state"] == {
+        "schema_version": "capex.lifecycle_stage_state.v1",
+        "derived_navigation_only": True,
+        "official_truth": False,
+        "duplicate_stage_ids_allowed": False,
+        "stages": [
+            "intake",
+            "baseline",
+            "planning_procurement",
+            "execution_delivery",
+            "commissioning_closeout",
+            "post_closeout",
+        ],
+    }
+    assert proposal["stage_readiness_matrix"]["ready_requires_evidence"] is True
+    assert proposal["stage_readiness_matrix"]["ai_draft_can_make_ready"] is False
+    assert proposal["officialness_policy"] == {
+        "stage_is_truth": False,
+        "stage_is_derived_navigation": True,
+        "stage_advances_waterfall_gate": False,
+        "ai_draft_sets_lifecycle_stage": False,
+        "reviewed_metadata_is_pointer_truth": False,
+    }
+    assert proposal["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_tasks": False,
+        "creates_approvals": False,
+        "creates_closure_snapshots": False,
+        "creates_reviewed_baseline": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "authored_workflow_pack_activation",
+        "raw_corpus_import",
+        "official_stage_truth",
+        "waterfall_gate_authority",
+        "reviewed_baseline_creation",
+        "closure_snapshot_creation",
+        "evidence_sufficiency_claim",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(proposal["cannot_be_used_for"])
+
+
+def test_lifecycle_stage_state_contract_contains_no_raw_corpus_markers() -> None:
+    lowered = LIFECYCLE_STAGE_STATE_PATH.read_text(encoding="utf-8").lower()
+
+    for marker in RAW_CORPUS_MARKERS:
+        assert marker not in lowered
+
+
+def test_project_state_snapshot_contract_is_planning_only_catalog_evidence() -> None:
+    proposal = _project_state_snapshot()
+
+    assert proposal["schema_version"] == "capex.workflow_catalog.proposal.v1"
+    assert proposal["proposal_id"] == "capex.project_state_snapshot.workflow.v1"
+    assert proposal["source_task_ref"] == "TASK-0289"
+    assert proposal["source_row"] == "WFLOW-007"
+    assert proposal["activation_posture"] == "planning_only_no_capex_activation"
+    assert proposal["acceptance_gates"] == ["AT-001", "AT-010"]
+    assert proposal["depends_on"]["repo_tasks"] == [
+        "TASK-0285",
+        "TASK-0286",
+        "TASK-0287",
+        "TASK-0288",
+    ]
+    assert proposal["canonical_outputs"] == [
+        "project_state_snapshot",
+        "project_closure_vector",
+        "project_state_snapshot_flags",
+    ]
+
+
+def test_project_state_snapshot_contract_preserves_closure_and_pointer_boundaries() -> None:
+    proposal = _project_state_snapshot()
+
+    assert proposal["project_state_snapshot"] == {
+        "schema_version": "capex.project_state_snapshot.v1",
+        "reviewed_state_only": True,
+        "official_truth": False,
+        "duplicate_snapshot_ids_allowed": False,
+        "includes_pointer_observations": True,
+    }
+    assert proposal["project_closure_vector"] == {
+        "schema_version": "capex.project_closure_vector.v1",
+        "components": [
+            "lifecycle_stage_state",
+            "governance_commitments",
+            "assumption_closure",
+            "owner_interface_resolution",
+            "official_pointer_posture",
+        ],
+        "waiver_result": "waiver_recorded_not_pass",
+        "conflict_result": "fail",
+        "missing_evidence_result": "fail",
+        "ai_draft_result": "fail",
+    }
+    assert proposal["officialness_policy"] == {
+        "snapshot_is_official_project_truth": False,
+        "snapshot_creates_closure": False,
+        "ai_draft_closes_project_state": False,
+        "waiver_is_pass": False,
+        "missing_evidence_closes_project_state": False,
+        "conflict_closes_project_state": False,
+        "reviewed_metadata_is_pointer_truth": False,
+    }
+    assert proposal["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_tasks": False,
+        "creates_approvals": False,
+        "creates_closure_snapshots": False,
+        "creates_project_state": False,
+        "creates_reviewed_baseline": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "authored_workflow_pack_activation",
+        "raw_corpus_import",
+        "official_project_state",
+        "closure_snapshot_creation",
+        "evidence_sufficiency_claim",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(proposal["cannot_be_used_for"])
+
+
+def test_project_state_snapshot_contract_contains_no_raw_corpus_markers() -> None:
+    lowered = PROJECT_STATE_SNAPSHOT_PATH.read_text(encoding="utf-8").lower()
 
     for marker in RAW_CORPUS_MARKERS:
         assert marker not in lowered

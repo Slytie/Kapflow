@@ -46,8 +46,8 @@ from onetruth.application.services.workpage_action_projection import (
     project_human_task_workpage_actions,
 )
 from onetruth.infrastructure.events.event_store import utc_now_iso
-from onetruth.infrastructure.repositories.artifact_links import (
-    list_artifact_links_for_artifact,
+from onetruth.infrastructure.repositories.artifact_relation_hydration import (
+    attach_hydrated_artifact_relations,
 )
 
 from onetruth.api.dependencies import (
@@ -783,9 +783,11 @@ def _load_scoped_artifact_versions_by_id(
     for row in rows:
         item = dict(row)
         item["metadata_json"] = json.loads(item["metadata_json"])
-        item["links"] = list_artifact_links_for_artifact(
-            connection,
-            artifact_version_id=str(item["artifact_version_id"]),
-        )
         loaded[str(item["artifact_version_id"])] = item
+    attach_hydrated_artifact_relations(
+        connection,
+        list(loaded.values()),
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+    )
     return loaded

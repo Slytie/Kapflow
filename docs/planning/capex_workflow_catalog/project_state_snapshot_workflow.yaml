@@ -1,0 +1,117 @@
+schema_version: capex.workflow_catalog.proposal.v1
+proposal_id: capex.project_state_snapshot.workflow.v1
+title: CAPEX Project State Snapshot workflow
+activation_posture: planning_only_no_capex_activation
+catalog_surface: planning_only_capex_workflow_catalog
+source_task_ref: TASK-0289
+source_row: WFLOW-007
+acceptance_gates:
+  - AT-001
+  - AT-010
+depends_on:
+  repo_tasks:
+    - TASK-0285
+    - TASK-0286
+    - TASK-0287
+    - TASK-0288
+workflow_basis:
+  corpus_baseline_workflow_schema_version: capex.corpus_baseline.workflow_outputs.v1
+  lifecycle_stage_state_workflow_schema_version: capex.lifecycle_stage_state.workflow_outputs.v1
+  governance_commitment_chain_schema_version: capex.governance_commitment_chain.outputs.v1
+  assumption_closure_workflow_schema_version: capex.assumption_closure.workflow_outputs.v1
+  owner_interface_resolution_workflow_schema_version: capex.owner_interface_resolution.workflow_outputs.v1
+  required_basis_refs:
+    - corpus_baseline_workflow_id
+    - lifecycle_stage_state_workflow_id
+    - governance_commitment_chain_workflow_id
+    - assumption_closure_workflow_id
+    - owner_interface_resolution_workflow_id
+    - packet_register_id
+canonical_outputs:
+  - project_state_snapshot
+  - project_closure_vector
+  - project_state_snapshot_flags
+project_state_snapshot:
+  schema_version: capex.project_state_snapshot.v1
+  reviewed_state_only: true
+  official_truth: false
+  duplicate_snapshot_ids_allowed: false
+  includes_pointer_observations: true
+project_closure_vector:
+  schema_version: capex.project_closure_vector.v1
+  components:
+    - lifecycle_stage_state
+    - governance_commitments
+    - assumption_closure
+    - owner_interface_resolution
+    - official_pointer_posture
+  waiver_result: waiver_recorded_not_pass
+  conflict_result: fail
+  missing_evidence_result: fail
+  ai_draft_result: fail
+project_state_snapshot_flags:
+  schema_version: capex.project_state_snapshot_flags.v1
+  stale_pointer_flag_required: true
+  missing_evidence_flag_required: true
+  conflict_flag_required: true
+  ai_draft_cannot_close_flag_required: true
+officialness_policy:
+  snapshot_is_official_project_truth: false
+  snapshot_creates_closure: false
+  ai_draft_closes_project_state: false
+  waiver_is_pass: false
+  missing_evidence_closes_project_state: false
+  conflict_closes_project_state: false
+  reviewed_metadata_is_pointer_truth: false
+truth_effects:
+  creates_workflow_run: false
+  creates_tasks: false
+  creates_approvals: false
+  creates_closure_snapshots: false
+  creates_project_state: false
+  creates_reviewed_baseline: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - authored_workflow_pack
+  - public_api_route
+  - frontend_route
+  - workpage_route
+  - closure_snapshot_creation
+  - official_pointer_creation
+  - project_state_runtime
+  - reviewed_baseline_creation
+raw_data_boundary:
+  allowed_repo_material:
+    - source_refs
+    - workflow_ids
+    - stage_ids
+    - commitment_ids
+    - assumption_ids
+    - interface_ids
+    - sanitized_pointer_refs
+    - aggregate_counts
+    - closure_vector_results
+    - aggregate_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_project_state_text
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - authored_workflow_pack_activation
+  - raw_corpus_import
+  - official_project_state
+  - closure_snapshot_creation
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

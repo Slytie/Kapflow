@@ -2,7 +2,8 @@
 id: TASK-0273
 epic: EPIC-141
 title: "Batch artifact link/provenance hydration"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0263"]
@@ -60,3 +61,10 @@ Eliminate N+1 link loading on CAPEX pages.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_source_ingest/BATCH_ARTIFACT_LINK_PROVENANCE_HYDRATION_CONTRACT.yaml` to record the `INGEST-008` / `AT-SCALE-006` performance contract, bounded page policy, shared relation loader, raw-data boundary, and non-activation posture.
+- Added `onetruth.infrastructure.repositories.artifact_relation_hydration` with project-scoped paginated artifact listing plus batch artifact link/provenance hydration helpers.
+- Rewired existing artifact read/list surfaces that loaded links per artifact to use the shared batch loader without adding routes or changing public payload shapes.
+- Added query-count and 5k synthetic artifact unit coverage in `tests/unit/test_capex_artifact_relation_hydration.py`, plus ingest contract closeout coverage.
+- Closeout posture: this task closes repository/query-shape evidence only. It adds no raw corpus import, frontend route, public route, migration, event-registry change, official pointer creation, reviewed baseline creation, search/vector runtime, production approval, or CAPEX runtime/product activation.

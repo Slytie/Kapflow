@@ -48,6 +48,16 @@ CHUNK_SEARCH_EVIDENCE_BINDING_CONTRACT_PATH = (
     / "docs/planning/capex_source_ingest/"
     "CHUNK_SEARCH_EVIDENCE_BINDING_INDEX_CONTRACT.yaml"
 )
+BATCH_ARTIFACT_LINK_PROVENANCE_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "BATCH_ARTIFACT_LINK_PROVENANCE_HYDRATION_CONTRACT.yaml"
+)
+ASYNC_DOCUMENT_PROCESSING_JOB_RUNTIME_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "ASYNC_DOCUMENT_PROCESSING_JOB_RUNTIME_CONTRACT.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -487,13 +497,137 @@ def test_chunk_search_evidence_binding_contract_closes_task_0272_without_runtime
     } <= set(contract["cannot_be_used_for"])
 
 
-def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
+def test_batch_artifact_link_provenance_hydration_contract_closes_task_0273() -> None:
+    contract = _load_yaml(BATCH_ARTIFACT_LINK_PROVENANCE_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0273"
+    assert contract["source_row"] == "INGEST-008"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["acceptance_gates"] == ["AT-SCALE-006"]
+    assert contract["performance_surface"]["shared_loader"] == (
+        "hydrate_artifact_relations_for_versions"
+    )
+    assert contract["performance_surface"]["max_page_size"] == 500
+    assert contract["source_output"] == {
+        "batch_loaders": True,
+        "paginated_list_detail_split": True,
+        "shared_relation_loader": True,
+        "query_count_tests_required": True,
+        "five_thousand_artifact_evidence_required": True,
+    }
+    assert contract["query_plan_policy"] == {
+        "unbounded_page_reads_allowed": False,
+        "n_plus_one_relation_loading_allowed": False,
+        "new_migration_required": False,
+        "existing_indexes_relied_on": [
+            "ix_artifact_versions_project_scope",
+            "artifact_links primary key on artifact_version_id",
+            "ix_artifact_provenance_edges_output",
+        ],
+    }
+    assert {
+        "public_api_route",
+        "frontend_route",
+        "migration",
+        "event_registry_change",
+        "raw_corpus_import",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "raw_corpus_import",
+        "reviewed_baseline_creation",
+        "evidence_sufficiency_claim",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(contract["cannot_be_used_for"])
+
+
+def test_async_document_processing_job_runtime_contract_closes_task_0274_without_activation() -> None:
+    contract = _load_yaml(ASYNC_DOCUMENT_PROCESSING_JOB_RUNTIME_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0274"
+    assert contract["source_row"] == "INGEST-009"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["acceptance_gates"] == ["NU-011", "AT-AI-RETRY-001"]
+    assert contract["input_contract"]["command_receipt_substrate"] == (
+        "canonical_command_receipts"
+    )
+    assert contract["input_contract"]["execution_session_substrate"] == (
+        "canonical_execution_sessions"
+    )
+    assert contract["input_contract"]["physical_ingest_job_schema_task"] == "TASK-0393"
+    assert contract["document_processing_job_register"] == {
+        "artifact_kind": "capex.document_processing_job_register",
+        "artifact_role": "evidence",
+        "file_name": "capex.document_processing_job_register.v1.json",
+        "schema_version": "capex.document_processing_job_register.v1",
+    }
+    assert contract["document_processing_job_attempt_register"] == {
+        "artifact_kind": "capex.document_processing_job_attempt_register",
+        "artifact_role": "evidence",
+        "file_name": "capex.document_processing_job_attempt_register.v1.json",
+        "schema_version": "capex.document_processing_job_attempt_register.v1",
+    }
+    assert contract["document_processing_job_progress"] == {
+        "artifact_kind": "capex.document_processing_job_progress",
+        "artifact_role": "evidence",
+        "file_name": "capex.document_processing_job_progress.v1.json",
+        "schema_version": "capex.document_processing_job_progress.v1",
+    }
+    assert contract["runtime_policy"] == {
+        "retry_reuses_planned_task_refs": True,
+        "retry_reuses_planned_artifact_refs": True,
+        "command_receipt_required": True,
+        "deterministic_idempotency_key_required": True,
+        "attempt_numbers_monotonic": True,
+        "retry_after_terminal_attempt_allowed": False,
+        "cancel_creates_runtime_effect": False,
+        "resume_creates_runtime_effect": False,
+        "progress_counts_must_be_bounded": True,
+        "durable_ingest_job_tables_in_scope": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_extraction_jobs": False,
+        "creates_execution_sessions": False,
+        "creates_command_receipts": False,
+        "starts_workers": False,
+        "runs_parser_adapter": False,
+        "writes_artifacts_by_default": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "queue_worker",
+        "parser_adapter",
+        "extraction_runtime",
+        "ocr_runtime",
+        "durable_ingest_job_tables",
+        "migration",
+        "event_registry_change",
+        "public_api_route",
+        "frontend_route",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "raw_corpus_import",
+        "parser_runtime_activation",
+        "ocr_runtime_activation",
+        "search_runtime_activation",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(contract["cannot_be_used_for"])
+
+
+def test_task_0267_through_0289_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
     task_0269 = _frontmatter("TASK-0269")
     task_0270 = _frontmatter("TASK-0270")
     task_0271 = _frontmatter("TASK-0271")
     task_0272 = _frontmatter("TASK-0272")
+    task_0273 = _frontmatter("TASK-0273")
+    task_0274 = _frontmatter("TASK-0274")
     task_0276 = _frontmatter("TASK-0276")
     task_0278 = _frontmatter("TASK-0278")
     task_0283 = _frontmatter("TASK-0283")
@@ -502,6 +636,7 @@ def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
     task_0286 = _frontmatter("TASK-0286")
     task_0287 = _frontmatter("TASK-0287")
     task_0288 = _frontmatter("TASK-0288")
+    task_0289 = _frontmatter("TASK-0289")
 
     assert task_0267["status"] == "DONE"
     assert task_0267["completed_at"] == "2026-06-17T00:00:00Z"
@@ -517,6 +652,12 @@ def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
     assert task_0272["status"] == "DONE"
     assert task_0272["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0271" in task_0272["depends_on"]
+    assert task_0273["status"] == "DONE"
+    assert task_0273["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0263" in task_0273["depends_on"]
+    assert task_0274["status"] == "DONE"
+    assert task_0274["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0266" in task_0274["depends_on"]
     assert task_0276["status"] == "DONE"
     assert task_0276["completed_at"] == "2026-06-17T00:00:00Z"
     assert task_0278["status"] == "DONE"
@@ -528,7 +669,8 @@ def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
     assert task_0284["completed_at"] == "2026-06-17T00:00:00Z"
     assert "TASK-0269" in task_0284["depends_on"]
     assert "TASK-0278" in task_0284["depends_on"]
-    assert task_0285["status"] == "TODO"
+    assert task_0285["status"] == "DONE"
+    assert task_0285["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0284" in task_0285["depends_on"]
     assert task_0286["status"] == "DONE"
     assert task_0286["completed_at"] == "2026-06-17T00:00:00Z"
@@ -540,6 +682,12 @@ def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
     assert task_0288["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0284" in task_0288["depends_on"]
     assert "TASK-0287" in task_0288["depends_on"]
+    assert task_0289["status"] == "DONE"
+    assert task_0289["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0285" in task_0289["depends_on"]
+    assert "TASK-0286" in task_0289["depends_on"]
+    assert "TASK-0287" in task_0289["depends_on"]
+    assert "TASK-0288" in task_0289["depends_on"]
 
 
 def test_generated_artifact_contract_does_not_claim_policy_or_activation_approval() -> None:

@@ -2,7 +2,8 @@
 id: TASK-0285
 epic: EPIC-143
 title: "Lifecycle Stage State workflow"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0284"]
@@ -60,3 +61,10 @@ Map project to CAPEX lifecycle navigation without waterfall truth.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_workflow_catalog/lifecycle_stage_state_workflow.yaml` for the `WFLOW-003` Lifecycle Stage State workflow planning contract.
+- Added `onetruth.capex_platform.lifecycle_stage_state_workflow` to produce deterministic `lifecycle_stage_state`, `stage_readiness_matrix`, and `lifecycle_navigation_flags` outputs from Corpus Baseline source refs and sanitized stage observations.
+- The helper treats lifecycle stages as derived navigation only: stage rows are not official truth, AI drafts cannot make a stage ready, missing evidence fails open, and conflicting evidence produces non-authoritative flags.
+- Added focused lifecycle workflow unit coverage in `tests/unit/test_capex_lifecycle_stage_state_workflow.py`, plus workflow catalog contract coverage and raw-corpus marker bans.
+- Closeout posture: this task closes planning/internal output-shape evidence only. It adds no authored workflow pack, workpage, public route, frontend route, closure snapshot, reviewed baseline creation, official pointer creation, waterfall gate authority, production approval, or CAPEX runtime/product activation.

@@ -18,11 +18,12 @@ WFLOW-001, WFLOW-002, WFLOW-003, WFLOW-004, WFLOW-005, WFLOW-006, WFLOW-007, NU-
 - `TASK-0278` is closed as of 2026-06-17 in EPIC-142, so the generated-artifact validator prerequisite for `TASK-0284` is satisfied.
 - `TASK-0283` is closed as of 2026-06-17 with `docs/planning/capex_workflow_catalog/project_intake_router_workflow.yaml` and `onetruth.capex_platform.project_intake_router` as a planning-only Project Intake Router contract/helper.
 - `TASK-0284` is closed as of 2026-06-17 with `docs/planning/capex_workflow_catalog/corpus_baseline_workflow.yaml` and `onetruth.capex_platform.corpus_baseline_workflow` as a planning-only Corpus Baseline workflow contract/helper.
+- `TASK-0285` is closed as of 2026-06-23 with `docs/planning/capex_workflow_catalog/lifecycle_stage_state_workflow.yaml` and `onetruth.capex_platform.lifecycle_stage_state_workflow` as a planning-only Lifecycle Stage State workflow contract/helper.
 - `TASK-0286` is closed as of 2026-06-17 with `docs/planning/capex_workflow_catalog/governance_commitment_chain_workflow.yaml` and `onetruth.capex_platform.governance_commitment_chain` as a planning-only Governance / Commitment Chain workflow contract/helper.
 - `TASK-0287` is closed as of 2026-06-23 with `docs/planning/capex_workflow_catalog/assumption_closure_workflow.yaml` and `onetruth.capex_platform.assumption_closure_workflow` as a planning-only Assumption Closure workflow contract/helper.
 - `TASK-0288` is closed as of 2026-06-23 with `docs/planning/capex_workflow_catalog/owner_interface_resolution_workflow.yaml` and `onetruth.capex_platform.owner_interface_resolution_workflow` as a planning-only Owner Interface Resolution workflow contract/helper.
-- `TASK-0289` remains blocked by `TASK-0285`; lifecycle navigation is still the lower-priority prerequisite for project-state snapshot synthesis.
-- This does not author or activate CAPEX workflow packs, public Project Intake/Corpus Baseline/Governance/Assumption/Interface routes, or Project Intake/Corpus Baseline/Governance/Assumption/Interface workpages.
+- `TASK-0289` is closed as of 2026-06-23 with `docs/planning/capex_workflow_catalog/project_state_snapshot_workflow.yaml` and `onetruth.capex_platform.project_state_snapshot_workflow` as a planning-only Project State Snapshot workflow contract/helper.
+- This does not author or activate CAPEX workflow packs, public Project Intake/Corpus Baseline/Governance/Assumption/Interface/Lifecycle/Snapshot routes, or Project Intake/Corpus Baseline/Governance/Assumption/Interface/Lifecycle/Snapshot workpages.
 
 ## SME-RP addendum rows
 - `TASK-0654` adds Scope Management workflow requirements.

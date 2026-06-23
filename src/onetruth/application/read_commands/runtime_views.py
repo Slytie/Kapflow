@@ -10,13 +10,13 @@ from onetruth.application.handlers._shared.command_boundary import (
     CommandError,
     _workflow_scope,
 )
-from onetruth.infrastructure.repositories.artifact_links import (
-    list_artifact_links_for_artifact,
-    list_artifacts_for_subject,
-)
+from onetruth.infrastructure.repositories.artifact_links import list_artifacts_for_subject
 from onetruth.infrastructure.repositories.artifact_pointers import (
     get_pointer,
     list_pointers_for_workflow_run,
+)
+from onetruth.infrastructure.repositories.artifact_relation_hydration import (
+    attach_hydrated_artifact_relations,
 )
 from onetruth.infrastructure.repositories.artifact_versions import (
     get_artifact_version,
@@ -156,10 +156,7 @@ def show_artifact_version_command(
             message="artifact version not found",
             details={"artifact_version_id": artifact_version_id},
         )
-    artifact_version["links"] = list_artifact_links_for_artifact(
-        connection,
-        artifact_version_id=artifact_version_id,
-    )
+    attach_hydrated_artifact_relations(connection, [artifact_version])
     return artifact_version
 
 
@@ -169,11 +166,7 @@ def list_artifacts_for_workflow_run_command(
 ) -> list[dict[str, Any]]:
     _workflow_scope(connection, workflow_run_id)
     artifacts = list_artifact_versions_for_workflow_run(connection, workflow_run_id)
-    for artifact in artifacts:
-        artifact["links"] = list_artifact_links_for_artifact(
-            connection,
-            artifact_version_id=str(artifact["artifact_version_id"]),
-        )
+    attach_hydrated_artifact_relations(connection, artifacts)
     return artifacts
 
 
@@ -197,11 +190,7 @@ def list_artifacts_for_subject_command(
         subject_kind=subject_kind,
         subject_id=subject_id,
     )
-    for artifact in artifacts:
-        artifact["links"] = list_artifact_links_for_artifact(
-            connection,
-            artifact_version_id=str(artifact["artifact_version_id"]),
-        )
+    attach_hydrated_artifact_relations(connection, artifacts)
     return artifacts
 
 

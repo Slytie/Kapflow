@@ -2,7 +2,8 @@
 id: TASK-0289
 epic: EPIC-143
 title: "Project State Snapshot workflow"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0285", "TASK-0286", "TASK-0287", "TASK-0288"]

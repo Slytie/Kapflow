@@ -27,7 +27,9 @@ from onetruth.infrastructure.artifacts.storage import (
     storage_root_for_db_url,
 )
 from onetruth.infrastructure.events.event_store import DuplicateIdempotencyKeyError
-from onetruth.infrastructure.repositories.artifact_links import list_artifact_links_for_artifact
+from onetruth.infrastructure.repositories.artifact_relation_hydration import (
+    attach_hydrated_artifact_relations,
+)
 
 from onetruth.api.dependencies import BoundaryProfile, Page, RequestContext, scoped_workflow_run
 from onetruth.api.errors import ApiError, api_error_from_command, api_error_from_duplicate_idempotency
@@ -534,11 +536,14 @@ def query_artifacts_in_scope(
     for row in rows:
         artifact = dict(row)
         artifact["metadata_json"] = json_loads(artifact["metadata_json"])
-        artifact["links"] = list_artifact_links_for_artifact(
-            connection,
-            artifact_version_id=str(artifact["artifact_version_id"]),
-        )
         items.append(artifact)
+    attach_hydrated_artifact_relations(
+        connection,
+        items,
+        tenant_id=context.tenant_id,
+        domain_id=context.domain_id,
+        project_id=project_id,
+    )
     return items
 
 

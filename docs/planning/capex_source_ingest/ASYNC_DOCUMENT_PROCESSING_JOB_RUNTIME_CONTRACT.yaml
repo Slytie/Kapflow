@@ -1,0 +1,128 @@
+schema_version: capex.async_document_processing_job_runtime_contract.v1
+contract_id: capex.async_document_processing_job_runtime.v1
+owner_task: TASK-0274
+source_row: INGEST-009
+activation_posture: planning_only_no_capex_activation
+overall_status: async_document_processing_job_runtime_recorded_not_activated
+acceptance_gates:
+  - NU-011
+  - AT-AI-RETRY-001
+depends_on:
+  repo_tasks:
+    - TASK-0236
+    - TASK-0239
+    - TASK-0266
+    - TASK-0270
+input_contract:
+  document_manifest_outputs_schema_version: capex.document_manifest.outputs.v1
+  command_receipt_substrate: canonical_command_receipts
+  execution_session_substrate: canonical_execution_sessions
+  physical_ingest_job_schema_task: TASK-0393
+  required_job_fields:
+    - job_id
+    - job_kind
+    - job_state
+    - document_ids
+    - source_refs
+    - command_receipt
+  required_attempt_fields:
+    - attempt_id
+    - job_id
+    - attempt_no
+    - attempt_state
+    - command_receipt
+  required_progress_fields:
+    - progress_id
+    - job_id
+    - documents_total
+    - documents_processed
+    - documents_failed
+document_processing_job_register:
+  artifact_kind: capex.document_processing_job_register
+  artifact_role: evidence
+  file_name: capex.document_processing_job_register.v1.json
+  schema_version: capex.document_processing_job_register.v1
+document_processing_job_attempt_register:
+  artifact_kind: capex.document_processing_job_attempt_register
+  artifact_role: evidence
+  file_name: capex.document_processing_job_attempt_register.v1.json
+  schema_version: capex.document_processing_job_attempt_register.v1
+document_processing_job_progress:
+  artifact_kind: capex.document_processing_job_progress
+  artifact_role: evidence
+  file_name: capex.document_processing_job_progress.v1.json
+  schema_version: capex.document_processing_job_progress.v1
+runtime_policy:
+  retry_reuses_planned_task_refs: true
+  retry_reuses_planned_artifact_refs: true
+  command_receipt_required: true
+  deterministic_idempotency_key_required: true
+  attempt_numbers_monotonic: true
+  retry_after_terminal_attempt_allowed: false
+  cancel_creates_runtime_effect: false
+  resume_creates_runtime_effect: false
+  progress_counts_must_be_bounded: true
+  durable_ingest_job_tables_in_scope: false
+privacy_policy:
+  raw_absolute_path_allowed: false
+  raw_filename_allowed: false
+  inline_raw_content_allowed: false
+  base64_content_allowed: false
+  raw_failure_log_allowed: false
+  unrestricted_source_excerpt_allowed: false
+truth_effects:
+  creates_extraction_jobs: false
+  creates_execution_sessions: false
+  creates_command_receipts: false
+  starts_workers: false
+  runs_parser_adapter: false
+  writes_artifacts_by_default: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - queue_worker
+  - parser_adapter
+  - extraction_runtime
+  - ocr_runtime
+  - search_runtime
+  - durable_ingest_job_tables
+  - migration
+  - event_registry_change
+  - public_api_route
+  - frontend_route
+raw_data_boundary:
+  allowed_repo_material:
+    - document_ids
+    - descriptor_ids
+    - source_refs
+    - sanitized_storage_refs
+    - sha256_digests
+    - command_receipt_fingerprints
+    - execution_session_refs
+    - planned_task_refs
+    - planned_artifact_refs
+    - aggregate_progress_counts
+    - aggregate_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_document_text
+    - raw_ocr_text
+    - raw_job_logs
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - parser_runtime_activation
+  - ocr_runtime_activation
+  - search_runtime_activation
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval
