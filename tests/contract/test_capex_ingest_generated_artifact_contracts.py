@@ -33,6 +33,16 @@ ROLE_PACKET_REGISTER_CONTRACT_PATH = (
     / "docs/planning/capex_source_ingest/"
     "ROLE_PACKET_REGISTER_CONTRACT.yaml"
 )
+DOCUMENT_MANIFEST_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "DOCUMENT_MANIFEST_CONTRACT.yaml"
+)
+TEXT_EXTRACTION_PAGE_MANIFEST_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "TEXT_EXTRACTION_PAGE_MANIFEST_CONTRACT.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -308,15 +318,120 @@ def test_corpus_baseline_workflow_contract_is_planning_only_and_unblocked() -> N
     } <= set(contract["not_implemented_in_this_task"])
 
 
-def test_task_0267_0268_0269_0278_0283_and_0284_close_after_unblocker_pairs() -> None:
+def test_document_manifest_contract_closes_task_0270_without_extraction_runtime() -> None:
+    contract = _load_yaml(DOCUMENT_MANIFEST_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0270"
+    assert contract["source_row"] == "INGEST-005"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["document_manifest"]["artifact_kind"] == "capex.document_manifest"
+    assert contract["extraction_state_register"]["artifact_kind"] == (
+        "capex.extraction_state_register"
+    )
+    assert set(contract["extraction_state_register"]["allowed_statuses"]) == {
+        "pending",
+        "queued",
+        "in_progress",
+        "retry_pending",
+        "partial",
+        "completed",
+        "failed",
+        "skipped",
+    }
+    assert contract["privacy_policy"] == {
+        "raw_absolute_path_allowed": False,
+        "raw_filename_allowed": False,
+        "inline_raw_content_allowed": False,
+        "base64_content_allowed": False,
+        "raw_failure_log_allowed": False,
+        "unrestricted_source_excerpt_allowed": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_extraction_jobs": False,
+        "creates_reviewed_evidence": False,
+        "writes_artifacts_by_default": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "parser_adapter",
+        "extraction_runtime",
+        "async_job_runtime",
+        "page_manifest",
+        "chunk_index",
+        "evidence_binding_index",
+    } <= set(contract["not_implemented_in_this_task"])
+
+
+def test_text_extraction_page_manifest_contract_closes_task_0271_without_runtime() -> None:
+    contract = _load_yaml(TEXT_EXTRACTION_PAGE_MANIFEST_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0271"
+    assert contract["source_row"] == "INGEST-006"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0270"]
+    assert contract["document_text_extract"] == {
+        "artifact_kind": "capex.document_text_extract",
+        "artifact_role": "evidence",
+        "file_name": "capex.document_text_extract.v1.json",
+        "schema_version": "capex.document_text_extract.v1",
+    }
+    assert contract["document_page_manifest"] == {
+        "artifact_kind": "capex.document_page_manifest",
+        "artifact_role": "evidence",
+        "file_name": "capex.document_page_manifest.v1.json",
+        "schema_version": "capex.document_page_manifest.v1",
+    }
+    assert contract["text_policy"] == {
+        "inline_raw_text_allowed": False,
+        "unrestricted_source_excerpt_allowed": False,
+        "text_storage_ref_required": True,
+        "text_digest_required": True,
+        "page_source_ref_required": True,
+        "ocr_optional_and_gated": True,
+        "parser_adapter_required_for_runtime": True,
+    }
+    assert contract["truth_effects"] == {
+        "creates_extraction_jobs": False,
+        "runs_parser_adapter": False,
+        "creates_reviewed_evidence": False,
+        "writes_artifacts_by_default": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "parser_adapter",
+        "extraction_runtime",
+        "async_job_runtime",
+        "ocr_runtime",
+        "chunk_index",
+        "search_index",
+        "evidence_binding_index",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "raw_corpus_import",
+        "parser_runtime_activation",
+        "evidence_sufficiency_claim",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(contract["cannot_be_used_for"])
+
+
+def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
     task_0269 = _frontmatter("TASK-0269")
+    task_0270 = _frontmatter("TASK-0270")
+    task_0271 = _frontmatter("TASK-0271")
     task_0276 = _frontmatter("TASK-0276")
     task_0278 = _frontmatter("TASK-0278")
     task_0283 = _frontmatter("TASK-0283")
     task_0284 = _frontmatter("TASK-0284")
     task_0285 = _frontmatter("TASK-0285")
+    task_0286 = _frontmatter("TASK-0286")
+    task_0287 = _frontmatter("TASK-0287")
 
     assert task_0267["status"] == "DONE"
     assert task_0267["completed_at"] == "2026-06-17T00:00:00Z"
@@ -324,6 +439,11 @@ def test_task_0267_0268_0269_0278_0283_and_0284_close_after_unblocker_pairs() ->
     assert task_0268["completed_at"] == "2026-06-17T00:00:00Z"
     assert task_0269["status"] == "DONE"
     assert task_0269["completed_at"] == "2026-06-17T00:00:00Z"
+    assert task_0270["status"] == "DONE"
+    assert task_0270["completed_at"] == "2026-06-17T00:00:00Z"
+    assert task_0271["status"] == "DONE"
+    assert task_0271["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0270" in task_0271["depends_on"]
     assert task_0276["status"] == "DONE"
     assert task_0276["completed_at"] == "2026-06-17T00:00:00Z"
     assert task_0278["status"] == "DONE"
@@ -337,6 +457,12 @@ def test_task_0267_0268_0269_0278_0283_and_0284_close_after_unblocker_pairs() ->
     assert "TASK-0278" in task_0284["depends_on"]
     assert task_0285["status"] == "TODO"
     assert "TASK-0284" in task_0285["depends_on"]
+    assert task_0286["status"] == "DONE"
+    assert task_0286["completed_at"] == "2026-06-17T00:00:00Z"
+    assert "TASK-0284" in task_0286["depends_on"]
+    assert task_0287["status"] == "DONE"
+    assert task_0287["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0286" in task_0287["depends_on"]
 
 
 def test_generated_artifact_contract_does_not_claim_policy_or_activation_approval() -> None:

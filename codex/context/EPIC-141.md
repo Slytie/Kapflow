@@ -16,7 +16,9 @@ INGEST-001, INGEST-002, INGEST-003, INGEST-004, INGEST-005, INGEST-006, INGEST-0
 - `TASK-0267` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/SOURCE_INVENTORY_PIPELINE_CONTRACT.yaml` and `onetruth.capex_platform.source_inventory` record deterministic content identity, digest-store, and dedupe-group evidence from sanitized staged descriptors.
 - `TASK-0268` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/SOURCE_OCCURRENCE_REGISTER_CONTRACT.yaml` and `onetruth.capex_platform.source_occurrence_register` record project-scoped occurrence rows and deterministic `capex.source_occurrence_register.v1` output from sanitized contexts.
 - `TASK-0269` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/ROLE_PACKET_REGISTER_CONTRACT.yaml` and `onetruth.capex_platform.role_packet_register` record deterministic role assignment and packet register payloads from sanitized SourceOccurrence refs.
-- This does not close extraction, source occurrence relations, source locator unions, or evidence binding tasks.
+- `TASK-0270` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/DOCUMENT_MANIFEST_CONTRACT.yaml` and `onetruth.capex_platform.document_manifest` record deterministic `capex.document_manifest.v1` and `capex.extraction_state_register.v1` payloads from sanitized source-inventory rows.
+- `TASK-0271` is closed as of 2026-06-23: `docs/planning/capex_source_ingest/TEXT_EXTRACTION_PAGE_MANIFEST_CONTRACT.yaml` and `onetruth.capex_platform.text_extraction_page_manifest` record deterministic `capex.document_text_extract.v1` and `capex.document_page_manifest.v1` payloads from sanitized document-manifest basis rows.
+- This does not close parser adapters, extraction/OCR runtime, async jobs, chunk/search/evidence-binding indexes, source occurrence relations, source locator unions, upload behavior, or reviewed evidence sufficiency.
 
 ## SME-RP addendum rows
 - `TASK-0652` is closed with the planning-only source occurrence context and trust taxonomy contract for `SME-RP-G004`.

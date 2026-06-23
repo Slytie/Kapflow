@@ -18,6 +18,16 @@ PROJECT_INTAKE_PATH = (
     / "docs/planning/capex_workflow_catalog/"
     "project_intake_router_workflow.yaml"
 )
+GOVERNANCE_COMMITMENT_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_workflow_catalog/"
+    "governance_commitment_chain_workflow.yaml"
+)
+ASSUMPTION_CLOSURE_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_workflow_catalog/"
+    "assumption_closure_workflow.yaml"
+)
 ANNEX_B_PATH = (
     REPO_ROOT
     / "docs/planning/capex_real_project_acceptance/"
@@ -45,6 +55,18 @@ def _proposal() -> dict[str, Any]:
 
 def _project_intake() -> dict[str, Any]:
     loaded = yaml.safe_load(PROJECT_INTAKE_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _governance_commitment() -> dict[str, Any]:
+    loaded = yaml.safe_load(GOVERNANCE_COMMITMENT_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _assumption_closure() -> dict[str, Any]:
+    loaded = yaml.safe_load(ASSUMPTION_CLOSURE_PATH.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
 
@@ -210,6 +232,129 @@ def test_project_intake_router_contract_sets_k12_and_activation_boundaries() -> 
 
 def test_project_intake_router_contract_contains_no_raw_corpus_markers() -> None:
     lowered = PROJECT_INTAKE_PATH.read_text(encoding="utf-8").lower()
+
+    for marker in RAW_CORPUS_MARKERS:
+        assert marker not in lowered
+
+
+def test_governance_commitment_chain_contract_is_planning_only_catalog_evidence() -> None:
+    proposal = _governance_commitment()
+
+    assert proposal["schema_version"] == "capex.workflow_catalog.proposal.v1"
+    assert proposal["proposal_id"] == "capex.governance_commitment_chain.workflow.v1"
+    assert proposal["source_task_ref"] == "TASK-0286"
+    assert proposal["source_row"] == "WFLOW-004"
+    assert proposal["activation_posture"] == "planning_only_no_capex_activation"
+    assert proposal["acceptance_gates"] == ["AT-002", "AT-COMMIT-001"]
+    assert proposal["depends_on"]["repo_tasks"] == ["TASK-0284"]
+    assert proposal["canonical_outputs"] == [
+        "commitment_chain",
+        "expenditure_ledger",
+        "commitment_flags",
+    ]
+
+
+def test_governance_commitment_chain_contract_preserves_commercial_boundaries() -> None:
+    proposal = _governance_commitment()
+
+    assert proposal["commitment_chain"]["preserves_revision_history"] is True
+    assert proposal["commitment_chain"]["duplicate_commitment_ids_allowed"] is False
+    assert proposal["expenditure_ledger"]["commercial_status_not_technical_status"] is True
+    assert proposal["commitment_flags"]["settlement_not_rca_flag_required"] is True
+    assert proposal["officialness_policy"] == {
+        "external_internal_distinction_required": True,
+        "reviewed_metadata_is_pointer_truth": False,
+        "approval_response_mutation_allowed": False,
+        "commercial_settlement_closes_technical_rca": False,
+    }
+    assert proposal["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_approvals": False,
+        "closes_technical_rca": False,
+        "creates_reviewed_baseline": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "authored_workflow_pack_activation",
+        "raw_corpus_import",
+        "approval_response_mutation",
+        "technical_rca_closure",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(proposal["cannot_be_used_for"])
+
+
+def test_governance_commitment_chain_contract_contains_no_raw_corpus_markers() -> None:
+    lowered = GOVERNANCE_COMMITMENT_PATH.read_text(encoding="utf-8").lower()
+
+    for marker in RAW_CORPUS_MARKERS:
+        assert marker not in lowered
+
+
+def test_assumption_closure_contract_is_planning_only_catalog_evidence() -> None:
+    proposal = _assumption_closure()
+
+    assert proposal["schema_version"] == "capex.workflow_catalog.proposal.v1"
+    assert proposal["proposal_id"] == "capex.assumption_closure.workflow.v1"
+    assert proposal["source_task_ref"] == "TASK-0287"
+    assert proposal["source_row"] == "WFLOW-005"
+    assert proposal["activation_posture"] == "planning_only_no_capex_activation"
+    assert proposal["acceptance_gates"] == ["AT-007", "NEG-CLOSE-001"]
+    assert proposal["depends_on"]["repo_tasks"] == ["TASK-0284", "TASK-0286"]
+    assert proposal["canonical_outputs"] == [
+        "counterparty_assumption_register",
+        "assumption_closure_matrix",
+        "assumption_flags",
+    ]
+
+
+def test_assumption_closure_contract_records_negative_closure_policy() -> None:
+    proposal = _assumption_closure()
+
+    assert proposal["assumption_closure_matrix"]["states"] == [
+        "closed_with_evidence",
+        "closed_by_waiver",
+        "open_missing_evidence",
+        "blocked_contradicted",
+        "open_ai_draft_only",
+    ]
+    assert proposal["assumption_closure_matrix"]["waiver_result"] == (
+        "satisfied_by_waiver"
+    )
+    assert proposal["officialness_policy"] == {
+        "ai_draft_closes_assumption": False,
+        "missing_evidence_closes_assumption": False,
+        "contradicted_evidence_closes_assumption": False,
+        "waiver_is_pass": False,
+        "reviewed_metadata_is_pointer_truth": False,
+    }
+    assert proposal["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_approvals": False,
+        "creates_closure_snapshots": False,
+        "creates_reviewed_baseline": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "authored_workflow_pack_activation",
+        "raw_corpus_import",
+        "closure_snapshot_creation",
+        "evidence_sufficiency_claim",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(proposal["cannot_be_used_for"])
+
+
+def test_assumption_closure_contract_contains_no_raw_corpus_markers() -> None:
+    lowered = ASSUMPTION_CLOSURE_PATH.read_text(encoding="utf-8").lower()
 
     for marker in RAW_CORPUS_MARKERS:
         assert marker not in lowered

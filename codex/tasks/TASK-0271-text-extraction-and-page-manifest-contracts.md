@@ -2,7 +2,8 @@
 id: TASK-0271
 epic: EPIC-141
 title: "Text extraction and page manifest contracts"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0270"]
@@ -60,3 +61,9 @@ Extract text and page boundaries with provenance.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_source_ingest/TEXT_EXTRACTION_PAGE_MANIFEST_CONTRACT.yaml` for the `INGEST-006` text extraction and page manifest planning contract.
+- Added `onetruth.capex_platform.text_extraction_page_manifest` to produce deterministic `capex.document_text_extract.v1` and `capex.document_page_manifest.v1` payloads from sanitized document-manifest basis rows.
+- Evidence: text extraction/page manifest unit tests and CAPEX ingest/generated-artifact contract tests passed on 2026-06-23.
+- Closeout posture: `INGEST-006` closes text/page artifact shape evidence only; parser adapters, extraction/OCR runtime, async jobs, chunk/search/evidence-binding indexes, reviewed evidence sufficiency, public routes, workflow pack activation, raw corpus import, official pointer creation, and CAPEX runtime/product activation remain later gated work.

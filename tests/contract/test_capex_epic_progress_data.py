@@ -64,10 +64,10 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
     assert data["summary"]["taskCount"] == 432
-    assert data["summary"]["estimate"]["completedTasks"] == 110
-    assert data["summary"]["estimate"]["remainingTasks"] == 322
-    assert data["summary"]["estimate"]["etaDate"] == "2026-08-14"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-14"
+    assert data["summary"]["estimate"]["completedTasks"] == 114
+    assert data["summary"]["estimate"]["remainingTasks"] == 318
+    assert data["summary"]["estimate"]["etaDate"] == "2026-09-03"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-09-03"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
@@ -96,11 +96,15 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     assert task_statuses["TASK-0267"] == "done"
     assert task_statuses["TASK-0268"] == "done"
     assert task_statuses["TASK-0269"] == "done"
+    assert task_statuses["TASK-0270"] == "done"
+    assert task_statuses["TASK-0271"] == "done"
     assert task_statuses["TASK-0276"] == "done"
     assert task_statuses["TASK-0278"] == "done"
     assert task_statuses["TASK-0283"] == "done"
     assert task_statuses["TASK-0284"] == "done"
     assert task_statuses["TASK-0285"] == "not_started"
+    assert task_statuses["TASK-0286"] == "done"
+    assert task_statuses["TASK-0287"] == "done"
 
 
 def test_epic139_redo_final_acceptance_releases_red_interlocks() -> None:

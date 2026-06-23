@@ -2,7 +2,8 @@
 id: TASK-0270
 epic: EPIC-141
 title: "Document manifest and extraction-state artifact"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0267"]
@@ -60,3 +61,9 @@ Track storage refs, MIME, extraction status and failures.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Completion evidence
+- Added `docs/planning/capex_source_ingest/DOCUMENT_MANIFEST_CONTRACT.yaml` for the `INGEST-005` document manifest and extraction-state artifact contract.
+- Added `onetruth.capex_platform.document_manifest` to build deterministic `capex.document_manifest.v1` and `capex.extraction_state_register.v1` outputs from sanitized source-inventory rows.
+- Added unit and contract coverage for extraction status/progress/failure/retry states, unknown and duplicate descriptors, raw path/filename/inline-content/log rejection, and non-activation boundaries.
+- This closes planning artifact shape evidence only; extraction runtime, parser adapters, page manifests, chunk/evidence indexes, public routes, raw corpus import, reviewed evidence sufficiency, official pointers, and CAPEX runtime/product activation remain blocked.

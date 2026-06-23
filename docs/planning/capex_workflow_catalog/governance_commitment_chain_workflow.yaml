@@ -1,0 +1,90 @@
+schema_version: capex.workflow_catalog.proposal.v1
+proposal_id: capex.governance_commitment_chain.workflow.v1
+title: CAPEX Governance / Commitment Chain workflow
+activation_posture: planning_only_no_capex_activation
+catalog_surface: planning_only_capex_workflow_catalog
+source_task_ref: TASK-0286
+source_row: WFLOW-004
+acceptance_gates:
+  - AT-002
+  - AT-COMMIT-001
+depends_on:
+  repo_tasks:
+    - TASK-0284
+workflow_basis:
+  corpus_baseline_workflow_schema_version: capex.corpus_baseline.workflow_outputs.v1
+  required_basis_refs:
+    - corpus_baseline_workflow_id
+    - packet_register_id
+canonical_outputs:
+  - commitment_chain
+  - expenditure_ledger
+  - commitment_flags
+commitment_chain:
+  schema_version: capex.commitment_chain.v1
+  event_types:
+    - approval
+    - budget
+    - quote
+    - order
+    - revision
+    - settlement
+    - responsibility_shift
+  preserves_revision_history: true
+  duplicate_commitment_ids_allowed: false
+expenditure_ledger:
+  schema_version: capex.expenditure_ledger.v1
+  amount_basis: sanitized_observation_metadata
+  commercial_status_not_technical_status: true
+commitment_flags:
+  schema_version: capex.commitment_flags.v1
+  settlement_not_rca_flag_required: true
+officialness_policy:
+  external_internal_distinction_required: true
+  reviewed_metadata_is_pointer_truth: false
+  approval_response_mutation_allowed: false
+  commercial_settlement_closes_technical_rca: false
+truth_effects:
+  creates_workflow_run: false
+  creates_approvals: false
+  closes_technical_rca: false
+  creates_reviewed_baseline: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - authored_workflow_pack
+  - public_api_route
+  - frontend_route
+  - workpage_route
+  - approval_response_mutation
+  - pointer_promotion_policy
+  - reviewed_baseline_creation
+  - assumption_closure_workflow
+raw_data_boundary:
+  allowed_repo_material:
+    - source_refs
+    - commitment_ids
+    - event_ids
+    - sanitized_amount_metadata
+    - sanitized_responsibility_labels
+    - aggregate_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - authored_workflow_pack_activation
+  - raw_corpus_import
+  - approval_response_mutation
+  - technical_rca_closure
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

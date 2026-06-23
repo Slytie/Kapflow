@@ -1,0 +1,111 @@
+schema_version: capex.text_extraction_page_manifest_contract.v1
+contract_id: capex.text_extraction_page_manifest.v1
+owner_task: TASK-0271
+source_row: INGEST-006
+activation_posture: planning_only_no_capex_activation
+overall_status: text_extraction_page_manifest_recorded_not_activated
+acceptance_gates:
+  - AT-EVIDENCE-001
+depends_on:
+  repo_tasks:
+    - TASK-0270
+input_contract:
+  document_manifest_outputs_schema_version: capex.document_manifest.outputs.v1
+  required_text_extract_fields:
+    - document_id
+    - descriptor_id
+    - storage_ref
+    - text_digest
+    - parser_config_hash
+    - extraction_mode
+    - page_span
+    - character_count
+    - source_refs
+  required_page_fields:
+    - document_id
+    - descriptor_id
+    - page_number
+    - page_text_digest
+    - parser_config_hash
+    - source_refs
+  optional_page_fields:
+    - page_id
+    - page_storage_ref
+    - text_span
+    - ocr_status
+document_text_extract:
+  artifact_kind: capex.document_text_extract
+  artifact_role: evidence
+  file_name: capex.document_text_extract.v1.json
+  schema_version: capex.document_text_extract.v1
+document_page_manifest:
+  artifact_kind: capex.document_page_manifest
+  artifact_role: evidence
+  file_name: capex.document_page_manifest.v1.json
+  schema_version: capex.document_page_manifest.v1
+text_policy:
+  inline_raw_text_allowed: false
+  unrestricted_source_excerpt_allowed: false
+  text_storage_ref_required: true
+  text_digest_required: true
+  page_source_ref_required: true
+  ocr_optional_and_gated: true
+  parser_adapter_required_for_runtime: true
+privacy_policy:
+  raw_absolute_path_allowed: false
+  raw_filename_allowed: false
+  inline_raw_content_allowed: false
+  base64_content_allowed: false
+  raw_failure_log_allowed: false
+  unrestricted_source_excerpt_allowed: false
+truth_effects:
+  creates_extraction_jobs: false
+  runs_parser_adapter: false
+  creates_reviewed_evidence: false
+  writes_artifacts_by_default: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - parser_adapter
+  - extraction_runtime
+  - async_job_runtime
+  - ocr_runtime
+  - chunk_index
+  - search_index
+  - evidence_binding_index
+  - upload_endpoint
+  - public_api_route
+  - frontend_route
+raw_data_boundary:
+  allowed_repo_material:
+    - document_ids
+    - descriptor_ids
+    - source_refs
+    - sanitized_storage_refs
+    - text_digests
+    - page_digests
+    - parser_config_hashes
+    - page_numbers
+    - text_span_numbers
+    - aggregate_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_document_text
+    - raw_ocr_text
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - parser_runtime_activation
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

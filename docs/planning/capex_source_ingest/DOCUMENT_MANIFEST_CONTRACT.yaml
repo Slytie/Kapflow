@@ -1,0 +1,98 @@
+schema_version: capex.document_manifest_contract.v1
+contract_id: capex.document_manifest.v1
+owner_task: TASK-0270
+source_row: INGEST-005
+activation_posture: planning_only_no_capex_activation
+overall_status: document_manifest_recorded_not_activated
+acceptance_gates:
+  - AT-SCALE-004
+depends_on:
+  repo_tasks:
+    - TASK-0267
+input_contract:
+  source_inventory_schema_version: capex.source_inventory.v1
+  required_document_fields:
+    - descriptor_id
+    - storage_ref
+    - extraction_status
+  optional_document_fields:
+    - document_id
+    - extraction_progress
+    - retry_count
+    - failure_code
+    - failure_summary
+    - recovery_posture
+document_manifest:
+  artifact_kind: capex.document_manifest
+  artifact_role: evidence
+  file_name: capex.document_manifest.v1.json
+  schema_version: capex.document_manifest.v1
+extraction_state_register:
+  artifact_kind: capex.extraction_state_register
+  artifact_role: evidence
+  file_name: capex.extraction_state_register.v1.json
+  schema_version: capex.extraction_state_register.v1
+  allowed_statuses:
+    - pending
+    - queued
+    - in_progress
+    - retry_pending
+    - partial
+    - completed
+    - failed
+    - skipped
+  terminal_statuses:
+    - completed
+    - failed
+    - skipped
+privacy_policy:
+  raw_absolute_path_allowed: false
+  raw_filename_allowed: false
+  inline_raw_content_allowed: false
+  base64_content_allowed: false
+  raw_failure_log_allowed: false
+  unrestricted_source_excerpt_allowed: false
+truth_effects:
+  creates_extraction_jobs: false
+  creates_reviewed_evidence: false
+  writes_artifacts_by_default: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - parser_adapter
+  - extraction_runtime
+  - async_job_runtime
+  - page_manifest
+  - chunk_index
+  - evidence_binding_index
+  - upload_endpoint
+  - public_api_route
+  - frontend_route
+raw_data_boundary:
+  allowed_repo_material:
+    - descriptor_ids
+    - content_identity_ids
+    - content_digests
+    - sanitized_storage_refs
+    - sanitized_failure_codes
+    - aggregate_extraction_state
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_failure_logs
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - extraction_runtime_activation
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

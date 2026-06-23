@@ -2,7 +2,8 @@
 id: TASK-0286
 epic: EPIC-143
 title: "Governance / Commitment Chain workflow"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0284"]
@@ -60,3 +61,9 @@ Extract approvals, budgets, quotes, orders, revisions, settlements and responsib
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Completion evidence
+- Added `docs/planning/capex_workflow_catalog/governance_commitment_chain_workflow.yaml` for the `WFLOW-004` Governance / Commitment Chain planning contract.
+- Added `onetruth.capex_platform.governance_commitment_chain` to build deterministic commitment-chain, expenditure-ledger, and commitment-flag outputs from sanitized commitment observations and Corpus Baseline refs.
+- Added unit and contract coverage for order revisions, settlement-not-RCA boundaries, commercial/responsibility separation, missing basis, invalid event types, duplicate commitment ids, SourceRef scope, and non-activation boundaries.
+- This closes planning/internal output-shape evidence only; authored workflow pack activation, approval mutation, public routes, commitment workpages, reviewed baseline truth, official pointers, and CAPEX runtime/product activation remain blocked.

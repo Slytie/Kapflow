@@ -6,7 +6,7 @@ Build the content identity, source occurrence, extraction, and evidence-binding 
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0564` is closed as of 2026-06-08 with physical source occurrence/runtime resolver evidence, `TASK-0266` is closed as of 2026-06-17 with staged corpus ingest architecture and guardrail evidence, `TASK-0267` is closed as of 2026-06-17 with deterministic content-identity/source-inventory evidence, `TASK-0268` is closed as of 2026-06-17 with source occurrence register evidence, `TASK-0269` is closed as of 2026-06-17 with role assignment and packet register artifact evidence, and `TASK-0652` is closed with the SME-RP source occurrence context and trust contract. Extraction, evidence binding, and source occurrence relation work remain open.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0564` is closed as of 2026-06-08 with physical source occurrence/runtime resolver evidence, `TASK-0266` is closed as of 2026-06-17 with staged corpus ingest architecture and guardrail evidence, `TASK-0267` is closed as of 2026-06-17 with deterministic content-identity/source-inventory evidence, `TASK-0268` is closed as of 2026-06-17 with source occurrence register evidence, `TASK-0269` is closed as of 2026-06-17 with role assignment and packet register artifact evidence, `TASK-0270` is closed as of 2026-06-17 with document manifest and extraction-state register artifact evidence, `TASK-0271` is closed as of 2026-06-23 with text extraction/page manifest contract evidence, and `TASK-0652` is closed with the SME-RP source occurrence context and trust contract. Chunk/search/evidence binding, async processing, parser/OCR runtime, and source occurrence relation work remain open.
 
 ## In scope
 - Source task families/counts: ARCH:38, INGEST:9, NU:1, RF:3, SME-RP:1, V5:1.
@@ -36,8 +36,8 @@ Context pack:
 - `TASK-0267` (`INGEST-002`) - Implement digest, dedupe and source inventory pipeline - DONE 2026-06-17
 - `TASK-0268` (`INGEST-003`) - Implement source occurrence register - DONE 2026-06-17
 - `TASK-0269` (`INGEST-004`) - Implement role assignment and packet register artifacts - DONE 2026-06-17
-- `TASK-0270` (`INGEST-005`) - Document manifest and extraction-state artifact
-- `TASK-0271` (`INGEST-006`) - Text extraction and page manifest contracts
+- `TASK-0270` (`INGEST-005`) - Document manifest and extraction-state artifact - DONE 2026-06-17
+- `TASK-0271` (`INGEST-006`) - Text extraction and page manifest contracts - DONE 2026-06-23
 - `TASK-0272` (`INGEST-007`) - Chunk/search/evidence-binding index
 - `TASK-0273` (`INGEST-008`) - Batch artifact link/provenance hydration
 - `TASK-0274` (`INGEST-009`) - Async job runtime for document processing

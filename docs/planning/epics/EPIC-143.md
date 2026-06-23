@@ -6,7 +6,7 @@ Define CAPEX workflow slices for intake, baseline, lifecycle, commitments, assum
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0566` is closed as of 2026-06-08 with an internal handoff manifest schema and validation guard, `TASK-0571` is closed as of 2026-06-17 with a planning-only procurement and CEO escalation workflow proposal, `TASK-0276` closes the generated-artifact envelope prerequisite, `TASK-0278` closes the generated artifact schema/bundle validator prerequisite, `TASK-0283` is closed as of 2026-06-17 with a planning-only Project Intake Router contract/helper, and `TASK-0284` is closed as of 2026-06-17 with a planning-only Corpus Baseline workflow contract/helper. Authored CAPEX workflow packs, Project Intake/Corpus Baseline workpages/routes, SME-RP workflow extensions, and runtime activation remain open.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0566` is closed as of 2026-06-08 with an internal handoff manifest schema and validation guard, `TASK-0571` is closed as of 2026-06-17 with a planning-only procurement and CEO escalation workflow proposal, `TASK-0276` closes the generated-artifact envelope prerequisite, `TASK-0278` closes the generated artifact schema/bundle validator prerequisite, `TASK-0283` is closed as of 2026-06-17 with a planning-only Project Intake Router contract/helper, `TASK-0284` is closed as of 2026-06-17 with a planning-only Corpus Baseline workflow contract/helper, `TASK-0286` is closed as of 2026-06-17 with a planning-only Governance / Commitment Chain workflow contract/helper, and `TASK-0287` is closed as of 2026-06-23 with a planning-only Assumption Closure workflow contract/helper. Authored CAPEX workflow packs, Project Intake/Corpus Baseline/Governance/Assumption workpages/routes, SME-RP workflow extensions, owner-interface resolution, and runtime activation remain open.
 
 ## In scope
 - Source task families/counts: NU:2, SME-RP:4, V5:2, WFLOW:7.
@@ -35,8 +35,8 @@ Context pack:
 - `TASK-0283` (`WFLOW-001`) - Project Intake Router workflow - DONE 2026-06-17
 - `TASK-0284` (`WFLOW-002`) - Corpus Baseline workflow - DONE 2026-06-17
 - `TASK-0285` (`WFLOW-003`) - Lifecycle Stage State workflow
-- `TASK-0286` (`WFLOW-004`) - Governance / Commitment Chain workflow
-- `TASK-0287` (`WFLOW-005`) - Assumption Closure workflow
+- `TASK-0286` (`WFLOW-004`) - Governance / Commitment Chain workflow - DONE 2026-06-17
+- `TASK-0287` (`WFLOW-005`) - Assumption Closure workflow - DONE 2026-06-23
 - `TASK-0288` (`WFLOW-006`) - Owner Interface Resolution workflow
 - `TASK-0289` (`WFLOW-007`) - Project State Snapshot workflow
 - `TASK-0566` (`NU-CB-P0-006`) - Implement workflow handoff manifest contract - DONE 2026-06-08

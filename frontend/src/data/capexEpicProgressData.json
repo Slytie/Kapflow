@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 432,
-    "done": 110,
+    "done": 114,
     "in_progress": 0,
-    "not_started": 317,
+    "not_started": 313,
     "blocked": 1,
     "needs_review": 4,
     "total": 432,
     "estimate": {
-      "percentComplete": 25.5,
-      "completedTasks": 110,
-      "remainingTasks": 322,
+      "percentComplete": 26.4,
+      "completedTasks": 114,
+      "remainingTasks": 318,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 78,
-      "completionTimestampCoverage": 70.9,
-      "etaDate": "2026-08-14",
+      "completedWithTimestamps": 82,
+      "completionTimestampCoverage": 71.9,
+      "etaDate": "2026-09-03",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-14",
+      "label": "ETA 2026-09-03",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -2154,10 +2154,10 @@
         "remainingBlockedOrReviewTasks": 1,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-18",
+        "etaDate": "2026-06-19",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-18",
+        "label": "ETA 2026-06-19",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -4757,9 +4757,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 7,
+        "done": 9,
         "in_progress": 0,
-        "not_started": 45,
+        "not_started": 43,
         "blocked": 0,
         "needs_review": 1,
         "total": 53
@@ -5023,9 +5023,9 @@
           "epicId": "EPIC-141",
           "title": "Document manifest and extraction-state artifact",
           "plainPurpose": "Track storage refs, MIME, extraction status and failures.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task INGEST-005 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5069,20 +5069,25 @@
             "original_depends_on": "INGEST-002",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_source_ingest/DOCUMENT_MANIFEST_CONTRACT.yaml for the INGEST-005 document manifest and extraction-state artifact contract.",
+            "Added onetruth.capex_platform.document_manifest to build deterministic capex.document_manifest.v1 and capex.extraction_state_register.v1 outputs from sanitized source-inventory rows.",
+            "Added unit and contract coverage for extraction status/progress/failure/retry states, unknown and duplicate descriptors, raw path/filename/inline-content/log rejection, and non-activation boundaries.",
+            "This closes planning artifact shape evidence only; extraction runtime, parser adapters, page manifests, chunk/evidence indexes, public routes, raw corpus import, reviewed evidence sufficiency, official pointers, and CAPEX runtime/product activation remain blocked."
+          ],
           "taskPath": "codex/tasks/TASK-0270-document-manifest-and-extraction-state-artifact.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0271",
           "epicId": "EPIC-141",
           "title": "Text extraction and page manifest contracts",
           "plainPurpose": "Extract text and page boundaries with provenance.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task INGEST-006 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5126,11 +5131,16 @@
             "original_depends_on": "INGEST-005",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_source_ingest/TEXT_EXTRACTION_PAGE_MANIFEST_CONTRACT.yaml for the INGEST-006 text extraction and page manifest planning contract.",
+            "Added onetruth.capex_platform.text_extraction_page_manifest to produce deterministic capex.document_text_extract.v1 and capex.document_page_manifest.v1 payloads from sanitized document-manifest basis rows.",
+            "Evidence: text extraction/page manifest unit tests and CAPEX ingest/generated-artifact contract tests passed on 2026-06-23.",
+            "Closeout posture: INGEST-006 closes text/page artifact shape evidence only; parser adapters, extraction/OCR runtime, async jobs, chunk/search/evidence-binding indexes, reviewed evidence sufficiency, public routes, workflow pack activation, raw corpus import, official pointer creation, and CAPEX runtime/product activation remain later gated work."
+          ],
           "taskPath": "codex/tasks/TASK-0271-text-extraction-and-page-manifest-contracts.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0272",
@@ -7794,16 +7804,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 13.2,
-        "completedTasks": 7,
-        "remainingTasks": 46,
+        "percentComplete": 17.0,
+        "completedTasks": 9,
+        "remainingTasks": 44,
         "remainingBlockedOrReviewTasks": 1,
-        "completedWithTimestamps": 6,
-        "completionTimestampCoverage": 85.7,
-        "etaDate": "2026-09-02",
+        "completedWithTimestamps": 8,
+        "completionTimestampCoverage": 88.9,
+        "etaDate": "2026-09-13",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-09-02",
+        "label": "ETA 2026-09-13",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -9899,9 +9909,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 6,
+        "done": 8,
         "in_progress": 0,
-        "not_started": 9,
+        "not_started": 7,
         "blocked": 0,
         "needs_review": 0,
         "total": 15
@@ -10097,9 +10107,9 @@
           "epicId": "EPIC-143",
           "title": "Governance / Commitment Chain workflow",
           "plainPurpose": "Extract approvals, budgets, quotes, orders, revisions, settlements and responsibility shifts.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task WFLOW-004 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -10143,20 +10153,25 @@
             "original_depends_on": "WFLOW-002",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_workflow_catalog/governance_commitment_chain_workflow.yaml for the WFLOW-004 Governance / Commitment Chain planning contract.",
+            "Added onetruth.capex_platform.governance_commitment_chain to build deterministic commitment-chain, expenditure-ledger, and commitment-flag outputs from sanitized commitment observations and Corpus Baseline refs.",
+            "Added unit and contract coverage for order revisions, settlement-not-RCA boundaries, commercial/responsibility separation, missing basis, invalid event types, duplicate commitment ids, SourceRef scope, and non-activation boundaries.",
+            "This closes planning/internal output-shape evidence only; authored workflow pack activation, approval mutation, public routes, commitment workpages, reviewed baseline truth, official pointers, and CAPEX runtime/product activation remain blocked."
+          ],
           "taskPath": "codex/tasks/TASK-0286-governance-commitment-chain-workflow.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0287",
           "epicId": "EPIC-143",
           "title": "Assumption Closure workflow",
           "plainPurpose": "Extract supplier/counterparty assumptions and closure states with evidence or waiver.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task WFLOW-005 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -10201,11 +10216,16 @@
             "original_depends_on": "WFLOW-002; WFLOW-004",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_workflow_catalog/assumption_closure_workflow.yaml for the WFLOW-005 Assumption Closure workflow planning contract.",
+            "Added onetruth.capex_platform.assumption_closure_workflow to produce deterministic counterparty_assumption_register, assumption_closure_matrix, and assumption_flags outputs from sanitized assumption observations, Corpus Baseline refs, and Governance / Commitment Chain basis.",
+            "Evidence: Assumption Closure workflow unit tests and CAPEX workflow catalog contract tests passed on 2026-06-23.",
+            "Closeout posture: WFLOW-005 closes planning/internal output-shape evidence only; authored workflow pack activation, public routes, Assumption Closure workpages, physical closure snapshots, stale/reopen policy, owner-interface resolution, reviewed baseline truth, official pointer creation, and CAPEX runtime/product activation remain later gated work."
+          ],
           "taskPath": "codex/tasks/TASK-0287-assumption-closure-workflow.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0288",
@@ -10805,16 +10825,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 40.0,
-        "completedTasks": 6,
-        "remainingTasks": 9,
+        "percentComplete": 53.3,
+        "completedTasks": 8,
+        "remainingTasks": 7,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 4,
-        "completionTimestampCoverage": 66.7,
-        "etaDate": "2026-07-09",
+        "completedWithTimestamps": 6,
+        "completionTimestampCoverage": 75.0,
+        "etaDate": "2026-07-06",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-07-09",
+        "label": "ETA 2026-07-06",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -12745,10 +12765,10 @@
         "remainingBlockedOrReviewTasks": 2,
         "completedWithTimestamps": 2,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-23",
+        "etaDate": "2026-06-25",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-23",
+        "label": "ETA 2026-06-25",
         "caveat": "2 blocked or needs-review task(s) remain."
       }
     },
@@ -14855,10 +14875,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-23",
+        "etaDate": "2026-06-26",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-23",
+        "label": "ETA 2026-06-26",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -19925,10 +19945,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-30",
+        "etaDate": "2026-07-04",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-30",
+        "label": "ETA 2026-07-04",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -27408,10 +27428,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-22",
+        "etaDate": "2026-06-24",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-22",
+        "label": "ETA 2026-06-24",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

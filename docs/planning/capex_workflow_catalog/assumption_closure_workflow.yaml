@@ -1,0 +1,97 @@
+schema_version: capex.workflow_catalog.proposal.v1
+proposal_id: capex.assumption_closure.workflow.v1
+title: CAPEX Assumption Closure workflow
+activation_posture: planning_only_no_capex_activation
+catalog_surface: planning_only_capex_workflow_catalog
+source_task_ref: TASK-0287
+source_row: WFLOW-005
+acceptance_gates:
+  - AT-007
+  - NEG-CLOSE-001
+depends_on:
+  repo_tasks:
+    - TASK-0284
+    - TASK-0286
+workflow_basis:
+  corpus_baseline_workflow_schema_version: capex.corpus_baseline.workflow_outputs.v1
+  governance_commitment_chain_schema_version: capex.governance_commitment_chain.outputs.v1
+  required_basis_refs:
+    - corpus_baseline_workflow_id
+    - governance_commitment_chain_workflow_id
+    - packet_register_id
+canonical_outputs:
+  - counterparty_assumption_register
+  - assumption_closure_matrix
+  - assumption_flags
+counterparty_assumption_register:
+  schema_version: capex.counterparty_assumption_register.v1
+  duplicate_assumption_ids_allowed: false
+  source_refs_required: true
+assumption_closure_matrix:
+  schema_version: capex.assumption_closure_matrix.v1
+  states:
+    - closed_with_evidence
+    - closed_by_waiver
+    - open_missing_evidence
+    - blocked_contradicted
+    - open_ai_draft_only
+  evidence_specific_closure_required: true
+  waiver_result: satisfied_by_waiver
+assumption_flags:
+  schema_version: capex.assumption_flags.v1
+  missing_evidence_flag_required: true
+  contradicted_evidence_flag_required: true
+  ai_draft_cannot_close_flag_required: true
+officialness_policy:
+  ai_draft_closes_assumption: false
+  missing_evidence_closes_assumption: false
+  contradicted_evidence_closes_assumption: false
+  waiver_is_pass: false
+  reviewed_metadata_is_pointer_truth: false
+truth_effects:
+  creates_workflow_run: false
+  creates_approvals: false
+  creates_closure_snapshots: false
+  creates_reviewed_baseline: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - authored_workflow_pack
+  - public_api_route
+  - frontend_route
+  - workpage_route
+  - physical_closure_snapshot_creation
+  - stale_reopen_policy
+  - owner_interface_resolution_workflow
+  - project_state_snapshot_workflow
+  - reviewed_baseline_creation
+  - official_pointer_creation
+raw_data_boundary:
+  allowed_repo_material:
+    - source_refs
+    - assumption_ids
+    - counterparty_ids
+    - sanitized_assumption_summaries
+    - waiver_ids
+    - aggregate_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_assumption_text
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - authored_workflow_pack_activation
+  - raw_corpus_import
+  - closure_snapshot_creation
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

@@ -2,7 +2,8 @@
 id: TASK-0287
 epic: EPIC-143
 title: "Assumption Closure workflow"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0284", "TASK-0286"]
@@ -60,3 +61,9 @@ Extract supplier/counterparty assumptions and closure states with evidence or wa
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_workflow_catalog/assumption_closure_workflow.yaml` for the `WFLOW-005` Assumption Closure workflow planning contract.
+- Added `onetruth.capex_platform.assumption_closure_workflow` to produce deterministic `counterparty_assumption_register`, `assumption_closure_matrix`, and `assumption_flags` outputs from sanitized assumption observations, Corpus Baseline refs, and Governance / Commitment Chain basis.
+- Evidence: Assumption Closure workflow unit tests and CAPEX workflow catalog contract tests passed on 2026-06-23.
+- Closeout posture: `WFLOW-005` closes planning/internal output-shape evidence only; authored workflow pack activation, public routes, Assumption Closure workpages, physical closure snapshots, stale/reopen policy, owner-interface resolution, reviewed baseline truth, official pointer creation, and CAPEX runtime/product activation remain later gated work.
