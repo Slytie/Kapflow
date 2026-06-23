@@ -16,6 +16,26 @@ performance_surface:
   max_page_size: 500
   max_batch_hydration_ids: 5000
   sql_chunk_size: 500
+rf_closeout_surface:
+  owner_tasks:
+    - TASK-0372
+    - TASK-0373
+  source_rows:
+    - RF-004
+    - RF-005
+  workflow_run_page_loader: list_artifact_versions_page_for_workflow_run_with_relations
+  subject_page_loader: list_artifact_versions_page_for_subject_with_relations
+  route_adapters:
+    existing_routes_only: true
+    sql_level_limit_offset: true
+    artifact_kind_filter_before_page: true
+    response_envelope_changed: false
+  optional_subject_summary_hydration:
+    enabled_by_internal_flag: true
+    subject_kinds:
+      - human_task
+      - flag
+    public_payload_required: false
 source_output:
   batch_loaders: true
   paginated_list_detail_split: true

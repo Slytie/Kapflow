@@ -652,6 +652,23 @@ def test_batch_artifact_link_provenance_hydration_contract_closes_task_0273() ->
         "hydrate_artifact_relations_for_versions"
     )
     assert contract["performance_surface"]["max_page_size"] == 500
+    assert contract["rf_closeout_surface"] == {
+        "owner_tasks": ["TASK-0372", "TASK-0373"],
+        "source_rows": ["RF-004", "RF-005"],
+        "workflow_run_page_loader": "list_artifact_versions_page_for_workflow_run_with_relations",
+        "subject_page_loader": "list_artifact_versions_page_for_subject_with_relations",
+        "route_adapters": {
+            "existing_routes_only": True,
+            "sql_level_limit_offset": True,
+            "artifact_kind_filter_before_page": True,
+            "response_envelope_changed": False,
+        },
+        "optional_subject_summary_hydration": {
+            "enabled_by_internal_flag": True,
+            "subject_kinds": ["human_task", "flag"],
+            "public_payload_required": False,
+        },
+    }
     assert contract["source_output"] == {
         "batch_loaders": True,
         "paginated_list_detail_split": True,
@@ -783,6 +800,8 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0288 = _frontmatter("TASK-0288")
     task_0289 = _frontmatter("TASK-0289")
     task_0290 = _frontmatter("TASK-0290")
+    task_0372 = _frontmatter("TASK-0372")
+    task_0373 = _frontmatter("TASK-0373")
     task_0539 = _frontmatter("TASK-0539")
     task_0540 = _frontmatter("TASK-0540")
 
@@ -843,6 +862,13 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     assert task_0290["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0277" in task_0290["depends_on"]
     assert "TASK-0289" in task_0290["depends_on"]
+    assert task_0372["status"] == "DONE"
+    assert task_0372["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0273" in task_0372["depends_on"]
+    assert task_0373["status"] == "DONE"
+    assert task_0373["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0273" in task_0373["depends_on"]
+    assert "TASK-0372" in task_0373["depends_on"]
     assert task_0539["status"] == "DONE"
     assert task_0539["completed_at"] == "2026-06-23T00:00:00Z"
     assert task_0540["status"] == "DONE"

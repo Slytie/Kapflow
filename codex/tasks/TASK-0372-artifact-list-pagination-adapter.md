@@ -2,10 +2,11 @@
 id: TASK-0372
 epic: EPIC-141
 title: "Artifact list pagination adapter"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0273"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,12 @@ Replace broad workflow artifact loads with project/kind/date pagination adapter.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added bounded workflow-run and subject artifact page adapters in `onetruth.infrastructure.repositories.artifact_relation_hydration`, preserving `MAX_ARTIFACT_RELATION_PAGE_SIZE = 500`, SQL-level `limit`/`offset`, optional `artifact_kind`, and deterministic ordering.
+- Routed existing artifact list API branches through paginated read commands so workflow-run and subject list endpoints no longer broad-load and slice in memory.
+- Added unit and runtime/API coverage for page bounds, kind filtering, deterministic page ordering, scope mismatch fail-closed behavior, and unchanged response envelopes.
+- Updated the batch artifact hydration contract with the RF closeout surface for `TASK-0372`/`TASK-0373`.
+
+## Boundary posture
+- No new public routes, frontend routes, migrations, event-registry changes, raw corpus import, official pointer creation, reviewed-baseline claim, or CAPEX runtime/product activation.

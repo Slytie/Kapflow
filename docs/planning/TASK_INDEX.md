@@ -332,8 +332,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0369 | EPIC-139 | DONE | high | Approval side-effect extraction |
 | TASK-0370 | EPIC-139 | DONE | medium | Domain workpage descriptor registry |
 | TASK-0371 | EPIC-140 | DONE | high | Project-scope query helper |
-| TASK-0372 | EPIC-141 | TODO | high | Artifact list pagination adapter |
-| TASK-0373 | EPIC-141 | TODO | high | Batch relation hydration |
+| TASK-0372 | EPIC-141 | DONE | high | Artifact list pagination adapter |
+| TASK-0373 | EPIC-141 | DONE | high | Batch relation hydration |
 | TASK-0374 | EPIC-141 | TODO | high | Bulk ingest adapter seam |
 | TASK-0375 | EPIC-142 | TODO | high | Generated artifact helper migration |
 | TASK-0376 | EPIC-142 | TODO | high | Pointer promotion validator isolation |

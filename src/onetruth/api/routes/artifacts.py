@@ -10,8 +10,8 @@ from onetruth.application.handlers.artifacts import (
     ingest_artifact_document_command,
 )
 from onetruth.application.read_commands import (
-    list_artifacts_for_subject_command,
-    list_artifacts_for_workflow_run_command,
+    list_artifacts_for_subject_page_command,
+    list_artifacts_for_workflow_run_page_command,
     show_artifact_version_command,
     show_flag_command,
     show_human_task_command,
@@ -35,6 +35,13 @@ from onetruth.api.dependencies import BoundaryProfile, Page, RequestContext, sco
 from onetruth.api.errors import ApiError, api_error_from_command, api_error_from_duplicate_idempotency
 from onetruth.api.project_scope import assert_workflow_run_row_project
 from onetruth.api.responses import BinaryResponse, sanitize_download_filename
+
+
+def _workflow_project_id(workflow_run: dict[str, Any]) -> str | None:
+    project_id = workflow_run.get("project_id")
+    if project_id is None:
+        return None
+    return str(project_id)
 
 
 def list_artifacts_endpoint(
@@ -65,11 +72,17 @@ def list_artifacts_endpoint(
             not_found_code="workflow_run_not_found",
             details={"workflow_run_id": workflow_run_id},
         )
-        rows = list_artifacts_for_subject_command(
+        rows = list_artifacts_for_subject_page_command(
             connection,
             workflow_run_id=workflow_run_id,
             subject_kind=subject_kind,
             subject_id=subject_id,
+            limit=page.limit,
+            offset=page.offset,
+            artifact_kind=artifact_kind,
+            tenant_id=context.tenant_id,
+            domain_id=context.domain_id,
+            project_id=_workflow_project_id(workflow_run),
         )
     elif workflow_run_id is not None:
         workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
@@ -79,7 +92,16 @@ def list_artifacts_endpoint(
             not_found_code="workflow_run_not_found",
             details={"workflow_run_id": workflow_run_id},
         )
-        rows = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
+        rows = list_artifacts_for_workflow_run_page_command(
+            connection,
+            workflow_run_id,
+            limit=page.limit,
+            offset=page.offset,
+            artifact_kind=artifact_kind,
+            tenant_id=context.tenant_id,
+            domain_id=context.domain_id,
+            project_id=_workflow_project_id(workflow_run),
+        )
     else:
         rows = query_artifacts_in_scope(
             connection,
@@ -94,9 +116,6 @@ def list_artifacts_endpoint(
             "page": {"limit": page.limit, "offset": page.offset},
         }
 
-    if artifact_kind is not None:
-        rows = [row for row in rows if str(row["artifact_kind"]) == artifact_kind]
-    rows = rows[page.offset : page.offset + page.limit]
     return {
         "command": "api.artifacts.list",
         "artifact_versions": rows,
@@ -302,9 +321,16 @@ def list_workflow_run_artifacts_endpoint(
     workflow_run_id: str,
     page: Page,
 ) -> dict[str, Any]:
-    scoped_workflow_run(connection, context, workflow_run_id)
-    rows = list_artifacts_for_workflow_run_command(connection, workflow_run_id)
-    rows = rows[page.offset : page.offset + page.limit]
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    rows = list_artifacts_for_workflow_run_page_command(
+        connection,
+        workflow_run_id,
+        limit=page.limit,
+        offset=page.offset,
+        tenant_id=context.tenant_id,
+        domain_id=context.domain_id,
+        project_id=_workflow_project_id(workflow_run),
+    )
     return {
         "command": "api.workflow_runs.artifacts.list",
         "workflow_run_id": workflow_run_id,
@@ -325,14 +351,18 @@ def list_human_task_artifacts_endpoint(
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     workflow_run_id = str(human_task["workflow_run_id"])
-    scoped_workflow_run(connection, context, workflow_run_id)
-    rows = list_artifacts_for_subject_command(
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    rows = list_artifacts_for_subject_page_command(
         connection,
         workflow_run_id=workflow_run_id,
         subject_kind="human_task",
         subject_id=human_task_id,
+        limit=page.limit,
+        offset=page.offset,
+        tenant_id=context.tenant_id,
+        domain_id=context.domain_id,
+        project_id=_workflow_project_id(workflow_run),
     )
-    rows = rows[page.offset : page.offset + page.limit]
     return {
         "command": "api.human_tasks.artifacts.list",
         "human_task_id": human_task_id,
@@ -379,14 +409,18 @@ def list_approval_artifacts_endpoint(
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     workflow_run_id = str(approval["workflow_run_id"])
-    scoped_workflow_run(connection, context, workflow_run_id)
-    rows = list_artifacts_for_subject_command(
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    rows = list_artifacts_for_subject_page_command(
         connection,
         workflow_run_id=workflow_run_id,
         subject_kind="approval",
         subject_id=approval_id,
+        limit=page.limit,
+        offset=page.offset,
+        tenant_id=context.tenant_id,
+        domain_id=context.domain_id,
+        project_id=_workflow_project_id(workflow_run),
     )
-    rows = rows[page.offset : page.offset + page.limit]
     return {
         "command": "api.approvals.artifacts.list",
         "approval_id": approval_id,
@@ -438,14 +472,18 @@ def list_flag_artifacts_endpoint(
     except CommandError as exc:
         raise api_error_from_command(exc) from exc
     workflow_run_id = str(flag["workflow_run_id"])
-    scoped_workflow_run(connection, context, workflow_run_id)
-    rows = list_artifacts_for_subject_command(
+    workflow_run = scoped_workflow_run(connection, context, workflow_run_id)
+    rows = list_artifacts_for_subject_page_command(
         connection,
         workflow_run_id=workflow_run_id,
         subject_kind="flag",
         subject_id=flag_id,
+        limit=page.limit,
+        offset=page.offset,
+        tenant_id=context.tenant_id,
+        domain_id=context.domain_id,
+        project_id=_workflow_project_id(workflow_run),
     )
-    rows = rows[page.offset : page.offset + page.limit]
     return {
         "command": "api.flags.artifacts.list",
         "flag_id": flag_id,

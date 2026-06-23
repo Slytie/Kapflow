@@ -17,6 +17,8 @@ from onetruth.infrastructure.repositories.artifact_pointers import (
 )
 from onetruth.infrastructure.repositories.artifact_relation_hydration import (
     attach_hydrated_artifact_relations,
+    list_artifact_versions_page_for_subject_with_relations,
+    list_artifact_versions_page_for_workflow_run_with_relations,
 )
 from onetruth.infrastructure.repositories.artifact_versions import (
     get_artifact_version,
@@ -170,6 +172,31 @@ def list_artifacts_for_workflow_run_command(
     return artifacts
 
 
+def list_artifacts_for_workflow_run_page_command(
+    connection: sqlite3.Connection,
+    workflow_run_id: str,
+    *,
+    limit: int,
+    offset: int = 0,
+    artifact_kind: str | None = None,
+    tenant_id: str | None = None,
+    domain_id: str | None = None,
+    project_id: str | None = None,
+) -> list[dict[str, Any]]:
+    _workflow_scope(connection, workflow_run_id)
+    return list_artifact_versions_page_for_workflow_run_with_relations(
+        connection,
+        workflow_run_id=workflow_run_id,
+        limit=limit,
+        offset=offset,
+        artifact_kind=artifact_kind,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+        include_provenance=False,
+    )
+
+
 def list_artifacts_for_subject_command(
     connection: sqlite3.Connection,
     *,
@@ -192,6 +219,41 @@ def list_artifacts_for_subject_command(
     )
     attach_hydrated_artifact_relations(connection, artifacts)
     return artifacts
+
+
+def list_artifacts_for_subject_page_command(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    subject_kind: str,
+    subject_id: str,
+    limit: int,
+    offset: int = 0,
+    artifact_kind: str | None = None,
+    tenant_id: str | None = None,
+    domain_id: str | None = None,
+    project_id: str | None = None,
+) -> list[dict[str, Any]]:
+    _workflow_scope(connection, workflow_run_id)
+    _validate_artifact_link_subject(
+        connection,
+        workflow_run_id=workflow_run_id,
+        subject_kind=subject_kind,
+        subject_id=subject_id,
+    )
+    return list_artifact_versions_page_for_subject_with_relations(
+        connection,
+        workflow_run_id=workflow_run_id,
+        subject_kind=subject_kind,
+        subject_id=subject_id,
+        limit=limit,
+        offset=offset,
+        artifact_kind=artifact_kind,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+        include_provenance=False,
+    )
 
 
 def show_pointer_command(

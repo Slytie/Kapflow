@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import onetruth.application.handlers.workpages as workpage_handlers
+import onetruth.application.handlers.workpage_reporting_commands as workpage_reporting_commands
 from onetruth.application.handlers.artifacts import ingest_artifact_document_command
 from onetruth.application.handlers.workflow_task_lifecycle import (
     create_workflow_run_command,
@@ -16,6 +16,7 @@ from onetruth.infrastructure.artifacts.storage import (
     encode_base64_content,
 )
 from onetruth.infrastructure.db.session import open_sqlite_connection
+from tests.runtime.helpers.dispatch_reporting import REALISTIC_REPORTING_SERVICE_DATE
 from tests.runtime.helpers.runtime_api import RuntimeApiClient
 from tests.runtime.helpers.runtime_cli import REPO_ROOT, run_cli
 from tests.runtime.helpers.workpage_runs import seed_dispatch_reporting_workpage_run
@@ -204,11 +205,11 @@ def test_canonical_eod_draft_create_creates_artifact_in_seeded_reporting_run(
         ).fetchall()
         assert [dict(row) for row in run_rows] == [
             {
-                "workflow_id": "dispatch_reporting.v1",
-                "partition_key": "SD-2026-03-16",
-                "activation_key": "api:eod-draft:create-001:dispatch-reporting-workpage",
-            }
-        ]
+                    "workflow_id": "dispatch_reporting.v1",
+                    "partition_key": f"SD-{REALISTIC_REPORTING_SERVICE_DATE}",
+                    "activation_key": "api:eod-draft:create-001:dispatch-reporting-workpage",
+                }
+            ]
 
         artifact_row = connection.execute(
             """
@@ -228,7 +229,7 @@ def test_canonical_eod_draft_create_creates_artifact_in_seeded_reporting_run(
         assert metadata["template_id"] == "dispatch_reporting.stage03.upd_draft.workbook.empty.v1"
         assert metadata["seed_source_path"] == EXPECTED_TEMPLATE_REF
         assert "demo_workpage_id" not in metadata
-        assert metadata["service_date"] == "2026-03-16"
+        assert metadata["service_date"] == REALISTIC_REPORTING_SERVICE_DATE
         assert metadata["station_code"] == "DVC4"
         assert metadata["dsp_name"] == "QDCI"
 
@@ -405,7 +406,7 @@ def test_artifact_backed_eod_workpage_returns_projected_contract(tmp_path: Path)
     assert workpage["source_artifact_version_id"] == artifact_version_id
     assert workpage["source_examples"] == {}
     assert workpage["summary"] == {
-        "service_date": "2026-03-16",
+        "service_date": REALISTIC_REPORTING_SERVICE_DATE,
         "station_code": "DVC4",
         "dsp_name": "QDCI",
         "total_routes_actual": 0,
@@ -418,10 +419,9 @@ def test_artifact_backed_eod_workpage_returns_projected_contract(tmp_path: Path)
         "average_route_time": "0:00:00",
         "formula_integrity_warning": False,
         "warning_note": (
-            "This EOD projection is built from canonical dispatch-reporting artifacts sourced from "
-            "an intentionally partial 2026-03-16 QDCI / DVC4 example family. Row-level actuals "
-            "remain the primary truth because the source workbook summary tabs contained broken "
-            "formulas."
+            "This EOD projection is built from canonical dispatch-reporting artifacts. "
+            "Row-level route actuals remain the primary truth when summary sheets contain "
+            "broken formulas."
         ),
     }
 
@@ -610,7 +610,7 @@ def test_submit_artifact_workpage_links_supported_stage04_approval_as_response(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        workpage_handlers,
+        workpage_reporting_commands,
         "project_upd_draft_workbook",
         lambda _workbook_bytes: {
             "manual_closeout": [
@@ -629,7 +629,7 @@ def test_submit_artifact_workpage_links_supported_stage04_approval_as_response(
         },
     )
     monkeypatch.setattr(
-        workpage_handlers,
+        workpage_reporting_commands,
         "materialize_upd_draft_workbook",
         lambda workbook_bytes, edits, change_log_entry: workbook_bytes,
     )
@@ -695,7 +695,7 @@ def test_submit_artifact_workpage_links_supported_stage04_review_task_as_respons
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        workpage_handlers,
+        workpage_reporting_commands,
         "materialize_upd_draft_workbook",
         lambda workbook_bytes, edits, change_log_entry: workbook_bytes,
     )
@@ -797,6 +797,24 @@ def test_workflow_run_artifact_list_includes_eod_draft_chain_versions(tmp_path: 
         submitted_artifact_version_id,
     ]
     assert all("demo_workpage_id" not in row["metadata_json"] for row in workbook_rows)
+
+    second_workbook_page = client.get(
+        "/api/v1/artifacts",
+        query={
+            "workflow_run_id": workflow_run_id,
+            "artifact_kind": "reporting.upd_draft.workbook",
+            "limit": "1",
+            "offset": "1",
+        },
+    )
+    assert second_workbook_page.status_code == 200
+    assert second_workbook_page.payload["command"] == "api.artifacts.list"
+    assert second_workbook_page.payload["page"] == {"limit": 1, "offset": 1}
+    assert [
+        row["artifact_version_id"]
+        for row in second_workbook_page.payload["artifact_versions"]
+        if row["artifact_kind"] == "reporting.upd_draft.workbook"
+    ] == [submitted_artifact_version_id]
 
 
 def test_submit_artifact_workpage_replays_idempotently_without_duplicate_versions(

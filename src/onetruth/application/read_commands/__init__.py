@@ -1,6 +1,8 @@
 from .runtime_views import (
     list_artifacts_for_subject_command,
+    list_artifacts_for_subject_page_command,
     list_artifacts_for_workflow_run_command,
+    list_artifacts_for_workflow_run_page_command,
     list_execution_sessions_for_workflow_run_command,
     list_flags_for_workflow_run_command,
     list_pointers_for_workflow_run_command,
@@ -18,7 +20,9 @@ from .runtime_views import (
 
 __all__ = [
     "list_artifacts_for_subject_command",
+    "list_artifacts_for_subject_page_command",
     "list_artifacts_for_workflow_run_command",
+    "list_artifacts_for_workflow_run_page_command",
     "list_execution_sessions_for_workflow_run_command",
     "list_flags_for_workflow_run_command",
     "list_pointers_for_workflow_run_command",

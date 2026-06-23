@@ -8,6 +8,8 @@ from onetruth.infrastructure.events.event_store import create_sqlite_substrate
 from onetruth.infrastructure.repositories.artifact_relation_hydration import (
     ArtifactRelationHydrationError,
     hydrate_artifact_relations_for_versions,
+    list_artifact_versions_page_for_subject_with_relations,
+    list_artifact_versions_page_for_workflow_run,
     list_artifact_versions_page_with_relations,
 )
 
@@ -106,6 +108,7 @@ def _seed_artifact(
     *,
     workflow_run_id: str = "wr-hydration",
     project_id: str = "cp-hydration",
+    artifact_kind: str = "capex.generated_artifact",
     created_at: str = NOW,
 ) -> None:
     connection.execute(
@@ -138,7 +141,7 @@ def _seed_artifact(
             "domain-x",
             project_id,
             None,
-            "capex.generated_artifact",
+            artifact_kind,
             "evidence",
             "application/json",
             f"object://artifact/{artifact_version_id}",
@@ -153,7 +156,15 @@ def _seed_artifact(
     )
 
 
-def _seed_link(connection: sqlite3.Connection, artifact_version_id: str, index: int) -> None:
+def _seed_link(
+    connection: sqlite3.Connection,
+    artifact_version_id: str,
+    index: int,
+    *,
+    workflow_run_id: str = "wr-hydration",
+    subject_kind: str = "human_task",
+    subject_id: str | None = None,
+) -> None:
     connection.execute(
         """
         INSERT INTO artifact_links (
@@ -170,13 +181,119 @@ def _seed_link(connection: sqlite3.Connection, artifact_version_id: str, index: 
         """,
         (
             artifact_version_id,
-            "wr-hydration",
-            "human_task",
-            f"ht-{index:04d}",
+            workflow_run_id,
+            subject_kind,
+            subject_id if subject_id is not None else f"ht-{index:04d}",
             "input",
             f"2026-06-23T00:00:{index % 60:02d}Z",
             "human:pm",
             "human",
+        ),
+    )
+
+
+def _seed_task_run(connection: sqlite3.Connection, task_run_id: str) -> None:
+    connection.execute(
+        """
+        INSERT INTO task_runs (
+            task_run_id,
+            workflow_run_id,
+            stage_id,
+            task_kind,
+            state,
+            generation,
+            activation_key,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            task_run_id,
+            "wr-hydration",
+            "stage-review",
+            "review",
+            "ACTIVE",
+            0,
+            f"activation-{task_run_id}",
+            NOW,
+            NOW,
+        ),
+    )
+
+
+def _seed_human_task(connection: sqlite3.Connection, human_task_id: str) -> None:
+    task_run_id = f"tr-{human_task_id}"
+    _seed_task_run(connection, task_run_id)
+    connection.execute(
+        """
+        INSERT INTO human_tasks (
+            human_task_id,
+            workflow_run_id,
+            task_run_id,
+            task_kind,
+            state,
+            candidate_roles,
+            owner_role,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            human_task_id,
+            "wr-hydration",
+            task_run_id,
+            "review",
+            "READY",
+            '["project_manager"]',
+            "project_manager",
+            NOW,
+            NOW,
+        ),
+    )
+
+
+def _seed_flag(connection: sqlite3.Connection, flag_id: str) -> None:
+    connection.execute(
+        """
+        INSERT INTO flags (
+            flag_id,
+            workflow_run_id,
+            tenant_id,
+            domain_id,
+            workflow_id,
+            partition_key,
+            kind,
+            severity,
+            state,
+            summary,
+            details_json,
+            assigned_group,
+            created_at,
+            created_by_actor_id,
+            created_by_actor_type,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            flag_id,
+            "wr-hydration",
+            "tenant-a",
+            "domain-x",
+            "capex.corpus_baseline.v1",
+            "cp-hydration",
+            "missing_evidence",
+            "high",
+            "OPEN",
+            "not exposed in hydration summary",
+            "{}",
+            "project_controls",
+            NOW,
+            "human:pm",
+            "human",
+            NOW,
         ),
     )
 
@@ -255,6 +372,195 @@ def test_project_page_hydrates_links_and_provenance_deterministically() -> None:
     assert rows[0]["provenance_edges"][0]["input_artifact_version_id"] == "av-001"
     assert rows[0]["provenance_edges"][0]["metadata_json"] == {"source": "unit"}
     assert len(selects) == 4
+
+
+def test_workflow_run_page_filters_kind_and_preserves_sql_ordering() -> None:
+    connection = _connection()
+    _seed_project(connection)
+    _seed_workflow(connection)
+    _seed_artifact(
+        connection,
+        "av-001",
+        artifact_kind="capex.alpha",
+        created_at="2026-06-23T00:01:00Z",
+    )
+    _seed_artifact(
+        connection,
+        "av-002",
+        artifact_kind="capex.beta",
+        created_at="2026-06-23T00:02:00Z",
+    )
+    _seed_artifact(
+        connection,
+        "av-003",
+        artifact_kind="capex.alpha",
+        created_at="2026-06-23T00:03:00Z",
+    )
+
+    selects: list[str] = []
+    connection.set_trace_callback(
+        lambda sql: selects.append(sql)
+        if sql.lstrip().upper().startswith("SELECT")
+        else None
+    )
+    rows = list_artifact_versions_page_for_workflow_run(
+        connection,
+        workflow_run_id="wr-hydration",
+        artifact_kind="capex.alpha",
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        project_id="cp-hydration",
+        limit=1,
+        offset=1,
+    )
+    connection.set_trace_callback(None)
+
+    assert [row["artifact_version_id"] for row in rows] == ["av-003"]
+    assert rows[0]["tenant_id"] == "tenant-a"
+    assert rows[0]["project_id"] == "cp-hydration"
+    assert len(selects) == 2
+
+
+def test_subject_page_hydrates_relations_and_fails_closed_on_scope_mismatch() -> None:
+    connection = _connection()
+    _seed_project(connection)
+    _seed_project(connection, "cp-other")
+    _seed_workflow(connection)
+    _seed_workflow(connection, workflow_run_id="wr-cross-same-project")
+    for index, artifact_id in enumerate(("av-001", "av-002", "av-003"), start=1):
+        _seed_artifact(
+            connection,
+            artifact_id,
+            artifact_kind="capex.alpha" if artifact_id != "av-002" else "capex.beta",
+            created_at=f"2026-06-23T00:0{index}:00Z",
+        )
+        _seed_link(connection, artifact_id, index, subject_id="ht-review")
+    _seed_artifact(
+        connection,
+        "av-cross-run",
+        workflow_run_id="wr-cross-same-project",
+        artifact_kind="capex.alpha",
+        created_at="2026-06-23T00:01:30Z",
+    )
+    _seed_link(
+        connection,
+        "av-cross-run",
+        99,
+        workflow_run_id="wr-hydration",
+        subject_id="ht-review",
+    )
+
+    rows = list_artifact_versions_page_for_subject_with_relations(
+        connection,
+        workflow_run_id="wr-hydration",
+        subject_kind="human_task",
+        subject_id="ht-review",
+        artifact_kind="capex.alpha",
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        project_id="cp-hydration",
+        limit=1,
+        offset=1,
+        include_provenance=False,
+    )
+
+    assert [row["artifact_version_id"] for row in rows] == ["av-003"]
+    assert rows[0]["links"][0]["subject_id"] == "ht-review"
+    with pytest.raises(ArtifactRelationHydrationError) as exc:
+        list_artifact_versions_page_for_subject_with_relations(
+            connection,
+            workflow_run_id="wr-hydration",
+            subject_kind="human_task",
+            subject_id="ht-review",
+            tenant_id="tenant-a",
+            domain_id="domain-x",
+            project_id="cp-other",
+            limit=1,
+        )
+    assert exc.value.code == "artifact_relation_scope_mismatch"
+
+
+def test_page_adapters_reject_invalid_bounds() -> None:
+    connection = _connection()
+    _seed_project(connection)
+    _seed_workflow(connection)
+
+    with pytest.raises(ArtifactRelationHydrationError) as limit:
+        list_artifact_versions_page_for_workflow_run(
+            connection,
+            workflow_run_id="wr-hydration",
+            limit=501,
+        )
+    assert limit.value.code == "artifact_relation_page_limit_invalid"
+
+    with pytest.raises(ArtifactRelationHydrationError) as offset:
+        list_artifact_versions_page_for_workflow_run(
+            connection,
+            workflow_run_id="wr-hydration",
+            limit=1,
+            offset=-1,
+        )
+    assert offset.value.code == "artifact_relation_page_offset_invalid"
+
+
+def test_optional_subject_summary_hydration_batches_human_tasks_and_flags() -> None:
+    connection = _connection()
+    _seed_project(connection)
+    _seed_workflow(connection)
+    _seed_human_task(connection, "ht-summary")
+    _seed_flag(connection, "flag-summary")
+    _seed_artifact(connection, "av-task")
+    _seed_artifact(connection, "av-flag")
+    _seed_link(connection, "av-task", 1, subject_id="ht-summary")
+    _seed_link(
+        connection,
+        "av-flag",
+        2,
+        subject_kind="flag",
+        subject_id="flag-summary",
+    )
+
+    relations = hydrate_artifact_relations_for_versions(
+        connection,
+        ["av-task", "av-flag"],
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        project_id="cp-hydration",
+        include_provenance=False,
+        include_subject_summaries=True,
+    )
+
+    task_summary = relations["av-task"]["links"][0]["subject_summary"]
+    flag_summary = relations["av-flag"]["links"][0]["subject_summary"]
+    assert task_summary == {
+        "workflow_run_id": "wr-hydration",
+        "task_run_id": "tr-ht-summary",
+        "task_kind": "review",
+        "state": "READY",
+        "owner_role": "project_manager",
+        "assignee_actor_id": None,
+        "assignee_actor_type": None,
+        "due_at": None,
+        "escalation_at": None,
+        "linked_approval_id": None,
+        "created_at": NOW,
+        "updated_at": NOW,
+        "subject_kind": "human_task",
+        "subject_id": "ht-summary",
+    }
+    assert flag_summary == {
+        "workflow_run_id": "wr-hydration",
+        "kind": "missing_evidence",
+        "severity": "high",
+        "state": "OPEN",
+        "assigned_group": "project_controls",
+        "created_at": NOW,
+        "closed_at": None,
+        "updated_at": NOW,
+        "subject_kind": "flag",
+        "subject_id": "flag-summary",
+    }
+    assert "summary" not in flag_summary
 
 
 def test_hydration_rejects_scope_mismatch_and_duplicate_ids() -> None:

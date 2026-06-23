@@ -13,6 +13,12 @@ ARTIFACT_RELATION_SQL_CHUNK_SIZE = 500
 _ARTIFACT_COLUMNS = """
     av.artifact_version_id,
     av.workflow_run_id,
+    av.tenant_id,
+    av.domain_id,
+    av.project_id,
+    av.dataset_key,
+    av.partition_kind,
+    av.partition_key,
     av.task_run_id,
     av.artifact_kind,
     av.artifact_role,
@@ -106,6 +112,173 @@ def list_artifact_versions_page_with_relations(
     return rows
 
 
+def list_artifact_versions_page_for_workflow_run(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    limit: int,
+    offset: int = 0,
+    artifact_kind: str | None = None,
+    tenant_id: str | None = None,
+    domain_id: str | None = None,
+    project_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return one bounded artifact page for a workflow run."""
+
+    page_limit = _coerce_page_limit(limit)
+    page_offset = _coerce_offset(offset)
+    _require_workflow_scope(
+        connection,
+        workflow_run_id=workflow_run_id,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+    )
+
+    query = f"""
+        SELECT
+            {_ARTIFACT_COLUMNS}
+        FROM artifact_versions av
+        WHERE av.workflow_run_id = ?
+    """
+    params: list[Any] = [workflow_run_id]
+    if artifact_kind is not None:
+        query += " AND av.artifact_kind = ?"
+        params.append(artifact_kind)
+    query += """
+        ORDER BY av.created_at ASC, av.artifact_version_id ASC
+        LIMIT ? OFFSET ?
+    """
+    params.extend([page_limit, page_offset])
+    return _artifact_rows(connection.execute(query, params).fetchall())
+
+
+def list_artifact_versions_page_for_workflow_run_with_relations(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    limit: int,
+    offset: int = 0,
+    artifact_kind: str | None = None,
+    tenant_id: str | None = None,
+    domain_id: str | None = None,
+    project_id: str | None = None,
+    include_provenance: bool = True,
+    include_subject_summaries: bool = False,
+) -> list[dict[str, Any]]:
+    """Return one workflow-run artifact page with batch-hydrated relations."""
+
+    rows = list_artifact_versions_page_for_workflow_run(
+        connection,
+        workflow_run_id=workflow_run_id,
+        limit=limit,
+        offset=offset,
+        artifact_kind=artifact_kind,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+    )
+    attach_hydrated_artifact_relations(
+        connection,
+        rows,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+        include_provenance=include_provenance,
+        include_subject_summaries=include_subject_summaries,
+    )
+    return rows
+
+
+def list_artifact_versions_page_for_subject(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    subject_kind: str,
+    subject_id: str,
+    limit: int,
+    offset: int = 0,
+    artifact_kind: str | None = None,
+    tenant_id: str | None = None,
+    domain_id: str | None = None,
+    project_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return one bounded artifact page for a workflow-run subject."""
+
+    page_limit = _coerce_page_limit(limit)
+    page_offset = _coerce_offset(offset)
+    _require_workflow_scope(
+        connection,
+        workflow_run_id=workflow_run_id,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+    )
+
+    query = f"""
+        SELECT
+            {_ARTIFACT_COLUMNS}
+        FROM artifact_links al
+        JOIN artifact_versions av
+            ON av.artifact_version_id = al.artifact_version_id
+        WHERE al.workflow_run_id = ?
+            AND av.workflow_run_id = al.workflow_run_id
+            AND al.subject_kind = ?
+            AND al.subject_id = ?
+    """
+    params: list[Any] = [workflow_run_id, subject_kind, subject_id]
+    if artifact_kind is not None:
+        query += " AND av.artifact_kind = ?"
+        params.append(artifact_kind)
+    query += """
+        ORDER BY av.created_at ASC, av.artifact_version_id ASC
+        LIMIT ? OFFSET ?
+    """
+    params.extend([page_limit, page_offset])
+    return _artifact_rows(connection.execute(query, params).fetchall())
+
+
+def list_artifact_versions_page_for_subject_with_relations(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    subject_kind: str,
+    subject_id: str,
+    limit: int,
+    offset: int = 0,
+    artifact_kind: str | None = None,
+    tenant_id: str | None = None,
+    domain_id: str | None = None,
+    project_id: str | None = None,
+    include_provenance: bool = True,
+    include_subject_summaries: bool = False,
+) -> list[dict[str, Any]]:
+    """Return one subject artifact page with batch-hydrated relations."""
+
+    rows = list_artifact_versions_page_for_subject(
+        connection,
+        workflow_run_id=workflow_run_id,
+        subject_kind=subject_kind,
+        subject_id=subject_id,
+        limit=limit,
+        offset=offset,
+        artifact_kind=artifact_kind,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+    )
+    attach_hydrated_artifact_relations(
+        connection,
+        rows,
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+        include_provenance=include_provenance,
+        include_subject_summaries=include_subject_summaries,
+    )
+    return rows
+
+
 def attach_hydrated_artifact_relations(
     connection: sqlite3.Connection,
     artifacts: Sequence[dict[str, Any]],
@@ -114,6 +287,7 @@ def attach_hydrated_artifact_relations(
     domain_id: str | None = None,
     project_id: str | None = None,
     include_provenance: bool = False,
+    include_subject_summaries: bool = False,
 ) -> None:
     artifact_ids = [
         str(artifact["artifact_version_id"])
@@ -127,6 +301,7 @@ def attach_hydrated_artifact_relations(
         domain_id=domain_id,
         project_id=project_id,
         include_provenance=include_provenance,
+        include_subject_summaries=include_subject_summaries,
     )
     for artifact in artifacts:
         artifact_id = str(artifact["artifact_version_id"])
@@ -144,6 +319,7 @@ def hydrate_artifact_relations_for_versions(
     domain_id: str | None = None,
     project_id: str | None = None,
     include_provenance: bool = True,
+    include_subject_summaries: bool = False,
 ) -> dict[str, dict[str, Any]]:
     """Batch-load links and output-side provenance for known artifact versions."""
 
@@ -160,6 +336,7 @@ def hydrate_artifact_relations_for_versions(
         )
 
     relations = {artifact_id: _empty_relations() for artifact_id in artifact_ids}
+    loaded_links: list[dict[str, Any]] = []
     for artifact_id_chunk in _chunks(artifact_ids):
         placeholders = _placeholders(artifact_id_chunk)
         link_rows = connection.execute(
@@ -181,7 +358,19 @@ def hydrate_artifact_relations_for_versions(
         ).fetchall()
         for row in link_rows:
             item = dict(row)
+            loaded_links.append(item)
             relations[str(item["artifact_version_id"])]["links"].append(item)
+
+    if include_subject_summaries:
+        subject_summaries = _load_subject_summaries(connection, loaded_links)
+        for link in loaded_links:
+            key = _subject_summary_key(
+                str(link["subject_kind"]),
+                str(link["subject_id"]),
+            )
+            summary = subject_summaries.get(key)
+            if summary is not None:
+                link["subject_summary"] = summary
 
     if include_provenance:
         for artifact_id_chunk in _chunks(artifact_ids):
@@ -306,6 +495,127 @@ def _require_scope(
                 "project_id": project_id,
             },
         )
+
+
+def _require_workflow_scope(
+    connection: sqlite3.Connection,
+    *,
+    workflow_run_id: str,
+    tenant_id: str | None,
+    domain_id: str | None,
+    project_id: str | None,
+) -> None:
+    clauses = ["workflow_run_id = ?"]
+    params: list[Any] = [workflow_run_id]
+    if tenant_id is not None:
+        clauses.append("tenant_id = ?")
+        params.append(tenant_id)
+    if domain_id is not None:
+        clauses.append("domain_id = ?")
+        params.append(domain_id)
+    if project_id is not None:
+        clauses.append("project_id = ?")
+        params.append(project_id)
+    row = connection.execute(
+        f"""
+        SELECT workflow_run_id
+        FROM workflow_runs
+        WHERE {' AND '.join(clauses)}
+        """,
+        params,
+    ).fetchone()
+    if row is None:
+        raise ArtifactRelationHydrationError(
+            "artifact_relation_scope_mismatch",
+            {
+                "workflow_run_id": workflow_run_id,
+                "tenant_id": tenant_id,
+                "domain_id": domain_id,
+                "project_id": project_id,
+            },
+        )
+
+
+def _load_subject_summaries(
+    connection: sqlite3.Connection,
+    links: Sequence[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    human_task_ids = sorted(
+        {
+            str(link["subject_id"])
+            for link in links
+            if str(link.get("subject_kind")) == "human_task"
+        }
+    )
+    flag_ids = sorted(
+        {
+            str(link["subject_id"])
+            for link in links
+            if str(link.get("subject_kind")) == "flag"
+        }
+    )
+
+    summaries: dict[str, dict[str, Any]] = {}
+    for subject_id_chunk in _chunks(human_task_ids):
+        rows = connection.execute(
+            f"""
+            SELECT
+                human_task_id,
+                workflow_run_id,
+                task_run_id,
+                task_kind,
+                state,
+                owner_role,
+                assignee_actor_id,
+                assignee_actor_type,
+                due_at,
+                escalation_at,
+                linked_approval_id,
+                created_at,
+                updated_at
+            FROM human_tasks
+            WHERE human_task_id IN ({_placeholders(subject_id_chunk)})
+            ORDER BY human_task_id ASC
+            """,
+            subject_id_chunk,
+        ).fetchall()
+        for row in rows:
+            item = dict(row)
+            subject_id = str(item.pop("human_task_id"))
+            item["subject_kind"] = "human_task"
+            item["subject_id"] = subject_id
+            summaries[_subject_summary_key("human_task", subject_id)] = item
+
+    for subject_id_chunk in _chunks(flag_ids):
+        rows = connection.execute(
+            f"""
+            SELECT
+                flag_id,
+                workflow_run_id,
+                kind,
+                severity,
+                state,
+                assigned_group,
+                created_at,
+                closed_at,
+                updated_at
+            FROM flags
+            WHERE flag_id IN ({_placeholders(subject_id_chunk)})
+            ORDER BY flag_id ASC
+            """,
+            subject_id_chunk,
+        ).fetchall()
+        for row in rows:
+            item = dict(row)
+            subject_id = str(item.pop("flag_id"))
+            item["subject_kind"] = "flag"
+            item["subject_id"] = subject_id
+            summaries[_subject_summary_key("flag", subject_id)] = item
+    return summaries
+
+
+def _subject_summary_key(subject_kind: str, subject_id: str) -> str:
+    return f"{subject_kind}:{subject_id}"
 
 
 def _coerce_page_limit(limit: int) -> int:

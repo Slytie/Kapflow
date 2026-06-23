@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 432,
-    "done": 126,
+    "done": 128,
     "in_progress": 0,
-    "not_started": 303,
+    "not_started": 301,
     "blocked": 1,
     "needs_review": 2,
     "total": 432,
     "estimate": {
-      "percentComplete": 29.2,
-      "completedTasks": 126,
-      "remainingTasks": 306,
+      "percentComplete": 29.6,
+      "completedTasks": 128,
+      "remainingTasks": 304,
       "remainingBlockedOrReviewTasks": 3,
-      "completedWithTimestamps": 94,
-      "completionTimestampCoverage": 74.6,
-      "etaDate": "2026-08-27",
+      "completedWithTimestamps": 96,
+      "completionTimestampCoverage": 75.0,
+      "etaDate": "2026-08-25",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-27",
+      "label": "ETA 2026-08-25",
       "caveat": "3 blocked or needs-review task(s) remain."
     }
   },
@@ -4757,9 +4757,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 12,
+        "done": 14,
         "in_progress": 0,
-        "not_started": 41,
+        "not_started": 39,
         "blocked": 0,
         "needs_review": 0,
         "total": 53
@@ -5331,9 +5331,9 @@
           "epicId": "EPIC-141",
           "title": "Artifact list pagination adapter",
           "plainPurpose": "Replace broad workflow artifact loads with project/kind/date pagination adapter.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task RF-004 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5345,7 +5345,9 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0273"
+          ],
           "owners": [
             "platform"
           ],
@@ -5376,20 +5378,25 @@
             "source_only_dependency_notes": "phase preflight and safety net",
             "recommended_source_branch": "feature/capex-rf-004"
           },
-          "evidence": [],
+          "evidence": [
+            "Added bounded workflow-run and subject artifact page adapters in onetruth.infrastructure.repositories.artifact_relation_hydration, preserving MAX_ARTIFACT_RELATION_PAGE_SIZE = 500, SQL-level limit/offset, optional artifact_kind, and deterministic ordering.",
+            "Routed existing artifact list API branches through paginated read commands so workflow-run and subject list endpoints no longer broad-load and slice in memory.",
+            "Added unit and runtime/API coverage for page bounds, kind filtering, deterministic page ordering, scope mismatch fail-closed behavior, and unchanged response envelopes.",
+            "Updated the batch artifact hydration contract with the RF closeout surface for TASK-0372/TASK-0373."
+          ],
           "taskPath": "codex/tasks/TASK-0372-artifact-list-pagination-adapter.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0373",
           "epicId": "EPIC-141",
           "title": "Batch relation hydration",
           "plainPurpose": "Batch load artifact links/provenance/tasks/flags instead of N+1.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task RF-005 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5401,7 +5408,10 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0273",
+            "TASK-0372"
+          ],
           "owners": [
             "platform"
           ],
@@ -5432,11 +5442,16 @@
             "source_only_dependency_notes": "phase preflight and safety net",
             "recommended_source_branch": "feature/capex-rf-005"
           },
-          "evidence": [],
+          "evidence": [
+            "Extended onetruth.infrastructure.repositories.artifact_relation_hydration with workflow-run and subject page helpers that reuse the shared batch relation loader after scoped page selection.",
+            "Added optional internal batch subject-summary hydration for human_task and flag artifact links without changing default public API response payloads.",
+            "Preserved duplicate-ID rejection, the 5,000 artifact hydration cap, 500-row SQL chunks, scoped relation hydration, and no N+1 relation query posture.",
+            "Added unit coverage for optional task/flag summaries, duplicate/scope guards, 5k chunked hydration, and bounded page adapters; runtime/API tests cover unchanged list envelopes."
+          ],
           "taskPath": "codex/tasks/TASK-0373-batch-relation-hydration.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0374",
@@ -7815,16 +7830,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 22.6,
-        "completedTasks": 12,
-        "remainingTasks": 41,
+        "percentComplete": 26.4,
+        "completedTasks": 14,
+        "remainingTasks": 39,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 11,
-        "completionTimestampCoverage": 91.7,
-        "etaDate": "2026-08-22",
+        "completedWithTimestamps": 13,
+        "completionTimestampCoverage": 92.9,
+        "etaDate": "2026-08-10",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-08-22",
+        "label": "ETA 2026-08-10",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

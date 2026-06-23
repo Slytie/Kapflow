@@ -2,10 +2,11 @@
 id: TASK-0373
 epic: EPIC-141
 title: "Batch relation hydration"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0273", "TASK-0372"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,12 @@ Batch load artifact links/provenance/tasks/flags instead of N+1.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Extended `onetruth.infrastructure.repositories.artifact_relation_hydration` with workflow-run and subject page helpers that reuse the shared batch relation loader after scoped page selection.
+- Added optional internal batch subject-summary hydration for `human_task` and `flag` artifact links without changing default public API response payloads.
+- Preserved duplicate-ID rejection, the 5,000 artifact hydration cap, 500-row SQL chunks, scoped relation hydration, and no N+1 relation query posture.
+- Added unit coverage for optional task/flag summaries, duplicate/scope guards, 5k chunked hydration, and bounded page adapters; runtime/API tests cover unchanged list envelopes.
+
+## Boundary posture
+- No public route shape changes, frontend activation, migrations, event-registry changes, raw corpus import, official pointer creation, reviewed-baseline claim, or CAPEX runtime/product activation.

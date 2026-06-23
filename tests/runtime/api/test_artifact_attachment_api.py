@@ -62,10 +62,35 @@ def test_human_task_artifact_upload_list_show_download(tmp_path: Path) -> None:
         for link in artifact["links"]
     )
 
+    uploaded_second = client.post(
+        f"/api/v1/human-tasks/{human_task_id}/artifacts/upload",
+        payload={
+            "artifact_kind": "schedule.replan_delta.workbook",
+            "artifact_role": "evidence",
+            "content_base64": _encoded_file(STAGE07_WORKBOOK),
+            "file_name": STAGE07_WORKBOOK.name,
+            "idempotency_key": f"api:{harness.scenario_id}:human-task-artifact-upload-second",
+        },
+    )
+    assert uploaded_second.status_code == 200
+    second_artifact_version_id = str(
+        uploaded_second.payload["artifact_version"]["artifact_version_id"]
+    )
+
     listed = client.get(f"/api/v1/human-tasks/{human_task_id}/artifacts")
     assert listed.status_code == 200
     listed_ids = {row["artifact_version_id"] for row in listed.payload["artifact_versions"]}
     assert artifact_version_id in listed_ids
+    assert second_artifact_version_id in listed_ids
+
+    nested_page = client.get(
+        f"/api/v1/human-tasks/{human_task_id}/artifacts",
+        query={"limit": "1", "offset": "1"},
+    )
+    assert nested_page.status_code == 200
+    assert nested_page.payload["command"] == "api.human_tasks.artifacts.list"
+    assert nested_page.payload["page"] == {"limit": 1, "offset": 1}
+    assert len(nested_page.payload["artifact_versions"]) == 1
 
     list_by_subject = client.get(
         "/api/v1/artifacts",
@@ -78,6 +103,26 @@ def test_human_task_artifact_upload_list_show_download(tmp_path: Path) -> None:
     assert list_by_subject.status_code == 200
     subject_ids = {row["artifact_version_id"] for row in list_by_subject.payload["artifact_versions"]}
     assert artifact_version_id in subject_ids
+    assert second_artifact_version_id in subject_ids
+
+    filtered_subject_page = client.get(
+        "/api/v1/artifacts",
+        query={
+            "workflow_run_id": harness.workflow_run_id,
+            "subject_kind": "human_task",
+            "subject_id": human_task_id,
+            "artifact_kind": "schedule.replan_delta.workbook",
+            "limit": "1",
+            "offset": "0",
+        },
+    )
+    assert filtered_subject_page.status_code == 200
+    assert filtered_subject_page.payload["command"] == "api.artifacts.list"
+    assert filtered_subject_page.payload["page"] == {"limit": 1, "offset": 0}
+    assert [
+        row["artifact_version_id"]
+        for row in filtered_subject_page.payload["artifact_versions"]
+    ] == [second_artifact_version_id]
 
     detail = client.get(f"/api/v1/artifacts/{artifact_version_id}")
     assert detail.status_code == 200

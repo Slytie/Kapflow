@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-141 artifact pagination and relation hydration RF closeout)
+- Artifact list pagination decision: `TASK-0372` closes `RF-004` by adding bounded workflow-run and subject artifact page adapters with SQL-level `limit`/`offset`, optional `artifact_kind`, deterministic ordering, and tenant/domain/project scope checks before relation hydration.
+- Route compatibility decision: existing artifact list endpoint envelopes and route shapes are preserved; workflow-run and subject branches now call paginated read commands instead of broad-loading artifact sets and slicing in memory.
+- Relation hydration decision: `TASK-0373` closes `RF-005` by extending `onetruth.infrastructure.repositories.artifact_relation_hydration` with the workflow-run/subject page loaders and optional internal batch summary hydration for `human_task` and `flag` links, while keeping public payload behavior unchanged by default.
+- Guardrail decision: duplicate artifact IDs, more than 5,000 hydration IDs, invalid page bounds, and cross-scope artifacts fail closed; relation loading remains chunked at 500 IDs and avoids per-artifact relation queries.
+- Activation decision: this closeout adds bounded adapter/test/docs evidence only. It adds no new public routes, frontend routes, migrations, event-registry changes, raw corpus import, official pointers, reviewed-baseline claim, bulk ingest seam activation, production approval, or CAPEX runtime/product activation.
+
 ## 2026-06-23 (EPIC-151 RiskSignal and W8 CEO freshness closeout)
 - RiskSignal decision: `TASK-0539` records `capex.risk_signal_register.v1` as planning-only transparency evidence derived from `capex.risk_ceo_transparency.workflow_outputs.v1`, with deterministic `risk_signal_id`, `predicate_id`, risk refs, severity/status enums, owner roles, SourceRefs, policy version, input digests, row digests, and register digest.
 - W8 freshness decision: `TASK-0540` records `capex.ceo_transparency_snapshot_freshness.v1` as a companion payload over the existing `capex.ceo_transparency_snapshot.v1` artifact, Risk/CEO workflow outputs, and optional RiskSignal outputs; it does not replace the `TASK-0277` CEO snapshot artifact.
