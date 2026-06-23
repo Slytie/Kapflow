@@ -55,13 +55,14 @@ mvp_boundary:
     - pm_review_before_baseline_update_rule
     - redacted_path_locator_rule
     - observation_proposal_review_chain
+    - internal_source_root_runtime_state
   excluded:
-    - runtime_tables_or_migrations
     - public_api_routes
     - frontend_routes
     - persistent_desktop_agent
     - bidirectional_sync_or_writeback
     - raw_corpus_import
+    - capex_runtime_activation
     - reviewed_baseline_mutation
     - official_pointer_promotion
 non_authority_rules:

@@ -226,25 +226,25 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0263 | EPIC-140 | DONE | high | Project-scoped artifact/task/flag/approval/pointer APIs |
 | TASK-0264 | EPIC-140 | DONE | medium | Project selector/dashboard for max-five active projects per user |
 | TASK-0265 | EPIC-140 | DONE | high | Project-scoped official pointer families |
-| TASK-0266 | EPIC-141 | TODO | high | Design bulk/staged corpus ingest architecture |
-| TASK-0267 | EPIC-141 | TODO | high | Implement digest, dedupe and source inventory pipeline |
-| TASK-0268 | EPIC-141 | TODO | high | Implement source occurrence register |
-| TASK-0269 | EPIC-141 | TODO | high | Implement role assignment and packet register artifacts |
+| TASK-0266 | EPIC-141 | DONE | high | Design bulk/staged corpus ingest architecture |
+| TASK-0267 | EPIC-141 | DONE | high | Implement digest, dedupe and source inventory pipeline |
+| TASK-0268 | EPIC-141 | DONE | high | Implement source occurrence register |
+| TASK-0269 | EPIC-141 | DONE | high | Implement role assignment and packet register artifacts |
 | TASK-0270 | EPIC-141 | TODO | high | Document manifest and extraction-state artifact |
 | TASK-0271 | EPIC-141 | TODO | high | Text extraction and page manifest contracts |
 | TASK-0272 | EPIC-141 | TODO | high | Chunk/search/evidence-binding index |
 | TASK-0273 | EPIC-141 | TODO | high | Batch artifact link/provenance hydration |
 | TASK-0274 | EPIC-141 | TODO | high | Async job runtime for document processing |
 | TASK-0275 | EPIC-148 | TODO | high | Storage quota, backup and restore gate |
-| TASK-0276 | EPIC-142 | TODO | high | Implement generated artifact envelope and canonical naming |
+| TASK-0276 | EPIC-142 | DONE | high | Implement generated artifact envelope and canonical naming |
 | TASK-0277 | EPIC-151 | TODO | high | Add ceo_transparency_snapshot schema and decision |
-| TASK-0278 | EPIC-142 | TODO | high | Implement schema and bundle validators |
+| TASK-0278 | EPIC-142 | DONE | high | Implement schema and bundle validators |
 | TASK-0279 | EPIC-142 | TODO | high | Implement meaningful source_refs/evidence_refs policy |
 | TASK-0280 | EPIC-142 | TODO | high | Implement pointer promotion request and policy checks |
 | TASK-0281 | EPIC-142 | TODO | high | Implement stale/reopen register and rules |
 | TASK-0282 | EPIC-144 | TODO | medium | Implement projection consistency test manifest |
-| TASK-0283 | EPIC-143 | TODO | high | Project Intake Router workflow |
-| TASK-0284 | EPIC-143 | TODO | high | Corpus Baseline workflow |
+| TASK-0283 | EPIC-143 | DONE | high | Project Intake Router workflow |
+| TASK-0284 | EPIC-143 | DONE | high | Corpus Baseline workflow |
 | TASK-0285 | EPIC-143 | TODO | medium | Lifecycle Stage State workflow |
 | TASK-0286 | EPIC-143 | TODO | high | Governance / Commitment Chain workflow |
 | TASK-0287 | EPIC-143 | TODO | high | Assumption Closure workflow |
@@ -568,8 +568,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0605 | EPIC-152 | DONE | high | Verify semantic MR, CODEOWNERS, review-tier, and CI gates are active |
 | TASK-0606 | EPIC-152 | DONE | high | Produce production preflight go/no-go memorandum |
 | TASK-0607 | EPIC-150 | DONE | high | Freeze EPIC-150 stage model and MVP/non-MVP boundary |
-| TASK-0608 | EPIC-150 | TODO | high | Define SourceRootBinding, FolderTreeSnapshot, SyncRun, and source-root state model |
-| TASK-0609 | EPIC-150 | TODO | medium | Specify browser folder / ZIP import MVP protocol |
+| TASK-0608 | EPIC-150 | DONE | high | Define SourceRootBinding, FolderTreeSnapshot, SyncRun, and source-root state model |
+| TASK-0609 | EPIC-150 | DONE | medium | Specify browser folder / ZIP import MVP protocol |
 | TASK-0610 | EPIC-150 | TODO | high | Specify manual resync and snapshot/delta reconciliation |
 | TASK-0611 | EPIC-150 | TODO | high | Define watcher-as-hint semantics and deferred desktop-agent contract |
 | TASK-0612 | EPIC-150 | TODO | high | Define local deletion and missing-source evidence semantics |

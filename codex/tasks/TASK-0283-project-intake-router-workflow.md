@@ -2,7 +2,8 @@
 id: TASK-0283
 epic: EPIC-143
 title: "Project Intake Router workflow"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0261", "TASK-0276"]
@@ -60,3 +61,9 @@ Route new/mid-project/issue/CEO entry and create intake/module activation artifa
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Completion evidence
+- Added `docs/planning/capex_workflow_catalog/project_intake_router_workflow.yaml` as the planning-only `WFLOW-001` Project Intake Router contract.
+- Added `onetruth.capex_platform.project_intake_router` to build deterministic `project_intake_profile`, `module_activation_profile`, and `handoff_manifest` payloads for new-project, mid-project, issue-escalation, and CEO/sponsor entry modes.
+- Enforced human-confirmed / AI-draft-only posture and sanitized context refs for the mid-project K12 fixture path without raw corpus import or project-specific file hardcoding.
+- Added unit and contract coverage for entry modes, mid-project K12 sanitized refs, human confirmation, raw-context rejection, and non-activation boundaries.

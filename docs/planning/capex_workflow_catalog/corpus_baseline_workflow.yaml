@@ -1,0 +1,85 @@
+schema_version: capex.workflow_catalog.proposal.v1
+proposal_id: capex.corpus_baseline.workflow.v1
+title: CAPEX Corpus Baseline workflow
+activation_posture: planning_only_no_capex_activation
+catalog_surface: planning_only_capex_workflow_catalog
+source_task_ref: TASK-0284
+source_row: WFLOW-002
+acceptance_gates:
+  - AT-BRIDGE-005
+depends_on:
+  repo_tasks:
+    - TASK-0269
+    - TASK-0278
+workflow_basis:
+  source_inventory_schema_version: capex.source_inventory.v1
+  source_occurrence_register_schema_version: capex.source_occurrence_register.v1
+  role_assignment_register_schema_version: capex.role_assignment_register.v1
+  packet_register_schema_version: capex.packet_register.v1
+  generated_artifact_bundle_schema_version: capex.generated_artifact_bundle.v1
+canonical_outputs:
+  - source_inventory
+  - source_occurrence_register
+  - role_assignment_register
+  - packet_register
+  - workflow_handoff_manifest
+generated_artifact_contract:
+  envelope_schema_ref: schemas/runtime/capex_generated_artifact_envelope.schema.json
+  canonical_names:
+    - capex.role_assignment_register.v1.json
+    - capex.packet_register.v1.json
+  validator_contract_ref: docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_VALIDATOR_CONTRACT.yaml
+workflow_output:
+  schema_version: capex.corpus_baseline.workflow_outputs.v1
+  role_packet_contract_ref: docs/planning/capex_source_ingest/ROLE_PACKET_REGISTER_CONTRACT.yaml
+  validator_result_required: true
+  handoff_manifest_ref_required: true
+identity_policy:
+  content_identity_not_occurrence: true
+  occurrence_not_role: true
+  role_not_file_identity: true
+  packet_not_reviewed_baseline: true
+  no_raw_truth: true
+truth_effects:
+  creates_workflow_run: false
+  creates_reviewed_baseline: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - authored_workflow_pack
+  - public_api_route
+  - frontend_route
+  - workpage_route
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - pointer_promotion_policy
+  - meaningful_sourceref_evidence_policy
+raw_data_boundary:
+  allowed_repo_material:
+    - source_row_ids
+    - task_ids
+    - source_refs
+    - source_occurrence_ids
+    - role_ids
+    - packet_ids
+    - aggregate_output_shapes
+    - canonical_artifact_name_patterns
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - authored_workflow_pack_activation
+  - raw_corpus_import
+  - reviewed_baseline_creation
+  - evidence_sufficiency_claim
+  - official_pointer_creation
+  - production_preflight_approval

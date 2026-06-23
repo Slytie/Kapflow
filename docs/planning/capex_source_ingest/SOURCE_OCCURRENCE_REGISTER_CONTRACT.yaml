@@ -1,0 +1,83 @@
+schema_version: capex.source_occurrence_register_contract.v1
+contract_id: capex.source_occurrence_register.v1
+owner_task: TASK-0268
+source_row: INGEST-003
+activation_posture: planning_only_no_capex_activation
+overall_status: source_occurrence_register_recorded_not_activated
+acceptance_gates:
+  - AT-BRIDGE-005
+depends_on:
+  repo_tasks:
+    - TASK-0267
+input_contract:
+  source_inventory_schema_version: capex.source_inventory.v1
+  required_occurrence_context_fields:
+    - descriptor_id
+    - occurrence_kind
+    - locator_json
+  optional_occurrence_context_fields:
+    - source_occurrence_id
+    - status
+    - metadata_json
+privacy_policy:
+  raw_absolute_path_allowed: false
+  raw_filename_allowed: false
+  inline_raw_content_allowed: false
+  base64_content_allowed: false
+  locator_authority: sanitized_context_only
+register_output:
+  artifact_kind: capex.source_occurrence_register
+  artifact_role: evidence
+  file_name: capex.source_occurrence_register.v1.json
+  schema_version: capex.source_occurrence_register.v1
+  row_count_must_match_physical_rows: true
+  snapshot_digest_must_match_physical_rows: true
+occurrence_identity_policy:
+  content_identity_not_occurrence: true
+  occurrence_not_role: true
+  same_digest_multiple_contexts: one_content_identity_multiple_source_occurrences
+  same_digest_multiple_projects: distinct_project_scoped_occurrences
+  role_assignment_task: TASK-0269
+truth_effects:
+  creates_source_occurrences: true
+  creates_role_assignments: false
+  creates_packet_register: false
+  writes_artifacts_by_default: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - role_assignment_artifact
+  - packet_register_artifact
+  - extraction_job_runtime
+  - raw_corpus_import
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - public_api_route
+  - frontend_route
+raw_data_boundary:
+  allowed_repo_material:
+    - sanitized_locator_field_names
+    - source_occurrence_ids
+    - source_refs
+    - aggregate_register_shapes
+    - sha256_digest_examples
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - role_assignment_approval
+  - packet_register_approval
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

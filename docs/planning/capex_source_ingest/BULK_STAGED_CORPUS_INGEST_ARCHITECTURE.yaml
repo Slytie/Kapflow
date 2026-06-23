@@ -1,0 +1,126 @@
+schema_version: capex.bulk_staged_corpus_ingest_architecture.v1
+architecture_id: capex.bulk_staged_corpus_ingest.v1
+owner_task: TASK-0266
+source_row: INGEST-001
+activation_posture: planning_only_no_capex_activation
+overall_status: architecture_recorded_not_activated
+acceptance_gates:
+  - AT-SCALE-001
+  - AT-SCALE-002
+depends_on:
+  repo_tasks:
+    - TASK-0235
+    - TASK-0236
+    - TASK-0261
+  later_tasks:
+    - TASK-0267
+    - TASK-0274
+body_limit_policy:
+  json_base64_command_route_allowed: false
+  inline_raw_content_allowed: false
+  max_descriptor_count: 5000
+  max_descriptor_batch_bytes: 2000000
+source_inventory_descriptor_fields:
+  optional_until_TASK_0267:
+    - content_digest
+    - content_byte_size
+    - content_media_type
+    - canonicalization_profile
+  authority_boundary: content_digest_metadata_can_seed_content_identity_but_not_source_occurrence_truth
+staged_ingest_modes:
+  - mode: object_store_manifest
+    required_fields:
+      - descriptor_id
+      - manifest_ref
+      - manifest_digest
+      - object_ref
+    authority_boundary: object_ref_is_staged_observation_not_canonical_evidence
+  - mode: folder_manifest
+    required_fields:
+      - descriptor_id
+      - manifest_ref
+      - manifest_digest
+      - redacted_path_hint
+    authority_boundary: folder_name_or_path_hint_cannot_create_project_truth
+  - mode: source_root_snapshot
+    required_fields:
+      - descriptor_id
+      - manifest_ref
+      - manifest_digest
+      - source_root_id
+      - folder_tree_snapshot_id
+    authority_boundary: source_root_snapshot_is_observation_until_reviewed
+manifest_first_phases:
+  - phase_id: project_authorization_precheck
+    required_evidence:
+      - active_project_membership
+      - project_scope_selected_before_manifest
+    output_state: authorization_prechecked
+  - phase_id: sanitized_descriptor_submission
+    required_evidence:
+      - manifest_ref
+      - sha256_manifest_digest
+      - no_inline_blob_bytes
+      - no_raw_absolute_path_hints
+    output_state: descriptors_accepted_for_planning
+  - phase_id: staged_object_or_folder_registration
+    required_evidence:
+      - staged_location_ref
+      - idempotency_key
+      - descriptor_fingerprint
+    output_state: staged_ingest_plan_recordable
+  - phase_id: quarantine_and_leak_scan_handoff
+    required_evidence:
+      - raw_data_boundary_acknowledgement
+      - later_leak_scan_task
+    output_state: quarantine_review_required
+  - phase_id: source_inventory_handoff
+    required_evidence:
+      - TASK-0267
+    output_state: digest_inventory_pipeline_required
+rollback_recovery_posture:
+  rollback_mode: disable_affected_staged_ingest_batch
+  preserve:
+    - descriptor_fingerprint
+    - idempotency_key
+    - audit_timeline
+  remediation:
+    - quarantine_suspect_batch
+    - require_sanitized_manifest_resubmission
+    - do_not_delete_governed_project_or_artifact_history
+not_implemented_in_this_task:
+  - upload_endpoint
+  - blob_storage_activation
+  - source_occurrence_creation
+  - source_inventory_artifact
+  - extraction_job_runtime
+  - public_api_route
+  - frontend_route
+  - workflow_pack_activation
+raw_data_boundary:
+  allowed_repo_material:
+    - task_ids
+    - source_row_ids
+    - sanitized_descriptor_field_names
+    - staged_mode_names
+    - aggregate_limit_policy
+    - sha256_digest_examples
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - json_base64_command_route
+  - source_occurrence_binding
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

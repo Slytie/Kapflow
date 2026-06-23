@@ -2,7 +2,8 @@
 id: TASK-0267
 epic: EPIC-141
 title: "Implement digest, dedupe and source inventory pipeline"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0238", "TASK-0266"]
@@ -60,3 +61,9 @@ Create content identity and source inventory from staged files.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Completion evidence
+- Added `docs/planning/capex_source_ingest/SOURCE_INVENTORY_PIPELINE_CONTRACT.yaml` as the repo-native `INGEST-002` source inventory contract.
+- Added `onetruth.capex_platform.source_inventory` to create content identities from sanitized staged descriptors, build deterministic `capex.source_inventory.v1` inventory payloads, and group duplicate staged descriptors by content digest without creating SourceOccurrence rows.
+- Extended staged ingest descriptors with sanitized content digest metadata while preserving raw-content, raw-filename, base64, and absolute-path rejection.
+- Added unit and contract coverage for 1k sanitized descriptors, same-bytes dedupe, digest-store behavior, pre-occurrence artifact envelope posture, and non-activation/raw-data boundaries.

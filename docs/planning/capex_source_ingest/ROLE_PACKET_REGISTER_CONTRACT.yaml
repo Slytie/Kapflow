@@ -1,0 +1,87 @@
+schema_version: capex.role_packet_register_contract.v1
+contract_id: capex.role_packet_register.v1
+owner_task: TASK-0269
+source_row: INGEST-004
+activation_posture: planning_only_no_capex_activation
+overall_status: role_packet_register_recorded_not_activated
+acceptance_gates:
+  - AT-ROLE-001
+  - AT-PACKET-001
+depends_on:
+  repo_tasks:
+    - TASK-0268
+input_contract:
+  source_occurrence_register_schema_version: capex.source_occurrence_register.v1
+  role_assignment_required_fields:
+    - source_ref
+    - source_role
+    - review_state
+    - review_rationale
+  packet_required_fields:
+    - packet_id
+    - packet_kind
+    - review_state
+    - source_refs
+    - review_rationale
+role_assignment_register:
+  artifact_kind: capex.role_assignment_register
+  artifact_role: evidence
+  file_name: capex.role_assignment_register.v1.json
+  schema_version: capex.role_assignment_register.v1
+  allowed_review_states:
+    - draft_ai_suggested
+    - human_reviewed
+    - rejected
+  ai_draft_is_official: false
+packet_register:
+  artifact_kind: capex.packet_register
+  artifact_role: evidence
+  file_name: capex.packet_register.v1.json
+  schema_version: capex.packet_register.v1
+  allowed_review_states:
+    - draft_ai_suggested
+    - human_reviewed
+    - split
+    - merged
+identity_policy:
+  content_identity_not_occurrence: true
+  occurrence_not_role: true
+  role_not_file_identity: true
+  packet_not_reviewed_baseline: true
+truth_effects:
+  creates_role_assignments: true
+  creates_packet_register: true
+  creates_reviewed_baseline: false
+  writes_artifacts_by_default: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+raw_data_boundary:
+  raw_absolute_path_allowed: false
+  raw_filename_allowed: false
+  inline_raw_content_allowed: false
+  base64_content_allowed: false
+  allowed_repo_material:
+    - source_refs
+    - source_occurrence_ids
+    - role_ids
+    - packet_ids
+    - sanitized_review_rationales
+    - aggregate_register_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - reviewed_baseline_creation
+  - evidence_sufficiency_claim
+  - official_pointer_creation
+  - production_preflight_approval

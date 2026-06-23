@@ -2,7 +2,8 @@
 id: TASK-0609
 epic: EPIC-150
 title: Specify browser folder / ZIP import MVP protocol
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: [capex-platform]
 reviewers: [backend, capex-architecture]
 depends_on: [TASK-0608, EPIC-139]
@@ -85,3 +86,10 @@ Exact repo paths must be confirmed before editing. Use existing repo conventions
 - Snippets are patterns, not patches.
 - Stage 3 persistent desktop-agent behavior is disabled unless separately activated.
 - If this task reveals a contradiction with EPIC-139/140/141/144/145/147, stop and raise an architecture decision before implementation.
+
+## Closeout evidence
+
+- Added `docs/planning/capex_desktop_source_roots/BROWSER_FOLDER_ZIP_IMPORT_MVP_PROTOCOL.yaml` as a planning-only Stage 1 browser folder/ZIP/user-selected upload protocol for source rows `DST-003` and `DFS-DELTA-002`.
+- The protocol records manifest-first phases for project authorization precheck, sanitized manifest submission, source-root/sync-run creation, upload authorization after manifest acceptance, folder-tree snapshot finalization, and PM review handoff.
+- Evidence: desktop source-root planning contract tests cover the protocol's task/source rows, runtime table/schema refs, manifest-first phases, raw-data boundary, auth-before-upload posture, and non-activation prohibitions.
+- Closeout posture: protocol evidence only. No upload endpoint, blob storage/custody, background watcher, manual resync execution, SourceOccurrence binding, reviewed baseline creation, official pointer creation, public API, frontend route, raw corpus import, CAPEX runtime activation, or CAPEX product activation is added.

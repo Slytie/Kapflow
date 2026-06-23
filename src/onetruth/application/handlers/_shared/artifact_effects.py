@@ -3,7 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import re
 import sqlite3
+from collections.abc import Mapping, Sequence
 from typing import Any
 from uuid import uuid4
 
@@ -45,6 +47,23 @@ from onetruth.infrastructure.repositories.input_bindings import (
 )
 from onetruth.infrastructure.repositories.policy_decisions import get_policy_decision
 from onetruth.infrastructure.repositories.tool_executions import get_tool_execution
+
+
+CAPEX_GENERATED_ARTIFACT_ENVELOPE_SCHEMA_VERSION = (
+    "capex.generated_artifact_envelope.v1"
+)
+CAPEX_SOURCE_INVENTORY_ARTIFACT_KIND = "capex.source_inventory"
+CAPEX_SOURCE_INVENTORY_PRE_OCCURRENCE_VALIDATION_RESULT = (
+    "inventory_pre_source_occurrence"
+)
+_CAPEX_GENERATED_ARTIFACT_KIND_RE = re.compile(
+    r"^capex(?:\.[a-z0-9_]+)+$"
+)
+_CAPEX_GENERATED_ARTIFACT_FILE_NAME_RE = re.compile(
+    r"^capex(?:\.[a-z0-9_]+)+\.v[1-9][0-9]*\.json$"
+)
+_CAPEX_GENERATED_ARTIFACT_VERSION_RE = re.compile(r"^v[1-9][0-9]*$")
+_SHA256_DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def _create_artifact_version_effects(
@@ -226,6 +245,229 @@ def canonical_json_bytes(value: Any) -> bytes:
         ensure_ascii=True,
         allow_nan=False,
     ).encode("utf-8")
+
+
+def canonical_capex_generated_artifact_file_name(
+    artifact_kind: str,
+    *,
+    artifact_schema_version: str = "v1",
+) -> str:
+    normalized_kind = _validate_capex_generated_artifact_kind(artifact_kind)
+    if not _CAPEX_GENERATED_ARTIFACT_VERSION_RE.match(artifact_schema_version):
+        raise CommandError(
+            code="invalid_capex_generated_artifact_version",
+            message="CAPEX generated artifact schema version must look like v1",
+            details={"artifact_schema_version": artifact_schema_version},
+        )
+    file_name = f"{normalized_kind}.{artifact_schema_version}.json"
+    return validate_capex_generated_artifact_file_name(file_name)
+
+
+def validate_capex_generated_artifact_file_name(file_name: str) -> str:
+    normalized = str(file_name).strip()
+    if "/" in normalized or "\\" in normalized:
+        raise CommandError(
+            code="invalid_capex_generated_artifact_name",
+            message="CAPEX generated artifact file names must not contain path separators",
+            details={"file_name": file_name},
+        )
+    if not _CAPEX_GENERATED_ARTIFACT_FILE_NAME_RE.match(normalized):
+        raise CommandError(
+            code="invalid_capex_generated_artifact_name",
+            message=(
+                "CAPEX generated artifact file names must follow "
+                "capex.<family>.<artifact>.vN.json"
+            ),
+            details={"file_name": file_name},
+        )
+    return normalized
+
+
+def build_capex_generated_artifact_envelope(
+    *,
+    artifact_kind: str,
+    artifact_role: str,
+    source_refs: Sequence[str],
+    input_digests: Sequence[str],
+    validation_summary: Mapping[str, Any],
+    payload: Any,
+) -> dict[str, Any]:
+    normalized_kind = _validate_capex_generated_artifact_kind(artifact_kind)
+    normalized_role = str(artifact_role).strip()
+    if not normalized_role:
+        raise CommandError(
+            code="invalid_capex_generated_artifact_envelope",
+            message="artifact_role must not be empty",
+            details={"field": "artifact_role"},
+        )
+    if not isinstance(validation_summary, Mapping):
+        raise CommandError(
+            code="invalid_capex_generated_artifact_envelope",
+            message="validation_summary must be a JSON object",
+            details={"field": "validation_summary"},
+        )
+    normalized_source_refs = _normalize_capex_source_refs(
+        source_refs,
+        artifact_kind=normalized_kind,
+        validation_summary=validation_summary,
+    )
+    normalized_input_digests = _normalize_capex_input_digests(input_digests)
+    envelope = {
+        "schema_version": CAPEX_GENERATED_ARTIFACT_ENVELOPE_SCHEMA_VERSION,
+        "artifact_kind": normalized_kind,
+        "artifact_role": normalized_role,
+        "source_refs": list(normalized_source_refs),
+        "input_digests": list(normalized_input_digests),
+        "validation_summary": dict(validation_summary),
+        "payload": payload,
+    }
+    try:
+        canonical_json_bytes(envelope)
+    except (TypeError, ValueError) as exc:
+        raise CommandError(
+            code="invalid_capex_generated_artifact_envelope",
+            message="CAPEX generated artifact envelope must be canonical JSON serializable",
+            details={},
+        ) from exc
+    return envelope
+
+
+def persist_capex_generated_artifact_effects(
+    connection: sqlite3.Connection,
+    *,
+    storage_root: Path,
+    workflow_run_id: str,
+    artifact_kind: str,
+    artifact_role: str,
+    source_refs: Sequence[str],
+    input_digests: Sequence[str],
+    validation_summary: Mapping[str, Any],
+    payload: Any,
+    artifact_schema_version: str = "v1",
+    metadata_json: dict[str, Any] | None = None,
+    actor_id: str = "system:runtime",
+    actor_type: str = "system",
+    artifact_version_id: str | None = None,
+    task_run_id: str | None = None,
+    parent_artifact_version_id: str | None = None,
+    supersedes_artifact_version_id: str | None = None,
+    lineage_note: str | None = None,
+    links: list[dict[str, Any]] | None = None,
+    canonical_partition_kind: str | None = None,
+    canonical_partition_key: str | None = None,
+    expected_content_digest: str | None = None,
+    event_idempotency: str | None = None,
+) -> dict[str, Any]:
+    envelope = build_capex_generated_artifact_envelope(
+        artifact_kind=artifact_kind,
+        artifact_role=artifact_role,
+        source_refs=source_refs,
+        input_digests=input_digests,
+        validation_summary=validation_summary,
+        payload=payload,
+    )
+    file_name = canonical_capex_generated_artifact_file_name(
+        artifact_kind,
+        artifact_schema_version=artifact_schema_version,
+    )
+    enriched_metadata = {
+        **(metadata_json or {}),
+        "capex_generated_artifact_envelope_schema_version": (
+            CAPEX_GENERATED_ARTIFACT_ENVELOPE_SCHEMA_VERSION
+        ),
+        "capex_generated_artifact_file_name": file_name,
+    }
+    return persist_generated_artifact_effects(
+        connection,
+        storage_root=storage_root,
+        workflow_run_id=workflow_run_id,
+        artifact_kind=artifact_kind,
+        artifact_role=artifact_role,
+        media_type="application/json",
+        file_name=file_name,
+        payload=envelope,
+        metadata_json=enriched_metadata,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        artifact_version_id=artifact_version_id,
+        task_run_id=task_run_id,
+        parent_artifact_version_id=parent_artifact_version_id,
+        supersedes_artifact_version_id=supersedes_artifact_version_id,
+        lineage_note=lineage_note,
+        links=links,
+        canonical_partition_kind=canonical_partition_kind,
+        canonical_partition_key=canonical_partition_key,
+        expected_content_digest=expected_content_digest,
+        event_idempotency=event_idempotency,
+    )
+
+
+def _validate_capex_generated_artifact_kind(artifact_kind: str) -> str:
+    normalized = str(artifact_kind).strip()
+    if not _CAPEX_GENERATED_ARTIFACT_KIND_RE.match(normalized):
+        raise CommandError(
+            code="invalid_capex_generated_artifact_kind",
+            message=(
+                "CAPEX generated artifact kinds must follow "
+                "capex.<artifact> or capex.<family>.<artifact> with lowercase tokens"
+            ),
+            details={"artifact_kind": artifact_kind},
+        )
+    return normalized
+
+
+def _normalize_capex_source_refs(
+    source_refs: Sequence[str],
+    *,
+    artifact_kind: str,
+    validation_summary: Mapping[str, Any],
+) -> tuple[str, ...]:
+    if not source_refs:
+        if (
+            artifact_kind == CAPEX_SOURCE_INVENTORY_ARTIFACT_KIND
+            and validation_summary.get("result")
+            == CAPEX_SOURCE_INVENTORY_PRE_OCCURRENCE_VALIDATION_RESULT
+        ):
+            return ()
+        raise CommandError(
+            code="invalid_capex_generated_artifact_envelope",
+            message="source_refs must contain at least one SourceRef",
+            details={"field": "source_refs"},
+        )
+    normalized = tuple(str(source_ref).strip() for source_ref in source_refs)
+    invalid = [
+        source_ref
+        for source_ref in normalized
+        if not source_ref.startswith("source_occurrence:")
+        or any(character.isspace() for character in source_ref)
+    ]
+    if invalid:
+        raise CommandError(
+            code="invalid_capex_generated_artifact_envelope",
+            message="source_refs must use source_occurrence:<id> references",
+            details={"invalid_source_refs": invalid},
+        )
+    return normalized
+
+
+def _normalize_capex_input_digests(input_digests: Sequence[str]) -> tuple[str, ...]:
+    if not input_digests:
+        raise CommandError(
+            code="invalid_capex_generated_artifact_envelope",
+            message="input_digests must contain at least one sha256 digest",
+            details={"field": "input_digests"},
+        )
+    normalized = tuple(str(digest).strip().lower() for digest in input_digests)
+    invalid = [
+        digest for digest in normalized if not _SHA256_DIGEST_RE.match(digest)
+    ]
+    if invalid:
+        raise CommandError(
+            code="invalid_capex_generated_artifact_envelope",
+            message="input_digests must use sha256:<64 hex> format",
+            details={"invalid_input_digests": invalid},
+        )
+    return normalized
 
 
 def persist_generated_artifact_effects(

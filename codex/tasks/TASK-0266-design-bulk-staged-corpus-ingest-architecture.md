@@ -2,7 +2,8 @@
 id: TASK-0266
 epic: EPIC-141
 title: "Design bulk/staged corpus ingest architecture"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0235", "TASK-0236", "TASK-0261"]
@@ -60,3 +61,9 @@ Do not use JSON/base64 command route for project corpora.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_source_ingest/BULK_STAGED_CORPUS_INGEST_ARCHITECTURE.yaml` as the repo-native `INGEST-001` staged-ingest architecture contract.
+- Added `onetruth.capex_platform.staged_corpus_ingest.plan_staged_corpus_ingest(...)` as a side-effect-free validator/planner for sanitized staged descriptors.
+- Focused tests cover 1k synthetic descriptors, object/folder/source-root descriptor modes, JSON/base64 raw-content rejection, raw absolute path and filename rejection, mode-specific basis validation, and no canonical truth side effects.
+- Closeout posture: this closes the architecture and guardrail slice only. Upload endpoints, blob storage activation, source occurrence binding, source inventory artifacts, extraction jobs, public routes, workflow pack activation, raw corpus import, and CAPEX runtime/product activation remain later gated work.

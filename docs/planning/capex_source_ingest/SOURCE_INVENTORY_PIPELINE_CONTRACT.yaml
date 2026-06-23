@@ -1,0 +1,91 @@
+schema_version: capex.source_inventory_pipeline_contract.v1
+contract_id: capex.source_inventory_pipeline.v1
+owner_task: TASK-0267
+source_row: INGEST-002
+activation_posture: planning_only_no_capex_activation
+overall_status: content_identity_inventory_recorded_not_activated
+acceptance_gates:
+  - AT-K12-CORPUS-001
+depends_on:
+  repo_tasks:
+    - TASK-0238
+    - TASK-0266
+input_contract:
+  staged_ingest_plan_schema_version: capex.staged_corpus_ingest_plan.v1
+  required_descriptor_fields:
+    - descriptor_id
+    - mode
+    - manifest_ref
+    - manifest_digest
+    - content_digest
+    - canonicalization_profile
+  optional_descriptor_fields:
+    - content_byte_size
+    - content_media_type
+  raw_content_allowed: false
+digest_store:
+  repository: capex_content_identities
+  digest_algorithm: sha256
+  scope:
+    - tenant_id
+    - domain_id
+  source_occurrence_creation: false
+source_inventory_artifact:
+  artifact_kind: capex.source_inventory
+  artifact_role: evidence
+  file_name: capex.source_inventory.v1.json
+  schema_version: capex.source_inventory.v1
+  envelope_schema_ref: schemas/runtime/capex_generated_artifact_envelope.schema.json
+  validation_result: inventory_pre_source_occurrence
+  source_refs_policy: empty_allowed_only_before_TASK_0268_source_occurrence_binding
+outputs:
+  - capex.source_inventory.v1.json
+  - digest_store_records
+  - dedupe_groups
+dedupe_policy:
+  group_by:
+    - tenant_id
+    - domain_id
+    - digest_algorithm
+    - content_digest
+  same_bytes_multiple_descriptors: one_content_identity_many_inventory_items
+  occurrence_binding_task: TASK-0268
+truth_effects:
+  creates_source_occurrences: false
+  writes_generated_artifacts_by_default: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - source_occurrence_register
+  - source_locator_union
+  - extraction_job_runtime
+  - raw_corpus_import
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - public_api_route
+  - frontend_route
+raw_data_boundary:
+  allowed_repo_material:
+    - sanitized_descriptor_field_names
+    - sha256_digest_examples
+    - aggregate_inventory_shapes
+    - fixture_tier_refs
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - source_occurrence_binding
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

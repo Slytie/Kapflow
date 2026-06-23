@@ -1,0 +1,106 @@
+schema_version: capex.workflow_catalog.proposal.v1
+proposal_id: capex.project_intake_router.workflow.v1
+title: CAPEX Project Intake Router workflow
+activation_posture: planning_only_no_capex_activation
+catalog_surface: planning_only_capex_workflow_catalog
+source_task_ref: TASK-0283
+source_row: WFLOW-001
+acceptance_gates:
+  - AT-007
+  - NU-001
+depends_on:
+  repo_tasks:
+    - TASK-0261
+    - TASK-0276
+entry_modes:
+  - new_project
+  - mid_project
+  - issue_escalation
+  - ceo_sponsor_entry
+canonical_outputs:
+  - project_intake_profile
+  - module_activation_profile
+  - handoff_manifest
+generated_artifact_contract:
+  envelope_schema_ref: schemas/runtime/capex_generated_artifact_envelope.schema.json
+  canonical_names:
+    - capex.project_intake.profile.v1.json
+    - capex.project_intake.module_activation_profile.v1.json
+    - capex.project_intake.handoff_manifest.v1.json
+human_confirmation_policy:
+  human_confirms: true
+  ai_draft_only: true
+  ai_must_not_confirm:
+    - entry_mode
+    - module_activation
+    - reviewed_baseline
+    - official_project_truth
+mid_project_k12_policy:
+  fixture_tier: k12_sanitized_expected_output
+  raw_k12_corpus_allowed: false
+  expected_context_refs:
+    - source_inventory
+    - oracle_manifest
+    - sanitized_expected_output_manifest
+routing_results:
+  project_intake_profile:
+    schema_version: capex.project_intake_profile.v1
+    required_fields:
+      - tenant_id
+      - domain_id
+      - project_id
+      - intake_request_id
+      - entry_mode
+      - human_confirmation
+      - sanitized_context_refs
+  module_activation_profile:
+    schema_version: capex.module_activation_profile.v1
+    authority: none_planning_profile_only
+    allowed_readiness:
+      - candidate
+      - blocked
+      - deferred
+  handoff_manifest:
+    schema_version: capex.project_intake_handoff_manifest.v1
+    basis_refs_required: true
+    runtime_validator_task: later_workflow_activation_task
+truth_effects:
+  creates_workflow_run: false
+  creates_source_occurrences: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - authored_workflow_pack
+  - public_api_route
+  - frontend_route
+  - workpage_route
+  - source_occurrence_binding
+  - reviewed_baseline_creation
+  - official_pointer_creation
+raw_data_boundary:
+  allowed_repo_material:
+    - source_row_ids
+    - task_ids
+    - sanitized_fixture_tier_refs
+    - aggregate_output_shapes
+    - canonical_artifact_name_patterns
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - authored_workflow_pack_activation
+  - raw_corpus_import
+  - source_occurrence_binding
+  - reviewed_baseline_creation
+  - module_activation_approval
+  - official_pointer_creation
+  - production_preflight_approval

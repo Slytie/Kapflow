@@ -1,0 +1,78 @@
+schema_version: capex.generated_artifact_envelope_contract.v1
+contract_id: capex.generated_artifact_envelope_and_canonical_naming.v1
+owner_task: TASK-0276
+source_row: ART-001
+activation_posture: planning_only_no_capex_activation
+overall_status: helper_schema_recorded_not_activated
+acceptance_gates:
+  - IMP-004
+  - V-002
+depends_on:
+  repo_tasks:
+    - TASK-0238
+unblocks:
+  - TASK-0283
+canonical_envelope:
+  schema_ref: schemas/runtime/capex_generated_artifact_envelope.schema.json
+  schema_version: capex.generated_artifact_envelope.v1
+  required_fields:
+    - schema_version
+    - artifact_kind
+    - artifact_role
+    - source_refs
+    - input_digests
+    - validation_summary
+    - payload
+canonical_naming:
+  artifact_kind_pattern: capex.<family>.<artifact>
+  file_name_pattern: capex.<family>.<artifact>.vN.json
+  deprecated_names_rejected:
+    - uppercase_tokens
+    - spaces
+    - path_separators
+    - missing_capex_prefix
+    - missing_version_suffix
+determinism_policy:
+  canonical_bytes: deterministic_compact_ascii_json
+  digest_algorithm: sha256
+  existing_helper: persist_generated_artifact_effects
+source_ref_policy:
+  current_task_scope: envelope_field_shape_required
+  later_enforcement_task: TASK-0279
+  pre_occurrence_exception:
+    artifact_kind: capex.source_inventory
+    validation_result: inventory_pre_source_occurrence
+    reason: TASK-0267 records content identity before TASK-0268 source occurrence binding.
+  note: Meaningful SourceRef resolution and evidence sufficiency remain later policy work.
+not_implemented_in_this_task:
+  - bundle_validator
+  - pointer_promotion_policy
+  - evidence_sufficiency_policy
+  - meaningful_sourceref_resolution_policy
+  - workflow_pack_activation
+  - public_api_route
+  - frontend_route
+raw_data_boundary:
+  allowed_repo_material:
+    - schema_fields
+    - canonical_naming_patterns
+    - sanitized_source_ref_examples
+    - sha256_digest_examples
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

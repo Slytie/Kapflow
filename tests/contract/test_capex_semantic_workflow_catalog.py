@@ -13,6 +13,11 @@ PROPOSAL_PATH = (
     / "docs/planning/capex_workflow_catalog/"
     "procurement_escalation_workflow_proposal.yaml"
 )
+PROJECT_INTAKE_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_workflow_catalog/"
+    "project_intake_router_workflow.yaml"
+)
 ANNEX_B_PATH = (
     REPO_ROOT
     / "docs/planning/capex_real_project_acceptance/"
@@ -34,6 +39,12 @@ RAW_CORPUS_MARKERS = (
 
 def _proposal() -> dict[str, Any]:
     loaded = yaml.safe_load(PROPOSAL_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _project_intake() -> dict[str, Any]:
+    loaded = yaml.safe_load(PROJECT_INTAKE_PATH.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
 
@@ -132,6 +143,73 @@ def test_procurement_escalation_thresholds_reference_annex_without_signoff() -> 
 
 def test_procurement_escalation_proposal_contains_no_raw_corpus_markers() -> None:
     lowered = PROPOSAL_PATH.read_text(encoding="utf-8").lower()
+
+    for marker in RAW_CORPUS_MARKERS:
+        assert marker not in lowered
+
+
+def test_project_intake_router_contract_is_planning_only_and_human_confirmed() -> None:
+    proposal = _project_intake()
+
+    assert proposal["schema_version"] == "capex.workflow_catalog.proposal.v1"
+    assert proposal["proposal_id"] == "capex.project_intake_router.workflow.v1"
+    assert proposal["source_task_ref"] == "TASK-0283"
+    assert proposal["source_row"] == "WFLOW-001"
+    assert proposal["activation_posture"] == "planning_only_no_capex_activation"
+    assert proposal["acceptance_gates"] == ["AT-007", "NU-001"]
+    assert proposal["entry_modes"] == [
+        "new_project",
+        "mid_project",
+        "issue_escalation",
+        "ceo_sponsor_entry",
+    ]
+    assert proposal["canonical_outputs"] == [
+        "project_intake_profile",
+        "module_activation_profile",
+        "handoff_manifest",
+    ]
+    assert proposal["human_confirmation_policy"]["human_confirms"] is True
+    assert proposal["human_confirmation_policy"]["ai_draft_only"] is True
+    assert {
+        "entry_mode",
+        "module_activation",
+        "reviewed_baseline",
+        "official_project_truth",
+    } <= set(proposal["human_confirmation_policy"]["ai_must_not_confirm"])
+
+
+def test_project_intake_router_contract_sets_k12_and_activation_boundaries() -> None:
+    proposal = _project_intake()
+
+    assert proposal["mid_project_k12_policy"]["fixture_tier"] == (
+        "k12_sanitized_expected_output"
+    )
+    assert proposal["mid_project_k12_policy"]["raw_k12_corpus_allowed"] is False
+    assert proposal["routing_results"]["module_activation_profile"]["authority"] == (
+        "none_planning_profile_only"
+    )
+    assert proposal["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_source_occurrences": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "authored_workflow_pack_activation",
+        "raw_corpus_import",
+        "source_occurrence_binding",
+        "reviewed_baseline_creation",
+        "module_activation_approval",
+        "official_pointer_creation",
+    } <= set(proposal["cannot_be_used_for"])
+
+
+def test_project_intake_router_contract_contains_no_raw_corpus_markers() -> None:
+    lowered = PROJECT_INTAKE_PATH.read_text(encoding="utf-8").lower()
 
     for marker in RAW_CORPUS_MARKERS:
         assert marker not in lowered

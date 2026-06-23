@@ -2,7 +2,8 @@
 id: TASK-0608
 epic: EPIC-150
 title: Define SourceRootBinding, FolderTreeSnapshot, SyncRun, and source-root state model
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: [capex-platform]
 reviewers: [backend, security, capex-architecture]
 depends_on: [TASK-0607, EPIC-140, EPIC-141]
@@ -87,3 +88,10 @@ Exact repo paths must be confirmed before editing. Use existing repo conventions
 - Snippets are patterns, not patches.
 - Stage 3 persistent desktop-agent behavior is disabled unless separately activated.
 - If this task reveals a contradiction with EPIC-139/140/141/144/145/147, stop and raise an architecture decision before implementation.
+
+## Closeout evidence
+
+- Added internal runtime state for `capex_source_root_bindings`, `capex_source_root_sync_runs`, and `capex_folder_tree_snapshots` through Alembic, SQLite bootstrap, SQLAlchemy models, runtime schemas, and repository helpers.
+- Repository behavior validates observer/status vocabularies, rejects obvious raw absolute path hints, enforces tenant/domain/project consistency, blocks terminal sync-run advancement, and updates `latest_snapshot_id` only when a snapshot is explicitly recorded as latest.
+- Evidence: unit and schema-parity tests cover source-root creation, invalid values, raw path rejection, sync-run lifecycle, snapshot scope checks, latest-snapshot update behavior, and bootstrap/Alembic/model parity.
+- Closeout posture: internal source-root observation state only. No public API, frontend route, desktop sync activation, raw corpus import, blob upload behavior, SourceOccurrence binding, reviewed baseline mutation, official pointer creation, CAPEX runtime activation, or CAPEX product activation is added.

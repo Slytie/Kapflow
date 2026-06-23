@@ -2,7 +2,8 @@
 id: TASK-0278
 epic: EPIC-142
 title: "Implement schema and bundle validators"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0276"]
@@ -60,3 +61,9 @@ Validate JSON Schema plus cross-reference bundle consistency.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Completion evidence
+- Added `docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_VALIDATOR_CONTRACT.yaml` as the repo-native `ART-003` schema and bundle validator contract.
+- Added `onetruth.capex_platform.generated_artifact_validators` to validate CAPEX generated artifact envelopes, canonical names, canonical JSON digests, and bundle cross-references.
+- Validator failures now cover missing source refs, stale input digests, duplicate canonical names, artifact-kind/name mismatches, deprecated names, and empty SourceRefs outside the narrow pre-occurrence `capex.source_inventory` exception.
+- Added unit and contract coverage proving schema/bundle validation is not evidence sufficiency, pointer promotion policy, public route activation, or CAPEX runtime/product activation.

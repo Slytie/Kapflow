@@ -36,6 +36,9 @@ REQUIRED_NEW_TABLES = {
     "artifact_provenance_edges",
     "workflow_run_inputs",
     "task_input_bindings",
+    "capex_source_root_bindings",
+    "capex_source_root_sync_runs",
+    "capex_folder_tree_snapshots",
 }
 
 REQUIRED_INDEXES_BY_TABLE = {
@@ -58,6 +61,18 @@ REQUIRED_INDEXES_BY_TABLE = {
     },
     "task_input_bindings": {
         "ix_task_input_bindings_task_run_id",
+    },
+    "capex_source_root_bindings": {
+        "ix_capex_source_root_bindings_scope_status",
+        "ix_capex_source_root_bindings_observer",
+    },
+    "capex_source_root_sync_runs": {
+        "ix_capex_source_root_sync_runs_root_status",
+        "ix_capex_source_root_sync_runs_scope_status",
+    },
+    "capex_folder_tree_snapshots": {
+        "ix_capex_folder_tree_snapshots_root_observed",
+        "ix_capex_folder_tree_snapshots_scope_status",
     },
 }
 

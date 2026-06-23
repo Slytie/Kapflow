@@ -64,10 +64,10 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
     assert data["summary"]["taskCount"] == 432
-    assert data["summary"]["estimate"]["completedTasks"] == 100
-    assert data["summary"]["estimate"]["remainingTasks"] == 332
-    assert data["summary"]["estimate"]["etaDate"] == "2026-08-24"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-24"
+    assert data["summary"]["estimate"]["completedTasks"] == 110
+    assert data["summary"]["estimate"]["remainingTasks"] == 322
+    assert data["summary"]["estimate"]["etaDate"] == "2026-08-14"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-14"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
@@ -79,10 +79,28 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     epic150 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-150")
     assert epic150["displayStatus"] == "in_progress"
     assert epic150["taskCount"] == 66
-    assert epic150["counts"]["done"] == 1
-    assert epic150["counts"]["not_started"] == 65
+    assert epic150["counts"]["done"] == 3
+    assert epic150["counts"]["not_started"] == 63
     task_ids = {task["id"] for task in epic150["tasks"]}
     assert {"TASK-0607", "TASK-0642"} <= task_ids
+
+    epic141 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-141")
+    epic142 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-142")
+    epic143 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-143")
+    task_statuses = {
+        task["id"]: task["displayStatus"]
+        for epic in (epic141, epic142, epic143)
+        for task in epic["tasks"]
+    }
+    assert task_statuses["TASK-0266"] == "done"
+    assert task_statuses["TASK-0267"] == "done"
+    assert task_statuses["TASK-0268"] == "done"
+    assert task_statuses["TASK-0269"] == "done"
+    assert task_statuses["TASK-0276"] == "done"
+    assert task_statuses["TASK-0278"] == "done"
+    assert task_statuses["TASK-0283"] == "done"
+    assert task_statuses["TASK-0284"] == "done"
+    assert task_statuses["TASK-0285"] == "not_started"
 
 
 def test_epic139_redo_final_acceptance_releases_red_interlocks() -> None:

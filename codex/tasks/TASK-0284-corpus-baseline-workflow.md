@@ -2,7 +2,8 @@
 id: TASK-0284
 epic: EPIC-143
 title: "Corpus Baseline workflow"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0269", "TASK-0278"]
@@ -60,3 +61,9 @@ Build inventory, occurrences, duplicates, roles, packets and handoff manifest.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Completion evidence
+- Added `docs/planning/capex_workflow_catalog/corpus_baseline_workflow.yaml` as the planning-only Corpus Baseline workflow contract for `WFLOW-002`.
+- Added `onetruth.capex_platform.corpus_baseline_workflow` to compose source inventory, occurrence register, role register, packet register, generated-artifact validators, and handoff-manifest references into deterministic workflow outputs.
+- Added unit and contract coverage for a valid corpus baseline chain, missing role/packet prerequisites, scope mismatches, generated artifact envelope names, validator success, and non-activation boundaries.
+- This closes the workflow prerequisite for downstream EPIC-143 workflow rows, but does not activate authored workflow packs, public routes, workpages, reviewed baseline truth, official pointers, raw corpus import, or CAPEX runtime/product behavior.

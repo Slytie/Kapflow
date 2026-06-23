@@ -12,7 +12,11 @@ INGEST-001, INGEST-002, INGEST-003, INGEST-004, INGEST-005, INGEST-006, INGEST-0
 
 ## Closed foundation slice
 - `TASK-0564` is closed as of 2026-06-08: runtime state now includes `capex_content_identities` and `capex_source_occurrences`, and `onetruth.capex_platform.source_refs` resolves canonical `source_occurrence:{source_occurrence_id}` refs with meaningful-source-ref checks.
-- This does not close broader corpus ingest, extraction, source occurrence relations, source locator unions, or evidence binding tasks.
+- `TASK-0266` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/BULK_STAGED_CORPUS_INGEST_ARCHITECTURE.yaml` and `onetruth.capex_platform.staged_corpus_ingest` record the staged-ingest architecture and sanitized descriptor guardrails.
+- `TASK-0267` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/SOURCE_INVENTORY_PIPELINE_CONTRACT.yaml` and `onetruth.capex_platform.source_inventory` record deterministic content identity, digest-store, and dedupe-group evidence from sanitized staged descriptors.
+- `TASK-0268` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/SOURCE_OCCURRENCE_REGISTER_CONTRACT.yaml` and `onetruth.capex_platform.source_occurrence_register` record project-scoped occurrence rows and deterministic `capex.source_occurrence_register.v1` output from sanitized contexts.
+- `TASK-0269` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/ROLE_PACKET_REGISTER_CONTRACT.yaml` and `onetruth.capex_platform.role_packet_register` record deterministic role assignment and packet register payloads from sanitized SourceOccurrence refs.
+- This does not close extraction, source occurrence relations, source locator unions, or evidence binding tasks.
 
 ## SME-RP addendum rows
 - `TASK-0652` is closed with the planning-only source occurrence context and trust taxonomy contract for `SME-RP-G004`.

@@ -2,7 +2,8 @@
 id: TASK-0268
 epic: EPIC-141
 title: "Implement source occurrence register"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0267"]
@@ -60,3 +61,9 @@ Represent each path/container/context occurrence separately.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Completion evidence
+- Added `docs/planning/capex_source_ingest/SOURCE_OCCURRENCE_REGISTER_CONTRACT.yaml` as the repo-native `INGEST-003` source occurrence register contract.
+- Added `onetruth.capex_platform.source_occurrence_register` to create project-scoped source occurrence rows from sanitized source inventory plus sanitized context descriptors and return deterministic `capex.source_occurrence_register.v1` register payloads.
+- Preserved the distinction between content identity, source occurrence, and role/packet assignment; `TASK-0269` remains responsible for roles and packet registers.
+- Added unit and contract coverage for duplicate contexts, same-digest cross-project occurrences, raw locator rejection, physical-row snapshot digest checks, and non-activation boundaries.

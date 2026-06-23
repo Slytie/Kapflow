@@ -2,7 +2,8 @@
 id: TASK-0276
 epic: EPIC-142
 title: "Implement generated artifact envelope and canonical naming"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0238"]
@@ -60,3 +61,10 @@ Every capex.* artifact uses canonical envelope, kind, schema_version, source_ref
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `schemas/runtime/capex_generated_artifact_envelope.schema.json` for the CAPEX generated artifact envelope shape: `schema_version`, canonical `artifact_kind`, `artifact_role`, `source_refs`, `input_digests`, `validation_summary`, and `payload`.
+- Added `docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_ENVELOPE_CONTRACT.yaml` as the repo-native `ART-001` contract and explicit unblocker for `TASK-0283`.
+- Extended the shared generated-artifact helper with CAPEX envelope builders, canonical `capex.<family>.<artifact>.vN.json` naming, deprecated-name rejection, and a CAPEX wrapper that delegates persistence to `persist_generated_artifact_effects(...)`.
+- Focused tests cover schema validation, deterministic canonical bytes, canonical persistence/name/digest behavior, deprecated-name rejection, invalid envelope shape rejection, and unchanged non-CAPEX generated-artifact helper behavior.
+- Closeout posture: this closes the envelope and canonical-naming prerequisite only. Bundle validators, meaningful SourceRef/evidence sufficiency policy, pointer-promotion policy, workflow pack activation, public routes, raw corpus import, official pointer creation, and CAPEX runtime/product activation remain later gated work.

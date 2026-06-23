@@ -2,7 +2,8 @@
 id: TASK-0269
 epic: EPIC-141
 title: "Implement role assignment and packet register artifacts"
-status: TODO
+status: DONE
+completed_at: "2026-06-17T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0268"]
@@ -60,3 +61,9 @@ AI suggests roles/packets, human reviews.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Completion evidence
+- Added `docs/planning/capex_source_ingest/ROLE_PACKET_REGISTER_CONTRACT.yaml` as the planning-only role/packet artifact contract for `INGEST-004`.
+- Added `onetruth.capex_platform.role_packet_register` for deterministic `capex.role_assignment_register.v1` and `capex.packet_register.v1` payloads from sanitized SourceOccurrence refs.
+- Added unit and contract coverage for role correction, packet split/merge, unknown refs, duplicate refs, raw material rejection, and the non-official baseline boundary.
+- CAPEX runtime/product activation, raw corpus import, public routes, reviewed baseline creation, and official pointer creation remain blocked.

@@ -1,0 +1,73 @@
+schema_version: capex.generated_artifact_validator_contract.v1
+contract_id: capex.generated_artifact_schema_bundle_validator.v1
+owner_task: TASK-0278
+source_row: ART-003
+activation_posture: planning_only_no_capex_activation
+overall_status: schema_bundle_validator_recorded_not_activated
+acceptance_gates:
+  - V-002
+  - V-003
+depends_on:
+  repo_tasks:
+    - TASK-0276
+validator_scope:
+  schema_validator: true
+  canonical_name_validator: true
+  canonical_digest_validator: true
+  bundle_cross_reference_validator: true
+  evidence_sufficiency_validator: false
+  pointer_promotion_policy_validator: false
+single_artifact_checks:
+  - envelope_schema_valid
+  - canonical_file_name
+  - artifact_kind_matches_file_name
+  - canonical_json_digest_matches_expected_digest
+  - source_refs_empty_only_for_pre_occurrence_source_inventory
+bundle_checks:
+  - duplicate_canonical_name_rejected
+  - missing_source_ref_rejected
+  - stale_input_digest_rejected
+  - artifact_kind_name_mismatch_rejected
+  - deprecated_name_rejected
+source_ref_policy:
+  pre_occurrence_exception:
+    artifact_kind: capex.source_inventory
+    validation_result: inventory_pre_source_occurrence
+    exception_context: source_inventory_artifact_before_occurrence_register_artifact
+  meaningful_source_ref_policy_task: TASK-0279
+promotion_boundary:
+  schema_valid_is_promotable: false
+  bundle_valid_is_evidence_sufficient: false
+  pointer_promotion_policy_task: TASK-0280
+not_implemented_in_this_task:
+  - meaningful_sourceref_resolution_policy
+  - evidence_sufficiency_policy
+  - pointer_promotion_policy
+  - workflow_pack_activation
+  - public_api_route
+  - frontend_route
+raw_data_boundary:
+  allowed_repo_material:
+    - schema_fields
+    - canonical_naming_patterns
+    - sanitized_source_ref_examples
+    - sha256_digest_examples
+    - aggregate_bundle_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

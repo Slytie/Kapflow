@@ -8,8 +8,9 @@ This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. I
 ## Status
 Imported as TODO backlog unless an individual task records completed repo evidence.
 The desktop source-root addendum is now started for planning scope only:
-`TASK-0607` closes the stage/MVP-boundary contract, while `TASK-0608+`
-remain open.
+`TASK-0607` closes the stage/MVP-boundary contract, `TASK-0608` closes the
+internal source-root state model, and `TASK-0609` closes the manifest-first
+browser folder/ZIP import protocol. `TASK-0610+` remain open.
 
 ## In scope
 - Source task families/counts: ARCH:24, DOC:3, RF:2, SAFE:1.
@@ -32,6 +33,7 @@ Context pack:
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
 - `docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv`
 - `docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml`
+- `docs/planning/capex_desktop_source_roots/BROWSER_FOLDER_ZIP_IMPORT_MVP_PROTOCOL.yaml`
 
 ## Task stack
 - `TASK-0308` (`DOC-001`) - Restructure documentation tree
@@ -78,8 +80,10 @@ This addendum restores the EPIC-150 desktop folder source-root pack from
 task stack is represented as `TASK-0607` through `TASK-0642`.
 
 Status: planning addendum in progress. `TASK-0607` records the stage model and
-MVP/non-MVP boundary as a repo-native planning contract. It does not activate
-CAPEX runtime behavior.
+MVP/non-MVP boundary as a repo-native planning contract, `TASK-0608` records the
+internal source-root observation state, and `TASK-0609` records the Stage 1
+manifest-first import protocol. These rows do not activate CAPEX runtime
+behavior.
 
 Summary: create the PM-facing desktop folder intake and resync experience for
 CAPEX project corpora. A PM may select a desktop folder, folder set, ZIP, or
@@ -125,8 +129,8 @@ Additional dependencies:
 
 ## Desktop Source-Root Task Stack
 - `TASK-0607` - Freeze EPIC-150 stage model and MVP/non-MVP boundary. - DONE 2026-06-17.
-- `TASK-0608` - Define source-root runtime model and state machine.
-- `TASK-0609` - Specify manual folder/ZIP import protocol.
+- `TASK-0608` - Define source-root runtime model and state machine. - DONE 2026-06-17.
+- `TASK-0609` - Specify manual folder/ZIP import protocol. - DONE 2026-06-17.
 - `TASK-0610` - Specify manual resync and delta reconciliation.
 - `TASK-0611` - Define watcher-as-hint semantics and deferred desktop-agent contract.
 - `TASK-0612` - Define local deletion / missing-source evidence semantics.

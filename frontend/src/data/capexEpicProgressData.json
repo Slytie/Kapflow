@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 432,
-    "done": 100,
+    "done": 110,
     "in_progress": 0,
-    "not_started": 327,
+    "not_started": 317,
     "blocked": 1,
     "needs_review": 4,
     "total": 432,
     "estimate": {
-      "percentComplete": 23.1,
-      "completedTasks": 100,
-      "remainingTasks": 332,
+      "percentComplete": 25.5,
+      "completedTasks": 110,
+      "remainingTasks": 322,
       "remainingBlockedOrReviewTasks": 5,
-      "completedWithTimestamps": 68,
-      "completionTimestampCoverage": 68.0,
-      "etaDate": "2026-08-24",
+      "completedWithTimestamps": 78,
+      "completionTimestampCoverage": 70.9,
+      "etaDate": "2026-08-14",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-24",
+      "label": "ETA 2026-08-14",
       "caveat": "5 blocked or needs-review task(s) remain."
     }
   },
@@ -4757,9 +4757,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 3,
+        "done": 7,
         "in_progress": 0,
-        "not_started": 49,
+        "not_started": 45,
         "blocked": 0,
         "needs_review": 1,
         "total": 53
@@ -4772,9 +4772,9 @@
           "epicId": "EPIC-141",
           "title": "Design bulk/staged corpus ingest architecture",
           "plainPurpose": "Do not use JSON/base64 command route for project corpora.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task INGEST-001 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -4820,20 +4820,25 @@
             "original_depends_on": "PROJ-001; PR002; PR003",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_source_ingest/BULK_STAGED_CORPUS_INGEST_ARCHITECTURE.yaml as the repo-native INGEST-001 staged-ingest architecture contract.",
+            "Added onetruth.capex_platform.staged_corpus_ingest.plan_staged_corpus_ingest(...) as a side-effect-free validator/planner for sanitized staged descriptors.",
+            "Focused tests cover 1k synthetic descriptors, object/folder/source-root descriptor modes, JSON/base64 raw-content rejection, raw absolute path and filename rejection, mode-specific basis validation, and no canonical truth side effects.",
+            "Closeout posture: this closes the architecture and guardrail slice only. Upload endpoints, blob storage activation, source occurrence binding, source inventory artifacts, extraction jobs, public routes, workflow pack activation, raw corpus import, and CAPEX runtime/product activation remain later gated work."
+          ],
           "taskPath": "codex/tasks/TASK-0266-design-bulk-staged-corpus-ingest-architecture.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0267",
           "epicId": "EPIC-141",
           "title": "Implement digest, dedupe and source inventory pipeline",
           "plainPurpose": "Create content identity and source inventory from staged files.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task INGEST-002 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -4878,20 +4883,25 @@
             "original_depends_on": "INGEST-001; PR005",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_source_ingest/SOURCE_INVENTORY_PIPELINE_CONTRACT.yaml as the repo-native INGEST-002 source inventory contract.",
+            "Added onetruth.capex_platform.source_inventory to create content identities from sanitized staged descriptors, build deterministic capex.source_inventory.v1 inventory payloads, and group duplicate staged descriptors by content digest without creating SourceOccurrence rows.",
+            "Extended staged ingest descriptors with sanitized content digest metadata while preserving raw-content, raw-filename, base64, and absolute-path rejection.",
+            "Added unit and contract coverage for 1k sanitized descriptors, same-bytes dedupe, digest-store behavior, pre-occurrence artifact envelope posture, and non-activation/raw-data boundaries."
+          ],
           "taskPath": "codex/tasks/TASK-0267-implement-digest-dedupe-and-source-inventory-pipeline.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0268",
           "epicId": "EPIC-141",
           "title": "Implement source occurrence register",
           "plainPurpose": "Represent each path/container/context occurrence separately.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task INGEST-003 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -4935,20 +4945,25 @@
             "original_depends_on": "INGEST-002",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_source_ingest/SOURCE_OCCURRENCE_REGISTER_CONTRACT.yaml as the repo-native INGEST-003 source occurrence register contract.",
+            "Added onetruth.capex_platform.source_occurrence_register to create project-scoped source occurrence rows from sanitized source inventory plus sanitized context descriptors and return deterministic capex.source_occurrence_register.v1 register payloads.",
+            "Preserved the distinction between content identity, source occurrence, and role/packet assignment; TASK-0269 remains responsible for roles and packet registers.",
+            "Added unit and contract coverage for duplicate contexts, same-digest cross-project occurrences, raw locator rejection, physical-row snapshot digest checks, and non-activation boundaries."
+          ],
           "taskPath": "codex/tasks/TASK-0268-implement-source-occurrence-register.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0269",
           "epicId": "EPIC-141",
           "title": "Implement role assignment and packet register artifacts",
           "plainPurpose": "AI suggests roles/packets, human reviews.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task INGEST-004 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -4992,11 +5007,16 @@
             "original_depends_on": "INGEST-003",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_source_ingest/ROLE_PACKET_REGISTER_CONTRACT.yaml as the planning-only role/packet artifact contract for INGEST-004.",
+            "Added onetruth.capex_platform.role_packet_register for deterministic capex.role_assignment_register.v1 and capex.packet_register.v1 payloads from sanitized SourceOccurrence refs.",
+            "Added unit and contract coverage for role correction, packet split/merge, unknown refs, duplicate refs, raw material rejection, and the non-official baseline boundary.",
+            "CAPEX runtime/product activation, raw corpus import, public routes, reviewed baseline creation, and official pointer creation remain blocked."
+          ],
           "taskPath": "codex/tasks/TASK-0269-implement-role-assignment-and-packet-register-artifacts.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0270",
@@ -7774,16 +7794,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 5.7,
-        "completedTasks": 3,
-        "remainingTasks": 50,
+        "percentComplete": 13.2,
+        "completedTasks": 7,
+        "remainingTasks": 46,
         "remainingBlockedOrReviewTasks": 1,
-        "completedWithTimestamps": 2,
-        "completionTimestampCoverage": 66.7,
-        "etaDate": "2026-06-27",
-        "etaConfidence": "low",
-        "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-27",
+        "completedWithTimestamps": 6,
+        "completionTimestampCoverage": 85.7,
+        "etaDate": "2026-09-02",
+        "etaConfidence": "medium",
+        "etaSource": "epic_completed_at",
+        "label": "ETA 2026-09-02",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -7815,9 +7835,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 6,
+        "done": 8,
         "in_progress": 0,
-        "not_started": 28,
+        "not_started": 26,
         "blocked": 0,
         "needs_review": 1,
         "total": 35
@@ -7830,9 +7850,9 @@
           "epicId": "EPIC-142",
           "title": "Implement generated artifact envelope and canonical naming",
           "plainPurpose": "Every capex.* artifact uses canonical envelope, kind, schema_version, source_refs, input digests, validation summary.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task ART-001 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -7876,20 +7896,26 @@
             "original_depends_on": "PR005",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added schemas/runtime/capex_generated_artifact_envelope.schema.json for the CAPEX generated artifact envelope shape: schema_version, canonical artifact_kind, artifact_role, source_refs, input_digests, validation_summary, and payload.",
+            "Added docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_ENVELOPE_CONTRACT.yaml as the repo-native ART-001 contract and explicit unblocker for TASK-0283.",
+            "Extended the shared generated-artifact helper with CAPEX envelope builders, canonical capex.<family>.<artifact>.vN.json naming, deprecated-name rejection, and a CAPEX wrapper that delegates persistence to persist_generated_artifact_effects(...).",
+            "Focused tests cover schema validation, deterministic canonical bytes, canonical persistence/name/digest behavior, deprecated-name rejection, invalid envelope shape rejection, and unchanged non-CAPEX generated-artifact helper behavior.",
+            "Closeout posture: this closes the envelope and canonical-naming prerequisite only. Bundle validators, meaningful SourceRef/evidence sufficiency policy, pointer-promotion policy, workflow pack activation, public routes, raw corpus import, official pointer creation, and CAPEX runtime/product activation remain later gated work."
+          ],
           "taskPath": "codex/tasks/TASK-0276-implement-generated-artifact-envelope-and-canonical-naming.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0278",
           "epicId": "EPIC-142",
           "title": "Implement schema and bundle validators",
           "plainPurpose": "Validate JSON Schema plus cross-reference bundle consistency.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task ART-003 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -7933,11 +7959,16 @@
             "original_depends_on": "ART-001",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_VALIDATOR_CONTRACT.yaml as the repo-native ART-003 schema and bundle validator contract.",
+            "Added onetruth.capex_platform.generated_artifact_validators to validate CAPEX generated artifact envelopes, canonical names, canonical JSON digests, and bundle cross-references.",
+            "Validator failures now cover missing source refs, stale input digests, duplicate canonical names, artifact-kind/name mismatches, deprecated names, and empty SourceRefs outside the narrow pre-occurrence capex.source_inventory exception.",
+            "Added unit and contract coverage proving schema/bundle validation is not evidence sufficiency, pointer promotion policy, public route activation, or CAPEX runtime/product activation."
+          ],
           "taskPath": "codex/tasks/TASK-0278-implement-schema-and-bundle-validators.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0279",
@@ -9826,16 +9857,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 17.1,
-        "completedTasks": 6,
-        "remainingTasks": 29,
+        "percentComplete": 22.9,
+        "completedTasks": 8,
+        "remainingTasks": 27,
         "remainingBlockedOrReviewTasks": 1,
-        "completedWithTimestamps": 3,
-        "completionTimestampCoverage": 50.0,
-        "etaDate": "2026-09-22",
+        "completedWithTimestamps": 5,
+        "completionTimestampCoverage": 62.5,
+        "etaDate": "2026-08-10",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-09-22",
+        "label": "ETA 2026-08-10",
         "caveat": "1 blocked or needs-review task(s) remain."
       }
     },
@@ -9868,9 +9899,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 4,
+        "done": 6,
         "in_progress": 0,
-        "not_started": 11,
+        "not_started": 9,
         "blocked": 0,
         "needs_review": 0,
         "total": 15
@@ -9883,9 +9914,9 @@
           "epicId": "EPIC-143",
           "title": "Project Intake Router workflow",
           "plainPurpose": "Route new/mid-project/issue/CEO entry and create intake/module activation artifacts.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task WFLOW-001 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -9930,20 +9961,25 @@
             "original_depends_on": "PROJ-001; ART-001",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_workflow_catalog/project_intake_router_workflow.yaml as the planning-only WFLOW-001 Project Intake Router contract.",
+            "Added onetruth.capex_platform.project_intake_router to build deterministic project_intake_profile, module_activation_profile, and handoff_manifest payloads for new-project, mid-project, issue-escalation, and CEO/sponsor entry modes.",
+            "Enforced human-confirmed / AI-draft-only posture and sanitized context refs for the mid-project K12 fixture path without raw corpus import or project-specific file hardcoding.",
+            "Added unit and contract coverage for entry modes, mid-project K12 sanitized refs, human confirmation, raw-context rejection, and non-activation boundaries."
+          ],
           "taskPath": "codex/tasks/TASK-0283-project-intake-router-workflow.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0284",
           "epicId": "EPIC-143",
           "title": "Corpus Baseline workflow",
           "plainPurpose": "Build inventory, occurrences, duplicates, roles, packets and handoff manifest.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task WFLOW-002 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -9988,11 +10024,16 @@
             "original_depends_on": "INGEST-004; ART-003",
             "recommended_source_branch": "feature/capex-*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_workflow_catalog/corpus_baseline_workflow.yaml as the planning-only Corpus Baseline workflow contract for WFLOW-002.",
+            "Added onetruth.capex_platform.corpus_baseline_workflow to compose source inventory, occurrence register, role register, packet register, generated-artifact validators, and handoff-manifest references into deterministic workflow outputs.",
+            "Added unit and contract coverage for a valid corpus baseline chain, missing role/packet prerequisites, scope mismatches, generated artifact envelope names, validator success, and non-activation boundaries.",
+            "This closes the workflow prerequisite for downstream EPIC-143 workflow rows, but does not activate authored workflow packs, public routes, workpages, reviewed baseline truth, official pointers, raw corpus import, or CAPEX runtime/product behavior."
+          ],
           "taskPath": "codex/tasks/TASK-0284-corpus-baseline-workflow.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0285",
@@ -10764,16 +10805,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 26.7,
-        "completedTasks": 4,
-        "remainingTasks": 11,
+        "percentComplete": 40.0,
+        "completedTasks": 6,
+        "remainingTasks": 9,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 2,
-        "completionTimestampCoverage": 50.0,
-        "etaDate": "2026-06-19",
-        "etaConfidence": "low",
-        "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-19",
+        "completedWithTimestamps": 4,
+        "completionTimestampCoverage": 66.7,
+        "etaDate": "2026-07-09",
+        "etaConfidence": "medium",
+        "etaSource": "epic_completed_at",
+        "label": "ETA 2026-07-09",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14814,10 +14855,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-06-24",
+        "etaDate": "2026-06-23",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-24",
+        "label": "ETA 2026-06-23",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -19884,10 +19925,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-07-01",
+        "etaDate": "2026-06-30",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-01",
+        "label": "ETA 2026-06-30",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -19916,12 +19957,13 @@
         "docs/planning/CAPEX_MASTER_V6_INTAKE.md",
         "docs/planning/CAPEX_V6_CONVERSION_MAP.csv",
         "docs/planning/CAPEX_V6_GATE_RISK_DECISION_MAP.csv",
-        "docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml"
+        "docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml",
+        "docs/planning/capex_desktop_source_roots/BROWSER_FOLDER_ZIP_IMPORT_MVP_PROTOCOL.yaml"
       ],
       "counts": {
-        "done": 1,
+        "done": 3,
         "in_progress": 0,
-        "not_started": 65,
+        "not_started": 63,
         "blocked": 0,
         "needs_review": 0,
         "total": 66
@@ -21752,9 +21794,9 @@
           "epicId": "EPIC-150",
           "title": "Define SourceRootBinding, FolderTreeSnapshot, SyncRun, and source-root state model",
           "plainPurpose": "Define source-root identity, redacted path hints, snapshot state, sync-run lifecycle, permission basis, and sync health.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [],
           "scope": [],
           "outOfScope": [],
@@ -21865,20 +21907,25 @@
             "Required tests are green in the project environment."
           ],
           "sourceRow": {},
-          "evidence": [],
+          "evidence": [
+            "Added internal runtime state for capex_source_root_bindings, capex_source_root_sync_runs, and capex_folder_tree_snapshots through Alembic, SQLite bootstrap, SQLAlchemy models, runtime schemas, and repository helpers.",
+            "Repository behavior validates observer/status vocabularies, rejects obvious raw absolute path hints, enforces tenant/domain/project consistency, blocks terminal sync-run advancement, and updates latest_snapshot_id only when a snapshot is explicitly recorded as latest.",
+            "Evidence: unit and schema-parity tests cover source-root creation, invalid values, raw path rejection, sync-run lifecycle, snapshot scope checks, latest-snapshot update behavior, and bootstrap/Alembic/model parity.",
+            "Closeout posture: internal source-root observation state only. No public API, frontend route, desktop sync activation, raw corpus import, blob upload behavior, SourceOccurrence binding, reviewed baseline mutation, official pointer creation, CAPEX runtime activation, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0608-define-sourcerootbinding-foldertreesnapshot-syncrun-and-source-root-state-model.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0609",
           "epicId": "EPIC-150",
           "title": "Specify browser folder / ZIP import MVP protocol",
           "plainPurpose": "Define manifest-first, project-scoped import with authorization before blob upload and no background-sync assumptions.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [],
           "scope": [],
           "outOfScope": [],
@@ -21969,11 +22016,16 @@
             "Required tests are green in the project environment."
           ],
           "sourceRow": {},
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_desktop_source_roots/BROWSER_FOLDER_ZIP_IMPORT_MVP_PROTOCOL.yaml as a planning-only Stage 1 browser folder/ZIP/user-selected upload protocol for source rows DST-003 and DFS-DELTA-002.",
+            "The protocol records manifest-first phases for project authorization precheck, sanitized manifest submission, source-root/sync-run creation, upload authorization after manifest acceptance, folder-tree snapshot finalization, and PM review handoff.",
+            "Evidence: desktop source-root planning contract tests cover the protocol's task/source rows, runtime table/schema refs, manifest-first phases, raw-data boundary, auth-before-upload posture, and non-activation prohibitions.",
+            "Closeout posture: protocol evidence only. No upload endpoint, blob storage/custody, background watcher, manual resync execution, SourceOccurrence binding, reviewed baseline creation, official pointer creation, public API, frontend route, raw corpus import, CAPEX runtime activation, or CAPEX product activation is added."
+          ],
           "taskPath": "codex/tasks/TASK-0609-specify-browser-folder-zip-import-mvp-protocol.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-17T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0610",
@@ -25649,16 +25701,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 1.5,
-        "completedTasks": 1,
-        "remainingTasks": 65,
+        "percentComplete": 4.5,
+        "completedTasks": 3,
+        "remainingTasks": 63,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 1,
+        "completedWithTimestamps": 3,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-30",
-        "etaConfidence": "low",
-        "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-30",
+        "etaDate": "2026-07-08",
+        "etaConfidence": "medium",
+        "etaSource": "epic_completed_at",
+        "label": "ETA 2026-07-08",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -27356,10 +27408,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-06-23",
+        "etaDate": "2026-06-22",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-06-23",
+        "label": "ETA 2026-06-22",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

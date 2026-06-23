@@ -14,9 +14,12 @@ ART-001, ART-003, ART-004, ART-005, ART-006, RF-007, RF-008, ARCH-W4-S01, ... pl
 
 ## Closed foundation slice
 - `TASK-0565` is closed as of 2026-06-08: runtime state now includes `capex_waivers`, `capex_closure_gate_evaluations`, and `capex_closure_snapshots`, with closure vector evaluation and stale recurrence helpers under `onetruth.capex_platform.closure_governance`.
+- `TASK-0276` is closed as of 2026-06-17: `schemas/runtime/capex_generated_artifact_envelope.schema.json`, `docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_ENVELOPE_CONTRACT.yaml`, and CAPEX generated-artifact helper functions record envelope shape and canonical `capex.<family>.<artifact>.vN.json` naming.
+- `TASK-0267` uses the only current empty-SourceRef envelope exception: `capex.source_inventory` with validation result `inventory_pre_source_occurrence`, because SourceOccurrence binding remains `TASK-0268`.
+- `TASK-0278` is closed as of 2026-06-17: `docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_VALIDATOR_CONTRACT.yaml` and `onetruth.capex_platform.generated_artifact_validators` validate envelope schema, canonical names, canonical digests, and bundle cross-references without granting promotion authority.
 - `TASK-0570` is closed as of 2026-06-17 with non-commutative closure snapshot and official pointer sequence tests proving event/order sensitivity.
 - Waivers are recorded as `satisfied_by_waiver`, not as `pass`, and absence of evidence still fails closure.
-- This does not expose closure/promotion UI, public APIs, generated artifact policy validators, or CAPEX runtime activation.
+- This does not expose closure/promotion UI, public APIs, meaningful SourceRef/evidence sufficiency policy, pointer-promotion policy, or CAPEX runtime activation.
 
 ## SME-RP addendum rows
 - `TASK-0651` is closed with the planning-only evidence status vocabulary and transition contract for `SME-RP-G004`.

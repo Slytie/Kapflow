@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexGeneratedArtifactEnvelope",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "artifact_role",
+    "source_refs",
+    "input_digests",
+    "validation_summary",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "capex.generated_artifact_envelope.v1"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "pattern": "^capex(\\.[a-z0-9_]+)+$"
+    },
+    "artifact_role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^source_occurrence:[^\\s]+$"
+      }
+    },
+    "input_digests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "validation_summary": {
+      "type": "object"
+    },
+    "payload": true
+  },
+  "allOf": [
+    {
+      "anyOf": [
+        {
+          "properties": {
+            "source_refs": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "properties": {
+            "artifact_kind": {
+              "const": "capex.source_inventory"
+            },
+            "source_refs": {
+              "maxItems": 0
+            },
+            "validation_summary": {
+              "type": "object",
+              "required": ["result"],
+              "properties": {
+                "result": {
+                  "const": "inventory_pre_source_occurrence"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "additionalProperties": false
+}

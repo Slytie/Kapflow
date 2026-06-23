@@ -141,6 +141,63 @@ _CAPEX_REQUIRED_COLUMNS_BY_TABLE: dict[str, set[str]] = {
         "created_at",
         "updated_at",
     },
+    "capex_source_root_bindings": {
+        "source_root_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "observer_mode",
+        "display_label",
+        "redacted_path_hint",
+        "permission_basis",
+        "sync_health",
+        "status",
+        "root_marker",
+        "latest_snapshot_id",
+        "metadata_json",
+        "owner_actor_id",
+        "owner_actor_type",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "last_observed_at",
+        "created_at",
+        "updated_at",
+    },
+    "capex_source_root_sync_runs": {
+        "sync_run_id",
+        "source_root_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "observer_mode",
+        "observation_basis",
+        "status",
+        "failure_reason",
+        "metadata_json",
+        "started_by_actor_id",
+        "started_by_actor_type",
+        "finalized_at",
+        "created_at",
+        "updated_at",
+    },
+    "capex_folder_tree_snapshots": {
+        "folder_tree_snapshot_id",
+        "source_root_id",
+        "sync_run_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "observation_basis",
+        "path_scope",
+        "status",
+        "manifest_digest",
+        "file_count",
+        "metadata_json",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "observed_at",
+        "created_at",
+    },
     "capex_waivers": {
         "waiver_id",
         "tenant_id",
@@ -237,6 +294,9 @@ _CAPEX_EMPTY_SHELL_DROP_ORDER = (
     "capex_closure_snapshots",
     "capex_closure_gate_evaluations",
     "capex_waivers",
+    "capex_folder_tree_snapshots",
+    "capex_source_root_sync_runs",
+    "capex_source_root_bindings",
     "capex_source_occurrences",
     "capex_content_identities",
     "capex_user_project_view",
@@ -572,6 +632,108 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             ON capex_source_occurrences (tenant_id, domain_id, project_id, status);
         CREATE INDEX IF NOT EXISTS ix_capex_source_occurrences_content_identity
             ON capex_source_occurrences (content_identity_id);
+
+        CREATE TABLE IF NOT EXISTS capex_source_root_bindings (
+            source_root_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            observer_mode TEXT NOT NULL,
+            display_label TEXT,
+            redacted_path_hint TEXT,
+            permission_basis TEXT NOT NULL,
+            sync_health TEXT NOT NULL,
+            status TEXT NOT NULL,
+            root_marker TEXT,
+            latest_snapshot_id TEXT,
+            metadata_json TEXT NOT NULL,
+            owner_actor_id TEXT NOT NULL,
+            owner_actor_type TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            last_observed_at TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_source_root_bindings_scope_status
+            ON capex_source_root_bindings (
+                tenant_id,
+                domain_id,
+                project_id,
+                status
+            );
+        CREATE INDEX IF NOT EXISTS ix_capex_source_root_bindings_observer
+            ON capex_source_root_bindings (
+                tenant_id,
+                domain_id,
+                project_id,
+                observer_mode,
+                sync_health
+            );
+
+        CREATE TABLE IF NOT EXISTS capex_source_root_sync_runs (
+            sync_run_id TEXT PRIMARY KEY,
+            source_root_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            observer_mode TEXT NOT NULL,
+            observation_basis TEXT NOT NULL,
+            status TEXT NOT NULL,
+            failure_reason TEXT,
+            metadata_json TEXT NOT NULL,
+            started_by_actor_id TEXT NOT NULL,
+            started_by_actor_type TEXT NOT NULL,
+            finalized_at TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (source_root_id) REFERENCES capex_source_root_bindings(source_root_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_source_root_sync_runs_root_status
+            ON capex_source_root_sync_runs (source_root_id, status, created_at);
+        CREATE INDEX IF NOT EXISTS ix_capex_source_root_sync_runs_scope_status
+            ON capex_source_root_sync_runs (
+                tenant_id,
+                domain_id,
+                project_id,
+                status
+            );
+
+        CREATE TABLE IF NOT EXISTS capex_folder_tree_snapshots (
+            folder_tree_snapshot_id TEXT PRIMARY KEY,
+            source_root_id TEXT NOT NULL,
+            sync_run_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            observation_basis TEXT NOT NULL,
+            path_scope TEXT NOT NULL,
+            status TEXT NOT NULL,
+            manifest_digest TEXT,
+            file_count INTEGER,
+            metadata_json TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            observed_at TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (source_root_id) REFERENCES capex_source_root_bindings(source_root_id),
+            FOREIGN KEY (sync_run_id) REFERENCES capex_source_root_sync_runs(sync_run_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_folder_tree_snapshots_root_observed
+            ON capex_folder_tree_snapshots (source_root_id, observed_at);
+        CREATE INDEX IF NOT EXISTS ix_capex_folder_tree_snapshots_scope_status
+            ON capex_folder_tree_snapshots (
+                tenant_id,
+                domain_id,
+                project_id,
+                status
+            );
 
         CREATE TABLE IF NOT EXISTS capex_waivers (
             waiver_id TEXT PRIMARY KEY,

@@ -14,7 +14,11 @@ WFLOW-001, WFLOW-002, WFLOW-003, WFLOW-004, WFLOW-005, WFLOW-006, WFLOW-007, NU-
 ## Closed foundation rows
 - `TASK-0566` is closed as of 2026-06-08: `capex.workflow_handoff_manifest.v1` and `onetruth.capex_platform.workflow_handoffs` provide an internal handoff manifest contract and validation guard over exact artifact, pointer, SourceRef, validation, closure, task, and workpage basis.
 - `TASK-0571` is closed as of 2026-06-17 with a planning-only procurement and CEO escalation proposal that routes decisions through canonical task/approval chains rather than editable workpage status.
-- This does not author or activate CAPEX workflow packs.
+- `TASK-0276` is closed as of 2026-06-17 in EPIC-142, so the generated-artifact envelope prerequisite for `TASK-0283` is now satisfied.
+- `TASK-0278` is closed as of 2026-06-17 in EPIC-142, so the generated-artifact validator prerequisite for `TASK-0284` is satisfied.
+- `TASK-0283` is closed as of 2026-06-17 with `docs/planning/capex_workflow_catalog/project_intake_router_workflow.yaml` and `onetruth.capex_platform.project_intake_router` as a planning-only Project Intake Router contract/helper.
+- `TASK-0284` is closed as of 2026-06-17 with `docs/planning/capex_workflow_catalog/corpus_baseline_workflow.yaml` and `onetruth.capex_platform.corpus_baseline_workflow` as a planning-only Corpus Baseline workflow contract/helper.
+- This does not author or activate CAPEX workflow packs, public Project Intake/Corpus Baseline routes, or Project Intake/Corpus Baseline workpages.
 
 ## SME-RP addendum rows
 - `TASK-0654` adds Scope Management workflow requirements.

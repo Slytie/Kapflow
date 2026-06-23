@@ -309,6 +309,42 @@
 - Evidence: source occurrence resolver unit tests, schema-parity integration tests, schema validation, CAPEX domain/invariant contracts, and progress-data validation passed on 2026-06-08.
 - Closeout posture: `NU-CB-P0-004` closes physical occurrence truth and resolver foundation only; corpus ingest, raw material handling, source occurrence relations, locator unions, extraction, and evidence binding remain later gated work.
 
+## TASK-0266 closeout evidence
+- Added `docs/planning/capex_source_ingest/BULK_STAGED_CORPUS_INGEST_ARCHITECTURE.yaml` for the `INGEST-001` bulk/staged corpus ingest architecture.
+- Added `onetruth.capex_platform.staged_corpus_ingest` as a side-effect-free staged descriptor planner that rejects JSON/base64 raw-content command bodies, raw absolute path hints, and raw filenames while representing object, folder, and source-root staged modes.
+- Evidence: staged ingest unit tests and CAPEX ingest/generated-artifact contract tests passed on 2026-06-17.
+- Closeout posture: `INGEST-001` closes architecture and guardrail evidence only; digest inventory, source occurrence binding, upload/blob activation, extraction jobs, public routes, workflow pack activation, raw corpus import, and CAPEX runtime/product activation remain later gated work.
+
+## TASK-0267 closeout evidence
+- Added `docs/planning/capex_source_ingest/SOURCE_INVENTORY_PIPELINE_CONTRACT.yaml` for the `INGEST-002` digest, dedupe, and source-inventory pipeline contract.
+- Added `onetruth.capex_platform.source_inventory` to upsert scoped content identities from sanitized staged descriptors, produce deterministic `capex.source_inventory.v1` payloads, and group same-byte descriptors without creating SourceOccurrence rows.
+- Evidence: source inventory unit tests, staged ingest descriptor tests, CAPEX generated-artifact envelope tests, and CAPEX ingest/generated-artifact contract tests passed on 2026-06-17.
+- Closeout posture: `INGEST-002` closes content identity/digest inventory only; source occurrence binding, extraction, public routes, workflow pack activation, raw corpus import, reviewed baseline creation, official pointer creation, and CAPEX runtime/product activation remain later gated work.
+
+## TASK-0268 closeout evidence
+- Added `docs/planning/capex_source_ingest/SOURCE_OCCURRENCE_REGISTER_CONTRACT.yaml` for the `INGEST-003` source occurrence register contract.
+- Added `onetruth.capex_platform.source_occurrence_register` to create project-scoped source occurrence rows from sanitized source inventory plus sanitized context descriptors and produce deterministic `capex.source_occurrence_register.v1` payloads.
+- Evidence: source occurrence register unit tests, SourceRef resolver regressions, and CAPEX ingest/generated-artifact contract tests passed on 2026-06-17.
+- Closeout posture: `INGEST-003` closes source occurrence register evidence only; role/packet assignment, extraction, public routes, workflow pack activation, raw corpus import, reviewed baseline creation, official pointer creation, and CAPEX runtime/product activation remain later gated work.
+
+## TASK-0269 closeout evidence
+- Added `docs/planning/capex_source_ingest/ROLE_PACKET_REGISTER_CONTRACT.yaml` for the `INGEST-004` role assignment and packet register artifact contract.
+- Added `onetruth.capex_platform.role_packet_register` to produce deterministic `capex.role_assignment_register.v1` and `capex.packet_register.v1` payloads from sanitized SourceOccurrence refs.
+- Evidence: role/packet unit tests and CAPEX ingest/generated-artifact contract tests passed on 2026-06-17.
+- Closeout posture: `INGEST-004` closes role and packet artifact shape evidence only; extraction, meaningful evidence sufficiency, public routes, workflow pack activation, raw corpus import, reviewed baseline creation, official pointer creation, and CAPEX runtime/product activation remain later gated work.
+
+## TASK-0276 closeout evidence
+- Added `schemas/runtime/capex_generated_artifact_envelope.schema.json` and `docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_ENVELOPE_CONTRACT.yaml` for the `ART-001` CAPEX generated artifact envelope and canonical naming contract.
+- Added CAPEX generated-artifact helpers for deterministic envelope bytes, canonical `capex.<family>.<artifact>.vN.json` file names, deprecated-name rejection, and persistence through the existing generated-artifact helper.
+- Evidence: generated artifact envelope unit tests, existing generated-artifact helper regressions, and CAPEX ingest/generated-artifact contract tests passed on 2026-06-17.
+- Closeout posture: `ART-001` closes the envelope and canonical-naming prerequisite for `TASK-0283`; bundle validators, meaningful SourceRef/evidence policy, pointer-promotion policy, workflow pack activation, raw corpus import, and CAPEX runtime/product activation remain later gated work.
+
+## TASK-0278 closeout evidence
+- Added `docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_VALIDATOR_CONTRACT.yaml` for the `ART-003` generated artifact schema and bundle validator contract.
+- Added `onetruth.capex_platform.generated_artifact_validators` to validate envelope schema, canonical file names, canonical JSON digests, and bundle cross-references for missing SourceRefs, stale input digests, duplicate canonical names, and artifact-kind/name mismatches.
+- Evidence: generated artifact validator unit tests, generated artifact envelope regressions, and CAPEX ingest/generated-artifact contract tests passed on 2026-06-17.
+- Closeout posture: `ART-003` closes schema and bundle validation only; meaningful SourceRef/evidence sufficiency policy, pointer-promotion policy, workflow pack activation, raw corpus import, official pointer creation, and CAPEX runtime/product activation remain later gated work.
+
 ## TASK-0565 closeout evidence
 - Added additive runtime state for `capex_waivers`, `capex_closure_gate_evaluations`, and `capex_closure_snapshots`, including Alembic migration, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, repositories, and schema-parity coverage.
 - Added `onetruth.capex_platform.closure_governance` with closure vector evaluation, explicit `satisfied_by_waiver` recording, failed-evaluation snapshot rejection, and a small recurrence rule registry that marks snapshots stale when basis refs change.
@@ -320,6 +356,18 @@
 - Handoff validation requires exact artifact version basis, pointer generation basis, meaningful SourceRefs, validation summaries, closure evaluation refs, current closure snapshot refs, and task/workpage handoff bindings.
 - Evidence: handoff manifest unit and schema contract tests passed on 2026-06-08.
 - Closeout posture: `NU-CB-P0-006` closes handoff manifest foundation only; authored CAPEX workflow packs, public workflow activation, and runtime/product activation remain later gated work.
+
+## TASK-0283 closeout evidence
+- Added `docs/planning/capex_workflow_catalog/project_intake_router_workflow.yaml` for the `WFLOW-001` Project Intake Router planning contract.
+- Added `onetruth.capex_platform.project_intake_router` to build deterministic `project_intake_profile`, `module_activation_profile`, and `handoff_manifest` payloads for new-project, mid-project, issue-escalation, and CEO/sponsor entry modes.
+- Evidence: Project Intake Router unit tests and CAPEX workflow catalog contract tests passed on 2026-06-17.
+- Closeout posture: `WFLOW-001` closes planning/internal output-shape evidence only; authored workflow pack activation, public routes, Project Intake workpages, raw corpus import, reviewed baseline creation, official pointer creation, and CAPEX runtime/product activation remain later gated work.
+
+## TASK-0284 closeout evidence
+- Added `docs/planning/capex_workflow_catalog/corpus_baseline_workflow.yaml` for the `WFLOW-002` Corpus Baseline workflow planning contract.
+- Added `onetruth.capex_platform.corpus_baseline_workflow` to compose source inventory, source occurrence register, role register, packet register, generated artifact validator output, and handoff-manifest refs into deterministic workflow outputs.
+- Evidence: Corpus Baseline workflow unit tests, role/packet unit tests, generated artifact validator regressions, and CAPEX ingest/generated-artifact contract tests passed on 2026-06-17.
+- Closeout posture: `WFLOW-002` closes planning/internal output-shape evidence only; authored workflow pack activation, public routes, Corpus Baseline workpages, raw corpus import, reviewed baseline creation, official pointer creation, evidence sufficiency approval, and CAPEX runtime/product activation remain later gated work.
 
 ## TASK-0567 closeout evidence
 - Added `capex_workpage_projection_snapshots` and `capex_workpage_projection_rows`, including Alembic migration, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, repositories, and schema-parity coverage.
@@ -444,9 +492,16 @@
 | CAPEX project child APIs and authorization projections | `TASK-0263`, `TASK-0371`, `TASK-0265`, `TASK-0385`, `TASK-0386`, `TASK-0563` | first project child APIs, selector/dashboard, project-scope helper, official pointer-family substrate, project authorization CED, projection-backed `AuthorizedProjectsQuery`, and physical authorization projection runtime state are closed; pointer-promotion policy checks, source governance, and activation remain blocked |
 | CAPEX storage/blob custody and pilot storage gate | `TASK-0387`, `TASK-0388`, `TASK-0390` | storage/blob custody CED and pilot storage gate checklist are closed; real pilot storage evidence or explicit waiver, Postgres/blob backend rollout, and activation remain blocked |
 | CAPEX Wave 1 pattern and closeout evidence | `TASK-0389`, `TASK-0390` | W1 code pattern register and closeout review are closed as non-production traceability; no runtime activation, source ZIP mutation, or pilot go decision is implied |
-| Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | `TASK-0564` adds physical occurrence truth and the first SourceRef resolver; broader corpus ingest, source occurrence relations, locator unions, and evidence binding remain future work |
+| Staged corpus ingest architecture | `TASK-0266` | `docs/planning/capex_source_ingest/BULK_STAGED_CORPUS_INGEST_ARCHITECTURE.yaml`, `src/onetruth/capex_platform/staged_corpus_ingest.py`; source occurrence binding, upload/blob activation, extraction, and raw corpus import remain future work |
+| Source inventory / digest dedupe | `TASK-0267` | `docs/planning/capex_source_ingest/SOURCE_INVENTORY_PIPELINE_CONTRACT.yaml`, `src/onetruth/capex_platform/source_inventory.py`, and staged descriptor content digest fields close deterministic content identity and dedupe inventory only; SourceOccurrence binding and role/packet assignment are separate closed follow-ons |
+| Source occurrence / SourceRef | `TASK-0268`, `TASK-0391`, `TASK-0407`, `TASK-0428`, `TASK-0564` | `TASK-0564` adds physical occurrence truth and the first SourceRef resolver; `TASK-0268` adds deterministic source occurrence register creation from sanitized contexts; source occurrence relations, locator unions, extraction, and evidence binding remain future work |
+| Role assignment and packet register | `TASK-0269` | `docs/planning/capex_source_ingest/ROLE_PACKET_REGISTER_CONTRACT.yaml` and `src/onetruth/capex_platform/role_packet_register.py` close role/packet artifact shape evidence only; reviewed baseline truth, evidence sufficiency, official pointer creation, and activation remain blocked |
+| CAPEX generated artifact envelope | `TASK-0276` | `schemas/runtime/capex_generated_artifact_envelope.schema.json`, `docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_ENVELOPE_CONTRACT.yaml`, and CAPEX envelope helpers close canonical shape/naming only; meaningful SourceRef/evidence policy and pointer policy remain future work |
+| CAPEX generated artifact validators | `TASK-0278` | `docs/planning/capex_generated_artifacts/GENERATED_ARTIFACT_VALIDATOR_CONTRACT.yaml` and `src/onetruth/capex_platform/generated_artifact_validators.py` close schema/name/digest/bundle validation only; schema-valid does not mean evidence-sufficient or promotable |
 | Closure and waiver runtime primitives | `TASK-0432`, `TASK-0436`, `TASK-0438`, `TASK-0443`, `TASK-0444`, `TASK-0565` | `TASK-0565` adds waiver/evaluation/snapshot state plus stale recurrence helpers; generated artifact validators, public closure commands, workpage surfaces, and activation remain future work |
 | Workflow handoff manifest foundation | `TASK-0566`, `TASK-0581` | `TASK-0566` adds internal handoff manifest schema and validation guard; authored CAPEX workflow packs and activation remain future work |
+| Project Intake Router workflow | `TASK-0283` | `docs/planning/capex_workflow_catalog/project_intake_router_workflow.yaml` and `src/onetruth/capex_platform/project_intake_router.py` close planning/internal output-shape evidence only; public routes, workpages, authored workflow activation, and CAPEX runtime/product activation remain blocked |
+| Corpus Baseline workflow | `TASK-0284` | `docs/planning/capex_workflow_catalog/corpus_baseline_workflow.yaml` and `src/onetruth/capex_platform/corpus_baseline_workflow.py` close planning/internal workflow output evidence only; public routes, workpages, authored workflow activation, reviewed baseline truth, official pointers, and CAPEX runtime/product activation remain blocked |
 | Workpage projection snapshot and stale-command foundation | `TASK-0451`, `TASK-0453`, `TASK-0460`, `TASK-0462`, `TASK-0567` | `TASK-0567` adds internal project-scoped projection snapshots, signed cursors, command envelopes, and stale-command guards; public APIs, frontend routes, hydration families, and activation remain future work |
 | CAPEX semantic test and CODEOWNERS gate | `TASK-0568` | `capex_semantic` marker, CB2 backlog manifest, focused Make/GitHub lane, and real-owner CODEOWNERS entries are present; hosted branch protection and richer review automation remain external or later scope |
 | Interface burden conservation | `TASK-0569` | `onetruth.capex_platform.interface_burden` and `docs/architecture/CAPEX_INTERFACE_BURDEN_POLICY.md` require responsibility to be owned, transferred, waived, accepted residual, or open with follow-up; public routing remains future work |

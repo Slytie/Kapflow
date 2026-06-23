@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexSourceRootSyncRun",
+  "type": "object",
+  "required": [
+    "sync_run_id",
+    "source_root_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "observer_mode",
+    "observation_basis",
+    "status",
+    "metadata_json",
+    "started_by_actor_id",
+    "started_by_actor_type",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "sync_run_id": { "type": "string" },
+    "source_root_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "observer_mode": {
+      "type": "string",
+      "enum": [
+        "browser_folder_selection",
+        "zip_import",
+        "user_selected_folder_upload",
+        "browser_manual_resync",
+        "desktop_agent_manual_scan",
+        "desktop_agent_watch",
+        "cloud_connector",
+        "server_mounted_folder",
+        "archived_source"
+      ]
+    },
+    "observation_basis": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "manifest_received",
+        "uploading",
+        "finalized",
+        "failed",
+        "aborted"
+      ]
+    },
+    "failure_reason": { "type": ["string", "null"] },
+    "metadata_json": { "type": "object" },
+    "started_by_actor_id": { "type": "string" },
+    "started_by_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "finalized_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

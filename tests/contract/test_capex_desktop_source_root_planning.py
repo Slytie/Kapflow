@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,21 @@ STAGE_MODEL_PATH = (
     / "docs/planning/capex_desktop_source_roots/"
     "EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml"
 )
+IMPORT_PROTOCOL_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_desktop_source_roots/"
+    "BROWSER_FOLDER_ZIP_IMPORT_MVP_PROTOCOL.yaml"
+)
+EXPECTED_RUNTIME_SCHEMA_PATHS = {
+    "schemas/runtime/capex_source_root_binding.schema.json",
+    "schemas/runtime/capex_source_root_sync_run.schema.json",
+    "schemas/runtime/capex_folder_tree_snapshot.schema.json",
+}
+EXPECTED_RUNTIME_TABLES = {
+    "capex_source_root_bindings",
+    "capex_source_root_sync_runs",
+    "capex_folder_tree_snapshots",
+}
 EXPECTED_STAGE_IDS = [
     "stage_1_mvp_manual_import",
     "stage_2_mvp_plus_manual_resync",
@@ -26,6 +42,8 @@ FORBIDDEN_TEXT = (
     "local deletion deletes evidence",
     "official pointer creation approved",
     "capex activation approved",
+    "source occurrence binding approved",
+    "upload endpoint activated",
 )
 
 
@@ -71,14 +89,15 @@ def test_epic150_stage_model_contract_freezes_planning_boundary() -> None:
         "pm_review_before_baseline_update_rule",
         "redacted_path_locator_rule",
         "observation_proposal_review_chain",
+        "internal_source_root_runtime_state",
     }
     assert set(contract["mvp_boundary"]["excluded"]) >= {
-        "runtime_tables_or_migrations",
         "public_api_routes",
         "frontend_routes",
         "persistent_desktop_agent",
         "bidirectional_sync_or_writeback",
         "raw_corpus_import",
+        "capex_runtime_activation",
         "reviewed_baseline_mutation",
         "official_pointer_promotion",
     }
@@ -115,6 +134,90 @@ def test_epic150_stage_model_contract_freezes_planning_boundary() -> None:
         "absolute local paths",
         "usernames or machine names from local paths",
         "screenshots or logs containing source content",
+    }
+    for forbidden in FORBIDDEN_TEXT:
+        assert forbidden not in lowered
+
+
+def test_source_root_runtime_state_has_schema_contracts_without_activation() -> None:
+    for relative_path in EXPECTED_RUNTIME_SCHEMA_PATHS:
+        path = REPO_ROOT / relative_path
+        schema = json.loads(path.read_text(encoding="utf-8"))
+
+        assert schema["type"] == "object"
+        assert "capex_runtime_activation" not in path.read_text(encoding="utf-8")
+
+
+def test_browser_folder_zip_import_protocol_is_manifest_first_and_planning_only() -> None:
+    protocol = _load_yaml(IMPORT_PROTOCOL_PATH)
+    lowered = IMPORT_PROTOCOL_PATH.read_text(encoding="utf-8").lower()
+
+    assert (
+        protocol["schema_version"]
+        == "capex.browser_folder_zip_import_mvp_protocol.v1"
+    )
+    assert protocol["owner_task"] == "TASK-0609"
+    assert protocol["source_rows"] == ["DST-003", "DFS-DELTA-002"]
+    assert protocol["activation_posture"] == "planning_only_no_capex_activation"
+    assert protocol["overall_status"] == "protocol_recorded_not_activated"
+    assert set(protocol["state_model_refs"]["runtime_tables"]) == EXPECTED_RUNTIME_TABLES
+    assert set(protocol["state_model_refs"]["runtime_schemas"]) == (
+        EXPECTED_RUNTIME_SCHEMA_PATHS
+    )
+    assert set(protocol["allowed_stage_1_inputs"]) == {
+        "browser_folder_selection",
+        "zip_import",
+        "user_selected_folder_upload",
+    }
+
+    phases = protocol["manifest_first_phases"]
+    assert [phase["phase_id"] for phase in phases] == [
+        "project_authorization_precheck",
+        "sanitized_manifest_submission",
+        "source_root_and_sync_run_creation",
+        "upload_authorization_after_manifest_acceptance",
+        "folder_tree_snapshot_finalization",
+        "pm_review_handoff",
+    ]
+    observed_boundaries = {phase["authority_boundary"] for phase in phases}
+    assert "cannot_read_or_upload_blob_bytes" in observed_boundaries
+    assert (
+        "this_contract_does_not_implement_upload_endpoint_or_blob_storage"
+        in observed_boundaries
+    )
+    assert {
+        "upload_endpoint",
+        "blob_storage_or_blob_custody",
+        "background_watcher",
+        "manual_resync_execution",
+        "source_occurrence_binding",
+        "reviewed_corpus_baseline_creation",
+        "official_pointer_creation",
+        "public_api_route",
+        "frontend_route",
+    } <= set(protocol["not_implemented_in_this_task"])
+    assert set(protocol["cannot_be_used_for"]) >= {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "raw_corpus_import",
+        "upload_endpoint_activation",
+        "blob_storage_activation",
+        "source_occurrence_binding",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "desktop_sync_activation",
+        "background_watcher_activation",
+        "manual_resync_activation",
+        "evidence_sufficiency_claim",
+    }
+    assert set(protocol["raw_data_boundary"]["prohibited_repo_material"]) >= {
+        "full project corpus files",
+        "unrestricted source excerpts",
+        "raw project filenames",
+        "absolute local paths",
+        "usernames or machine names from local paths",
+        "uploaded blob bytes",
     }
     for forbidden in FORBIDDEN_TEXT:
         assert forbidden not in lowered

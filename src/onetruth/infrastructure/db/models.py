@@ -401,6 +401,158 @@ class CapexSourceOccurrence(Base):
     )
 
 
+class CapexSourceRootBinding(Base):
+    __tablename__ = "capex_source_root_bindings"
+    __table_args__ = (
+        Index(
+            "ix_capex_source_root_bindings_scope_status",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "status",
+        ),
+        Index(
+            "ix_capex_source_root_bindings_observer",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "observer_mode",
+            "sync_health",
+        ),
+    )
+
+    source_root_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    observer_mode: Mapped[str] = mapped_column(String(64), nullable=False)
+    display_label: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    redacted_path_hint: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    permission_basis: Mapped[str] = mapped_column(String(128), nullable=False)
+    sync_health: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    root_marker: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    latest_snapshot_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    owner_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    owner_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    last_observed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexSourceRootSyncRun(Base):
+    __tablename__ = "capex_source_root_sync_runs"
+    __table_args__ = (
+        Index(
+            "ix_capex_source_root_sync_runs_root_status",
+            "source_root_id",
+            "status",
+            "created_at",
+        ),
+        Index(
+            "ix_capex_source_root_sync_runs_scope_status",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "status",
+        ),
+    )
+
+    sync_run_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    source_root_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_source_root_bindings.source_root_id"),
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    observer_mode: Mapped[str] = mapped_column(String(64), nullable=False)
+    observation_basis: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    failure_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    started_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    started_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    finalized_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexFolderTreeSnapshot(Base):
+    __tablename__ = "capex_folder_tree_snapshots"
+    __table_args__ = (
+        Index(
+            "ix_capex_folder_tree_snapshots_root_observed",
+            "source_root_id",
+            "observed_at",
+        ),
+        Index(
+            "ix_capex_folder_tree_snapshots_scope_status",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "status",
+        ),
+    )
+
+    folder_tree_snapshot_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    source_root_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_source_root_bindings.source_root_id"),
+        nullable=False,
+    )
+    sync_run_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_source_root_sync_runs.sync_run_id"),
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    observation_basis: Mapped[str] = mapped_column(String(128), nullable=False)
+    path_scope: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    manifest_digest: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    file_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
 class CapexWaiver(Base):
     __tablename__ = "capex_waivers"
     __table_args__ = (

@@ -1,0 +1,107 @@
+schema_version: capex.browser_folder_zip_import_mvp_protocol.v1
+protocol_id: capex.desktop_source_root.browser_folder_zip_import_mvp.v1
+owner_task: TASK-0609
+source_rows:
+  - DST-003
+  - DFS-DELTA-002
+activation_posture: planning_only_no_capex_activation
+overall_status: protocol_recorded_not_activated
+state_model_refs:
+  runtime_tables:
+    - capex_source_root_bindings
+    - capex_source_root_sync_runs
+    - capex_folder_tree_snapshots
+  runtime_schemas:
+    - schemas/runtime/capex_source_root_binding.schema.json
+    - schemas/runtime/capex_source_root_sync_run.schema.json
+    - schemas/runtime/capex_folder_tree_snapshot.schema.json
+  planning_contract:
+    - docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml
+allowed_stage_1_inputs:
+  - browser_folder_selection
+  - zip_import
+  - user_selected_folder_upload
+manifest_first_phases:
+  - phase_id: project_authorization_precheck
+    required_evidence:
+      - active_project_membership
+      - project_scope_selected_before_manifest
+    output_state: authorization_prechecked
+    authority_boundary: cannot_read_or_upload_blob_bytes
+  - phase_id: sanitized_manifest_submission
+    required_evidence:
+      - redacted_path_hints_only
+      - file_count_and_digest_summary
+      - raw_filename_policy_acknowledged
+    output_state: manifest_received
+    authority_boundary: manifest_is_observation_not_reviewed_evidence
+  - phase_id: source_root_and_sync_run_creation
+    required_evidence:
+      - capex_source_root_bindings
+      - capex_source_root_sync_runs
+    output_state: source_root_observation_started
+    authority_boundary: source_root_is_observed_locator_not_project_truth
+  - phase_id: upload_authorization_after_manifest_acceptance
+    required_evidence:
+      - manifest_acceptance_for_upload
+      - auth_before_blob_upload_policy
+    output_state: upload_authorization_planned
+    authority_boundary: this_contract_does_not_implement_upload_endpoint_or_blob_storage
+  - phase_id: folder_tree_snapshot_finalization
+    required_evidence:
+      - capex_folder_tree_snapshots
+      - immutable_manifest_digest
+    output_state: snapshot_observed
+    authority_boundary: snapshot_does_not_create_reviewed_baseline_or_source_sufficiency
+  - phase_id: pm_review_handoff
+    required_evidence:
+      - future_pm_review_task
+      - future_corpus_structure_review_workpage
+    output_state: review_handoff_planned
+    authority_boundary: pm_review_is_required_before_downstream_baseline_use
+not_implemented_in_this_task:
+  - upload_endpoint
+  - blob_storage_or_blob_custody
+  - background_watcher
+  - manual_resync_execution
+  - source_occurrence_binding
+  - reviewed_corpus_baseline_creation
+  - official_pointer_creation
+  - public_api_route
+  - frontend_route
+raw_data_boundary:
+  allowed_repo_material:
+    - task ids
+    - source row ids
+    - runtime table names
+    - runtime schema paths
+    - sanitized phase names
+    - aggregate manifest requirements
+    - raw-data boundary rules
+  prohibited_repo_material:
+    - full project corpus files
+    - unrestricted source excerpts
+    - raw project filenames
+    - absolute local paths
+    - usernames or machine names from local paths
+    - screenshots or logs containing source content
+    - uploaded blob bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - upload_endpoint_activation
+  - blob_storage_activation
+  - source_occurrence_binding
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - desktop_sync_activation
+  - background_watcher_activation
+  - manual_resync_activation
+  - ai_proposal_authority
+  - evidence_sufficiency_claim
+  - production_preflight_approval
+  - pilot_readiness_approval

@@ -6,7 +6,7 @@ Constrain generated artifacts, pointer promotion, closure, stale reopen, and wai
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0565` is closed as of 2026-06-08 with internal closure/waiver/stale runtime primitive evidence, `TASK-0570` is closed as of 2026-06-17 with non-commutative closure and pointer sequence tests, and `TASK-0651` is closed with the SME-RP evidence status transition contract. Generated artifact envelopes, policy validators, pointer-promotion policy checks, richer closure command/UI surfaces, AI trust, and partial-handover addenda remain open.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0565` is closed as of 2026-06-08 with internal closure/waiver/stale runtime primitive evidence, `TASK-0276` is closed as of 2026-06-17 with the CAPEX generated artifact envelope schema and canonical naming helper, `TASK-0278` is closed as of 2026-06-17 with generated artifact schema/bundle validator evidence, `TASK-0570` is closed as of 2026-06-17 with non-commutative closure and pointer sequence tests, and `TASK-0651` is closed with the SME-RP evidence status transition contract. Meaningful SourceRef/evidence policy, pointer-promotion policy checks, richer closure command/UI surfaces, AI trust, and partial-handover addenda remain open.
 
 ## In scope
 - Source task families/counts: ARCH:20, ART:5, NU:2, RF:2, SME-RP:3, V5:3.
@@ -32,8 +32,8 @@ Context pack:
 - `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 
 ## Task stack
-- `TASK-0276` (`ART-001`) - Implement generated artifact envelope and canonical naming
-- `TASK-0278` (`ART-003`) - Implement schema and bundle validators
+- `TASK-0276` (`ART-001`) - Implement generated artifact envelope and canonical naming - DONE 2026-06-17
+- `TASK-0278` (`ART-003`) - Implement schema and bundle validators - DONE 2026-06-17
 - `TASK-0279` (`ART-004`) - Implement meaningful source_refs/evidence_refs policy
 - `TASK-0280` (`ART-005`) - Implement pointer promotion request and policy checks
 - `TASK-0281` (`ART-006`) - Implement stale/reopen register and rules

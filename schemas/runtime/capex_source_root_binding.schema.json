@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexSourceRootBinding",
+  "type": "object",
+  "required": [
+    "source_root_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "observer_mode",
+    "permission_basis",
+    "sync_health",
+    "status",
+    "metadata_json",
+    "owner_actor_id",
+    "owner_actor_type",
+    "created_by_actor_id",
+    "created_by_actor_type",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "source_root_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "observer_mode": {
+      "type": "string",
+      "enum": [
+        "browser_folder_selection",
+        "zip_import",
+        "user_selected_folder_upload",
+        "browser_manual_resync",
+        "desktop_agent_manual_scan",
+        "desktop_agent_watch",
+        "cloud_connector",
+        "server_mounted_folder",
+        "archived_source"
+      ]
+    },
+    "display_label": { "type": ["string", "null"] },
+    "redacted_path_hint": { "type": ["string", "null"] },
+    "permission_basis": { "type": "string" },
+    "sync_health": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "healthy",
+        "needs_manual_resync",
+        "permission_lost",
+        "root_missing",
+        "watcher_degraded",
+        "degraded"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "needs_manual_resync",
+        "permission_lost",
+        "root_missing",
+        "watcher_degraded",
+        "archived"
+      ]
+    },
+    "root_marker": { "type": ["string", "null"] },
+    "latest_snapshot_id": { "type": ["string", "null"] },
+    "metadata_json": { "type": "object" },
+    "owner_actor_id": { "type": "string" },
+    "owner_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "created_by_actor_id": { "type": "string" },
+    "created_by_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "last_observed_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

@@ -12,6 +12,7 @@ DOC-001, DOC-002, DOC-003, SAFE-002, RF-011, RF-012, ARCH-W7-SL-001, ARCH-W7-SL-
 - `docs/planning/CAPEX_MASTER_V6_INTAKE.md`
 - `docs/planning/CAPEX_V6_CONVERSION_MAP.csv`
 - `docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml`
+- `docs/planning/capex_desktop_source_roots/BROWSER_FOLDER_ZIP_IMPORT_MVP_PROTOCOL.yaml`
 - `docs/architecture/invariants.md`
 - `docs/status/CURRENT_FOCUS.md`
 
@@ -57,6 +58,8 @@ Stage model:
 
 Closed planning evidence:
 - `TASK-0607` - DONE 2026-06-17. `docs/planning/capex_desktop_source_roots/EPIC150_STAGE_MODEL_AND_BOUNDARY.yaml` freezes the stage/MVP boundary and non-authority rules without activating desktop sync, CAPEX runtime behavior, raw corpus import, or product/public surfaces.
+- `TASK-0608` - DONE 2026-06-17. Internal `capex_source_root_bindings`, `capex_source_root_sync_runs`, and `capex_folder_tree_snapshots` state exists for observations only; it does not bind SourceOccurrences or reviewed/official truth.
+- `TASK-0609` - DONE 2026-06-17. `docs/planning/capex_desktop_source_roots/BROWSER_FOLDER_ZIP_IMPORT_MVP_PROTOCOL.yaml` records the Stage 1 manifest-first browser folder/ZIP/user-selected upload protocol without implementing upload endpoints, blob storage, background sync, SourceOccurrence binding, reviewed baselines, or activation.
 
 Runtime concepts:
 - `SourceRootBinding`: project-scoped source-root identity. Path is a redacted locator/display hint.
