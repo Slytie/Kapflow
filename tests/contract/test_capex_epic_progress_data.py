@@ -64,10 +64,10 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
     assert data["summary"]["taskCount"] == 432
-    assert data["summary"]["estimate"]["completedTasks"] == 124
-    assert data["summary"]["estimate"]["remainingTasks"] == 308
-    assert data["summary"]["estimate"]["etaDate"] == "2026-08-29"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-29"
+    assert data["summary"]["estimate"]["completedTasks"] == 126
+    assert data["summary"]["estimate"]["remainingTasks"] == 306
+    assert data["summary"]["estimate"]["etaDate"] == "2026-08-27"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-08-27"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
@@ -117,6 +117,8 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     }
     assert epic151_task_statuses["TASK-0277"] == "done"
     assert epic151_task_statuses["TASK-0290"] == "done"
+    assert epic151_task_statuses["TASK-0539"] == "done"
+    assert epic151_task_statuses["TASK-0540"] == "done"
     assert epic151_task_statuses["TASK-0659"] == "done"
 
     epic144 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-144")

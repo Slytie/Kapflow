@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexCeoTransparencySnapshotFreshness",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "activation_posture",
+    "freshness_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "created_at",
+    "created_by_actor",
+    "basis",
+    "source_refs",
+    "input_digests",
+    "watermarks",
+    "freshness",
+    "caveat_propagation",
+    "risk_signal_refs",
+    "truth_effects",
+    "cannot_be_used_for",
+    "snapshot_digest"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "capex.ceo_transparency_snapshot_freshness.v1"
+    },
+    "activation_posture": {
+      "const": "planning_only_no_capex_activation"
+    },
+    "freshness_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_by_actor": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "basis": {
+      "type": "object",
+      "required": [
+        "risk_ceo_transparency_workflow_id",
+        "ceo_transparency_snapshot_id",
+        "ceo_transparency_snapshot_digest",
+        "risk_state_snapshot_digest",
+        "risk_ceo_flags_digest"
+      ],
+      "properties": {
+        "risk_ceo_transparency_workflow_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ceo_transparency_snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ceo_transparency_snapshot_digest": {
+          "$ref": "#/$defs/sha256_digest"
+        },
+        "risk_state_snapshot_digest": {
+          "$ref": "#/$defs/sha256_digest"
+        },
+        "risk_ceo_flags_digest": {
+          "$ref": "#/$defs/sha256_digest"
+        },
+        "risk_signal_register_digest": {
+          "$ref": "#/$defs/sha256_digest"
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_refs": {
+      "$ref": "#/$defs/source_refs"
+    },
+    "input_digests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/sha256_digest"
+      },
+      "uniqueItems": true
+    },
+    "watermarks": {
+      "type": "object",
+      "required": [
+        "project_snapshot_watermark",
+        "risk_snapshot_watermark",
+        "watermarks_match"
+      ],
+      "properties": {
+        "project_snapshot_watermark": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_snapshot_watermark": {
+          "type": "string",
+          "minLength": 1
+        },
+        "watermarks_match": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "freshness": {
+      "type": "object",
+      "required": [
+        "freshness_state",
+        "stale_reasons",
+        "blocker_caveat_count",
+        "risk_signal_count"
+      ],
+      "properties": {
+        "freshness_state": {
+          "enum": ["current", "stale", "blocked"]
+        },
+        "stale_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "blocker_caveat_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "risk_signal_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "caveat_propagation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "propagation_id",
+          "source",
+          "caveat_type",
+          "source_refs",
+          "blocks_forecast"
+        ],
+        "properties": {
+          "propagation_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "enum": ["ceo_transparency_snapshot", "risk_ceo_flags"]
+          },
+          "caveat_type": {
+            "enum": [
+              "not_forecastable",
+              "evidence_missing",
+              "evidence_conflict",
+              "stale_pointer",
+              "waiver_recorded",
+              "ai_draft_only",
+              "scope_limited",
+              "management_attention"
+            ]
+          },
+          "source_refs": {
+            "$ref": "#/$defs/source_refs"
+          },
+          "blocks_forecast": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "risk_signal_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^risk_signal:[A-Za-z0-9_.:-]+$"
+      },
+      "uniqueItems": true
+    },
+    "truth_effects": {
+      "type": "object",
+      "required": [
+        "creates_workflow_run",
+        "creates_tasks",
+        "creates_approvals",
+        "creates_risk_engine_state",
+        "creates_ceo_cockpit_state",
+        "creates_closure_snapshots",
+        "creates_official_project_state",
+        "writes_artifacts",
+        "promotes_official_pointers",
+        "activates_workflow_pack"
+      ],
+      "properties": {
+        "creates_workflow_run": {
+          "const": false
+        },
+        "creates_tasks": {
+          "const": false
+        },
+        "creates_approvals": {
+          "const": false
+        },
+        "creates_risk_engine_state": {
+          "const": false
+        },
+        "creates_ceo_cockpit_state": {
+          "const": false
+        },
+        "creates_closure_snapshots": {
+          "const": false
+        },
+        "creates_official_project_state": {
+          "const": false
+        },
+        "writes_artifacts": {
+          "const": false
+        },
+        "promotes_official_pointers": {
+          "const": false
+        },
+        "activates_workflow_pack": {
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "cannot_be_used_for": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "snapshot_digest": {
+      "$ref": "#/$defs/sha256_digest"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^source_occurrence:[A-Za-z0-9_.:-]+$"
+      },
+      "uniqueItems": true
+    },
+    "sha256_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

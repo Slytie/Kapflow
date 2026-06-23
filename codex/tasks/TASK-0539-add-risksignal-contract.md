@@ -2,10 +2,11 @@
 id: TASK-0539
 epic: EPIC-151
 title: "Add RiskSignal contract"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0290"]
 risk: high
 context_packs:
   - "codex/context/EPIC-151.md"
@@ -61,3 +62,5 @@ Deterministic predicate id, severity, status, owner, refs, policy version
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence: added `docs/planning/capex_transparency/RISK_SIGNAL_CONTRACT.yaml`, `src/onetruth/capex_platform/risk_signal.py`, focused unit tests, and CAPEX transparency/catalog contract coverage for deterministic planning-only `capex.risk_signal_register.v1` rows over `capex.risk_ceo_transparency.workflow_outputs.v1`.
+- Closeout boundary: this task creates no runtime risk engine, RiskSignal runtime table, CEO cockpit/runtime view, public or frontend routes, migrations, event-registry changes, official pointers, closure snapshots, external-system activation, raw corpus import, or CAPEX product/runtime activation.

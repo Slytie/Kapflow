@@ -8,7 +8,7 @@ This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. I
 ## Status
 Imported as TODO backlog unless an individual task records completed repo evidence.
 `TASK-0569` is closed as of 2026-06-09 with the internal CAPEX interface-burden conservation policy helper, architecture doc, and tests.
-`TASK-0277`, `TASK-0290`, and `TASK-0659` are closed as of 2026-06-23 with planning-only CEO transparency snapshot, Risk/CEO workflow, and procurement field / executive threshold-family contract/helper evidence. `TASK-0539` RiskSignal and `TASK-0540` W8 CEO transparency schema/freshness work remain open.
+`TASK-0277`, `TASK-0290`, `TASK-0539`, `TASK-0540`, and `TASK-0659` are closed as of 2026-06-23 with planning-only CEO transparency snapshot, Risk/CEO workflow, RiskSignal register, W8 CEO freshness companion, and procurement field / executive threshold-family contract/helper evidence.
 `TASK-0663` adds the remaining SME-RP external-system taxonomy obligation for executive transparency and observation boundaries.
 
 ## In scope
@@ -39,8 +39,8 @@ Context pack:
 - `TASK-0290` (`WFLOW-008`) - Risk and CEO Transparency workflow - DONE 2026-06-23
 - `TASK-0537` (`ARCH-W8-S01`) - Define reviewed_state_graph contract
 - `TASK-0538` (`ARCH-W8-S02`) - Implement SnapshotBuildRun skeleton
-- `TASK-0539` (`ARCH-W8-S03`) - Add RiskSignal contract
-- `TASK-0540` (`ARCH-W8-S04`) - Add ceo_transparency_snapshot schema
+- `TASK-0539` (`ARCH-W8-S03`) - Add RiskSignal contract - DONE 2026-06-23
+- `TASK-0540` (`ARCH-W8-S04`) - Add ceo_transparency_snapshot schema - DONE 2026-06-23
 - `TASK-0541` (`ARCH-W8-S05`) - Add ProjectCorpusDocument/Blob/Version design
 - `TASK-0542` (`ARCH-W8-S06`) - Add metadata type/value contract
 - `TASK-0543` (`ARCH-W8-S07`) - Define packet requirement/member/evaluation schema

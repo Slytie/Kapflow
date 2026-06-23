@@ -68,6 +68,11 @@ CEO_TRANSPARENCY_SNAPSHOT_CONTRACT_PATH = (
     / "docs/planning/capex_generated_artifacts/"
     "CEO_TRANSPARENCY_SNAPSHOT_CONTRACT.yaml"
 )
+CEO_TRANSPARENCY_FRESHNESS_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_transparency/"
+    "CEO_TRANSPARENCY_SNAPSHOT_W8_FRESHNESS_CONTRACT.yaml"
+)
 CORPUS_BASELINE_WORKFLOW_PATH = (
     ROOT
     / "docs/planning/capex_workflow_catalog/"
@@ -78,6 +83,9 @@ GENERATED_ARTIFACT_SCHEMA_PATH = (
 )
 CEO_TRANSPARENCY_SCHEMA_PATH = (
     ROOT / "schemas/runtime/capex_ceo_transparency_snapshot.schema.json"
+)
+CEO_TRANSPARENCY_FRESHNESS_SCHEMA_PATH = (
+    ROOT / "schemas/runtime/capex_ceo_transparency_snapshot_freshness.schema.json"
 )
 TASK_DIR = ROOT / "codex/tasks"
 FRONTMATTER_RE = re.compile(r"\A---\n(?P<body>.*?)\n---\n", re.DOTALL)
@@ -331,6 +339,67 @@ def test_ceo_transparency_snapshot_contract_closes_task_0277_without_activation(
         "ceo_cockpit_activation",
         "runtime_risk_engine_activation",
         "closure_snapshot_creation",
+        "official_project_state",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(contract["cannot_be_used_for"])
+
+
+def test_ceo_transparency_w8_freshness_contract_is_companion_schema_only() -> None:
+    contract = _load_yaml(CEO_TRANSPARENCY_FRESHNESS_CONTRACT_PATH)
+    schema = json.loads(CEO_TRANSPARENCY_FRESHNESS_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+    assert contract["owner_task"] == "TASK-0540"
+    assert contract["source_row"] == "ARCH-W8-S04"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0277", "TASK-0290"]
+    assert contract["depends_on"]["optional_repo_tasks"] == ["TASK-0539"]
+    assert contract["existing_snapshot_policy"] == {
+        "replaces_capex_ceo_transparency_snapshot_v1": False,
+        "companion_payload_schema_version": (
+            "capex.ceo_transparency_snapshot_freshness.v1"
+        ),
+        "schema_ref": (
+            "schemas/runtime/capex_ceo_transparency_snapshot_freshness.schema.json"
+        ),
+    }
+    assert schema["properties"]["schema_version"]["const"] == (
+        "capex.ceo_transparency_snapshot_freshness.v1"
+    )
+    assert contract["freshness_policy"] == {
+        "stale_pointer_caveats_propagate": True,
+        "missing_evidence_caveats_propagate": True,
+        "evidence_conflict_caveats_propagate": True,
+        "ai_draft_only_caveats_propagate": True,
+        "waiver_caveats_remain_visible": True,
+        "false_precision_allowed_when_not_forecastable": False,
+        "exact_date_cost_percent_without_forecastability_allowed": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_tasks": False,
+        "creates_approvals": False,
+        "creates_risk_engine_state": False,
+        "creates_ceo_cockpit_state": False,
+        "creates_closure_snapshots": False,
+        "creates_official_project_state": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "runtime_risk_engine",
+        "ceo_cockpit",
+        "public_api_route",
+        "frontend_route",
+        "official_pointer_creation",
+        "replacement_of_capex_ceo_transparency_snapshot_v1",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "raw_corpus_import",
+        "runtime_risk_engine_activation",
+        "ceo_cockpit_activation",
         "official_project_state",
         "official_pointer_creation",
         "capex_runtime_activation",
@@ -714,6 +783,8 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0288 = _frontmatter("TASK-0288")
     task_0289 = _frontmatter("TASK-0289")
     task_0290 = _frontmatter("TASK-0290")
+    task_0539 = _frontmatter("TASK-0539")
+    task_0540 = _frontmatter("TASK-0540")
 
     assert task_0267["status"] == "DONE"
     assert task_0267["completed_at"] == "2026-06-17T00:00:00Z"
@@ -772,6 +843,10 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     assert task_0290["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0277" in task_0290["depends_on"]
     assert "TASK-0289" in task_0290["depends_on"]
+    assert task_0539["status"] == "DONE"
+    assert task_0539["completed_at"] == "2026-06-23T00:00:00Z"
+    assert task_0540["status"] == "DONE"
+    assert task_0540["completed_at"] == "2026-06-23T00:00:00Z"
 
 
 def test_generated_artifact_contract_does_not_claim_policy_or_activation_approval() -> None:

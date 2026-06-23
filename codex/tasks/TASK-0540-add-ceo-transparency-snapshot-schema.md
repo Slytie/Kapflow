@@ -2,10 +2,11 @@
 id: TASK-0540
 epic: EPIC-151
 title: "Add ceo_transparency_snapshot schema"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0277", "TASK-0290", "TASK-0539"]
 risk: high
 context_packs:
   - "codex/context/EPIC-151.md"
@@ -61,3 +62,5 @@ Projection over project/risk snapshots with freshness and caveats
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence: added `docs/planning/capex_transparency/CEO_TRANSPARENCY_SNAPSHOT_W8_FRESHNESS_CONTRACT.yaml`, `schemas/runtime/capex_ceo_transparency_snapshot_freshness.schema.json`, and `build_ceo_transparency_snapshot_freshness_outputs(...)` as a companion payload over the existing `capex.ceo_transparency_snapshot.v1` artifact, Risk/CEO workflow outputs, and optional RiskSignal outputs.
+- Closeout boundary: this task does not replace the `TASK-0277` CEO snapshot artifact and creates no CEO cockpit/runtime view, runtime risk engine, public or frontend routes, migrations, event-registry changes, official pointers, closure snapshots, external-system activation, raw corpus import, or CAPEX product/runtime activation.

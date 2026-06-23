@@ -499,8 +499,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0536 | EPIC-150 | TODO | high | Wave 7 integration QA |
 | TASK-0537 | EPIC-151 | TODO | high | Define reviewed_state_graph contract |
 | TASK-0538 | EPIC-151 | TODO | high | Implement SnapshotBuildRun skeleton |
-| TASK-0539 | EPIC-151 | TODO | high | Add RiskSignal contract |
-| TASK-0540 | EPIC-151 | TODO | high | Add ceo_transparency_snapshot schema |
+| TASK-0539 | EPIC-151 | DONE | high | Add RiskSignal contract |
+| TASK-0540 | EPIC-151 | DONE | high | Add ceo_transparency_snapshot schema |
 | TASK-0541 | EPIC-151 | TODO | high | Add ProjectCorpusDocument/Blob/Version design |
 | TASK-0542 | EPIC-151 | TODO | high | Add metadata type/value contract |
 | TASK-0543 | EPIC-151 | TODO | high | Define packet requirement/member/evaluation schema |

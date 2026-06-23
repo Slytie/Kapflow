@@ -2,6 +2,12 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-151 RiskSignal and W8 CEO freshness closeout)
+- RiskSignal decision: `TASK-0539` records `capex.risk_signal_register.v1` as planning-only transparency evidence derived from `capex.risk_ceo_transparency.workflow_outputs.v1`, with deterministic `risk_signal_id`, `predicate_id`, risk refs, severity/status enums, owner roles, SourceRefs, policy version, input digests, row digests, and register digest.
+- W8 freshness decision: `TASK-0540` records `capex.ceo_transparency_snapshot_freshness.v1` as a companion payload over the existing `capex.ceo_transparency_snapshot.v1` artifact, Risk/CEO workflow outputs, and optional RiskSignal outputs; it does not replace the `TASK-0277` CEO snapshot artifact.
+- CEO-safe freshness decision: stale, missing-evidence, conflict, AI-draft-only, waiver, and not-forecastable caveats propagate into the freshness companion; no exact date/cost/percent precision is allowed when forecastability is `not_forecastable`.
+- Activation decision: this closeout adds helper/contract/schema/test evidence only. It adds no runtime risk engine, CEO cockpit/runtime view, public or frontend route, migration, event-registry change, official pointer, closure snapshot, external-system activation, raw corpus import, production approval, or CAPEX runtime/product activation.
+
 ## 2026-06-23 (EPIC-144/151 Risk cockpit and procurement thresholds closeout)
 - Risk cockpit projection decision: `TASK-0299` records a planning-only Risk / Stale / CEO Cockpit workpage contract/helper that requires `capex.risk_ceo_transparency.workflow_outputs.v1` basis and emits deterministic risk cards, stale/blocker cards, CEO management-action cards, SourceRef drilldowns, and forecastability/caveat display.
 - Display-boundary decision: cockpit projections must keep SourceRefs and drilldown refs visible, propagate stale/missing/conflict/AI-draft-only blockers, record waiver caveats explicitly, reject false date/cost/percent precision when `not_forecastable`, and create no generated workpage authority.

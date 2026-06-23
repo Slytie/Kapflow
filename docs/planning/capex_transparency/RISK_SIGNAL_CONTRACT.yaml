@@ -1,0 +1,127 @@
+schema_version: capex.transparency.contract.v1
+contract_id: capex.risk_signal.v1
+title: CAPEX RiskSignal planning register
+owner_task: TASK-0539
+source_row: ARCH-W8-S03
+activation_posture: planning_only_no_capex_activation
+overall_status: contract_helper_recorded_not_activated
+acceptance_gates:
+  - W8-accepted-gates
+  - semantic MR gate
+depends_on:
+  repo_tasks:
+    - TASK-0290
+required_basis:
+  schema_version: capex.risk_ceo_transparency.workflow_outputs.v1
+  required_outputs:
+    - risk_state_snapshot
+    - ceo_transparency_snapshot
+    - risk_ceo_flags
+canonical_outputs:
+  - risk_signal_register
+risk_signal_register:
+  schema_version: capex.risk_signal_register.v1
+  row_fields:
+    - risk_signal_id
+    - predicate_id
+    - risk_ref
+    - severity
+    - status
+    - owner_role
+    - source_refs
+    - policy_version
+    - input_digests
+    - row_digest
+  duplicate_risk_signal_ids_allowed: false
+  duplicate_predicate_for_same_risk_allowed: false
+  risk_refs_must_be_in_risk_ceo_outputs: true
+  source_refs_must_be_in_risk_ceo_outputs: true
+  register_digest_required: true
+severity_enum:
+  - critical
+  - high
+  - medium
+  - low
+  - informational
+status_enum:
+  - closed
+  - monitoring
+  - open
+  - blocked_missing_evidence
+  - blocked_conflict
+  - ai_draft_only
+  - waiver_recorded
+  - blocked_stale_pointer
+policy_version:
+  required: true
+  row_policy_must_match_register_policy: true
+determinism_policy:
+  canonical_bytes: deterministic_compact_ascii_json
+  digest_algorithm: sha256
+  row_order: risk_signal_id
+  digests_must_use_sha256_prefix: true
+truth_effects:
+  creates_workflow_run: false
+  creates_tasks: false
+  creates_approvals: false
+  creates_risk_engine_state: false
+  creates_risk_signal_runtime_state: false
+  creates_ceo_cockpit_state: false
+  creates_closure_snapshots: false
+  creates_official_project_state: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - runtime_risk_engine
+  - risk_signal_runtime_table
+  - ceo_cockpit
+  - public_api_route
+  - frontend_route
+  - migration
+  - event_registry_change
+  - closure_snapshot_creation
+  - official_pointer_creation
+  - external_system_activation
+raw_data_boundary:
+  allowed_repo_material:
+    - sanitized_risk_ids
+    - risk_refs
+    - predicate_ids
+    - source_refs
+    - input_digests
+    - policy_version
+    - severity_labels
+    - status_labels
+    - owner_role_labels
+    - aggregate_counts
+    - canonical_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_ai_output
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_project_state_text
+    - raw_risk_text
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - ceo_cockpit_activation
+  - runtime_risk_engine_activation
+  - authored_workflow_pack_activation
+  - raw_corpus_import
+  - reviewed_baseline_creation
+  - closure_snapshot_creation
+  - official_project_state
+  - official_pointer_creation
+  - production_preflight_approval
+remaining_open_after_this_task:
+  - TASK-0540
+  - TASK-0537
+  - TASK-0538
+  - TASK-0663

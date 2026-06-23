@@ -58,6 +58,16 @@ PROCUREMENT_FIELDS_THRESHOLDS_PATH = (
     / "docs/planning/capex_real_project_acceptance/"
     "PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml"
 )
+RISK_SIGNAL_CONTRACT_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_transparency/"
+    "RISK_SIGNAL_CONTRACT.yaml"
+)
+CEO_TRANSPARENCY_FRESHNESS_CONTRACT_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_transparency/"
+    "CEO_TRANSPARENCY_SNAPSHOT_W8_FRESHNESS_CONTRACT.yaml"
+)
 ANNEX_B_PATH = (
     REPO_ROOT
     / "docs/planning/capex_real_project_acceptance/"
@@ -135,6 +145,20 @@ def _risk_stale_ceo_cockpit_workpage() -> dict[str, Any]:
 
 def _procurement_fields_thresholds() -> dict[str, Any]:
     loaded = yaml.safe_load(PROCUREMENT_FIELDS_THRESHOLDS_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _risk_signal_contract() -> dict[str, Any]:
+    loaded = yaml.safe_load(RISK_SIGNAL_CONTRACT_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _ceo_freshness_contract() -> dict[str, Any]:
+    loaded = yaml.safe_load(
+        CEO_TRANSPARENCY_FRESHNESS_CONTRACT_PATH.read_text(encoding="utf-8")
+    )
     assert isinstance(loaded, dict)
     return loaded
 
@@ -824,6 +848,110 @@ def test_risk_ceo_transparency_contract_contains_no_raw_corpus_markers() -> None
         assert marker not in lowered
 
 
+def test_risk_signal_contract_is_planning_only_transparency_evidence() -> None:
+    contract = _risk_signal_contract()
+
+    assert contract["schema_version"] == "capex.transparency.contract.v1"
+    assert contract["contract_id"] == "capex.risk_signal.v1"
+    assert contract["owner_task"] == "TASK-0539"
+    assert contract["source_row"] == "ARCH-W8-S03"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0290"]
+    assert contract["required_basis"]["schema_version"] == (
+        "capex.risk_ceo_transparency.workflow_outputs.v1"
+    )
+    assert contract["canonical_outputs"] == ["risk_signal_register"]
+    assert contract["risk_signal_register"]["schema_version"] == (
+        "capex.risk_signal_register.v1"
+    )
+    assert contract["risk_signal_register"][
+        "duplicate_risk_signal_ids_allowed"
+    ] is False
+    assert contract["risk_signal_register"][
+        "risk_refs_must_be_in_risk_ceo_outputs"
+    ] is True
+    assert contract["policy_version"] == {
+        "required": True,
+        "row_policy_must_match_register_policy": True,
+    }
+    assert contract["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_tasks": False,
+        "creates_approvals": False,
+        "creates_risk_engine_state": False,
+        "creates_risk_signal_runtime_state": False,
+        "creates_ceo_cockpit_state": False,
+        "creates_closure_snapshots": False,
+        "creates_official_project_state": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "runtime_risk_engine",
+        "risk_signal_runtime_table",
+        "ceo_cockpit",
+        "public_api_route",
+        "frontend_route",
+        "migration",
+        "event_registry_change",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "raw_corpus_import",
+        "runtime_risk_engine_activation",
+        "ceo_cockpit_activation",
+        "official_project_state",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(contract["cannot_be_used_for"])
+
+
+def test_ceo_freshness_transparency_contract_preserves_w8_boundaries() -> None:
+    contract = _ceo_freshness_contract()
+
+    assert contract["schema_version"] == "capex.transparency.contract.v1"
+    assert contract["contract_id"] == (
+        "capex.ceo_transparency_snapshot_freshness.v1"
+    )
+    assert contract["owner_task"] == "TASK-0540"
+    assert contract["source_row"] == "ARCH-W8-S04"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["required_basis"] == {
+        "ceo_snapshot_schema_version": "capex.ceo_transparency_snapshot.v1",
+        "risk_ceo_workflow_schema_version": (
+            "capex.risk_ceo_transparency.workflow_outputs.v1"
+        ),
+        "optional_risk_signal_outputs_schema_version": "capex.risk_signal.outputs.v1",
+    }
+    assert contract["ceo_transparency_snapshot_freshness"][
+        "schema_version"
+    ] == "capex.ceo_transparency_snapshot_freshness.v1"
+    assert contract["validation_policy"] == {
+        "same_tenant_domain_project_required": True,
+        "source_refs_must_be_in_ceo_snapshot": True,
+        "input_digests_must_use_sha256_prefix": True,
+        "risk_signal_refs_must_be_known_when_present": True,
+        "duplicate_caveat_propagation_ids_allowed": False,
+        "deterministic_ordering_required": True,
+    }
+    assert contract["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_tasks": False,
+        "creates_approvals": False,
+        "creates_risk_engine_state": False,
+        "creates_ceo_cockpit_state": False,
+        "creates_closure_snapshots": False,
+        "creates_official_project_state": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert "replacement_of_capex_ceo_transparency_snapshot_v1" in contract[
+        "not_implemented_in_this_task"
+    ]
+
+
 def test_risk_stale_ceo_cockpit_workpage_is_planning_only_catalog_evidence() -> None:
     proposal = _risk_stale_ceo_cockpit_workpage()
 
@@ -898,7 +1026,12 @@ def test_risk_stale_ceo_cockpit_workpage_preserves_display_truth_boundaries() ->
 
 
 def test_risk_stale_ceo_cockpit_and_procurement_contracts_have_no_raw_markers() -> None:
-    for path in (RISK_STALE_CEO_COCKPIT_WORKPAGE_PATH, PROCUREMENT_FIELDS_THRESHOLDS_PATH):
+    for path in (
+        RISK_STALE_CEO_COCKPIT_WORKPAGE_PATH,
+        PROCUREMENT_FIELDS_THRESHOLDS_PATH,
+        RISK_SIGNAL_CONTRACT_PATH,
+        CEO_TRANSPARENCY_FRESHNESS_CONTRACT_PATH,
+    ):
         lowered = path.read_text(encoding="utf-8").lower()
         for marker in RAW_CORPUS_MARKERS:
             assert marker not in lowered
