@@ -54,7 +54,7 @@
     },
     "EPIC-144": {
       "displayStatus": "blocked",
-      "reviewPosture": "CAPEX review screens remain blocked even though TASK-0653 workpage-to-task generation planning truth is closed; public CAPEX workpages, read APIs, frontend routes, richer projection families, and risk/CEO workflow dependencies remain blocked/open."
+      "reviewPosture": "CAPEX review screens remain blocked even though TASK-0653 workpage-to-task generation planning truth and TASK-0299 Risk/Stale/CEO cockpit projection evidence are closed; public CAPEX workpages, read APIs, frontend routes, richer projection families, and runtime CEO cockpit activation remain blocked/open."
     },
     "EPIC-152": {
       "displayStatus": "blocked",
@@ -74,10 +74,6 @@
     "TASK-0291": {
       "displayStatus": "needs_review",
       "statusReason": "Needs fresh check because the selector/dashboard slice is closed, while richer CAPEX workpages and route-tree shell scope remain later EPIC-144 work."
-    },
-    "TASK-0299": {
-      "displayStatus": "needs_review",
-      "statusReason": "Needs fresh check because the risk/CEO view must not look product-ready before the risk workflow closes."
     }
   },
   "activationBlockers": [
@@ -98,8 +94,8 @@
     },
     {
       "id": "P3-001",
-      "plain": "The risk/CEO view can look finished before the risk workflow is ready.",
-      "action": "Show it as blocked until the risk workflow closes."
+      "plain": "The risk/CEO view can look finished before public cockpit activation is approved.",
+      "action": "Keep public routes and runtime cockpit behavior blocked until a later activation task closes."
     }
   ]
 }

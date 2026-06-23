@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexCeoTransparencySnapshot",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "artifact_file_name",
+    "activation_posture",
+    "snapshot_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "created_at",
+    "created_by_actor",
+    "source_refs",
+    "input_digests",
+    "forecastability",
+    "caveats",
+    "management_actions",
+    "drilldown_refs",
+    "summary",
+    "truth_effects",
+    "cannot_be_used_for",
+    "snapshot_digest"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "capex.ceo_transparency_snapshot.v1"
+    },
+    "artifact_kind": {
+      "const": "capex.ceo_transparency_snapshot"
+    },
+    "artifact_file_name": {
+      "const": "capex.ceo_transparency_snapshot.v1.json"
+    },
+    "activation_posture": {
+      "const": "planning_only_no_capex_activation"
+    },
+    "snapshot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_by_actor": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^source_occurrence:[A-Za-z0-9_.:-]+$"
+      },
+      "uniqueItems": true
+    },
+    "input_digests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "uniqueItems": true
+    },
+    "forecastability": {
+      "type": "object",
+      "required": [
+        "grade",
+        "false_precision_blocked",
+        "exact_forecast_fields_allowed"
+      ],
+      "properties": {
+        "grade": {
+          "enum": ["forecastable", "bounded_uncertainty", "not_forecastable"]
+        },
+        "false_precision_blocked": {
+          "const": true
+        },
+        "exact_forecast_fields_allowed": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "caveats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["caveat_id", "caveat_type", "caveat_label", "source_refs"],
+        "properties": {
+          "caveat_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "caveat_type": {
+            "enum": [
+              "not_forecastable",
+              "evidence_missing",
+              "evidence_conflict",
+              "stale_pointer",
+              "waiver_recorded",
+              "ai_draft_only",
+              "scope_limited",
+              "management_attention"
+            ]
+          },
+          "caveat_label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_refs": {
+            "$ref": "#/$defs/source_refs"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "management_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "action_id",
+          "action_label",
+          "owner_role",
+          "action_status",
+          "source_refs",
+          "drilldown_refs"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action_label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner_role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action_status": {
+            "enum": ["open", "blocked", "monitoring", "closed"]
+          },
+          "source_refs": {
+            "$ref": "#/$defs/source_refs"
+          },
+          "drilldown_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(project_state_component|risk_state_item|source_occurrence|generated_artifact|pointer_observation|workflow_output):[A-Za-z0-9_.:-]+$"
+            },
+            "uniqueItems": true
+          },
+          "forecast_date": {
+            "type": "string"
+          },
+          "forecast_amount_cents": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "forecast_percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "drilldown_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["drilldown_id", "drilldown_kind", "target_ref", "source_refs"],
+        "properties": {
+          "drilldown_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "drilldown_kind": {
+            "enum": [
+              "project_state_component",
+              "risk_state_item",
+              "source_occurrence",
+              "generated_artifact",
+              "pointer_observation",
+              "workflow_output"
+            ]
+          },
+          "target_ref": {
+            "type": "string",
+            "pattern": "^(project_state_component|risk_state_item|source_occurrence|generated_artifact|pointer_observation|workflow_output):[A-Za-z0-9_.:-]+$"
+          },
+          "source_refs": {
+            "$ref": "#/$defs/source_refs"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "caveat_count",
+        "management_action_count",
+        "drilldown_ref_count",
+        "not_forecastable"
+      ],
+      "properties": {
+        "caveat_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "management_action_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "drilldown_ref_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "not_forecastable": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "truth_effects": {
+      "type": "object",
+      "required": [
+        "creates_workflow_run",
+        "creates_risk_engine_state",
+        "creates_ceo_cockpit_state",
+        "creates_closure_snapshots",
+        "creates_official_project_state",
+        "writes_artifacts",
+        "promotes_official_pointers",
+        "activates_workflow_pack"
+      ],
+      "properties": {
+        "creates_workflow_run": { "const": false },
+        "creates_risk_engine_state": { "const": false },
+        "creates_ceo_cockpit_state": { "const": false },
+        "creates_closure_snapshots": { "const": false },
+        "creates_official_project_state": { "const": false },
+        "writes_artifacts": { "const": false },
+        "promotes_official_pointers": { "const": false },
+        "activates_workflow_pack": { "const": false }
+      },
+      "additionalProperties": false
+    },
+    "cannot_be_used_for": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "snapshot_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "forecastability": {
+            "properties": {
+              "grade": {
+                "const": "not_forecastable"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "management_actions": {
+            "items": {
+              "not": {
+                "anyOf": [
+                  { "required": ["forecast_date"] },
+                  { "required": ["forecast_amount_cents"] },
+                  { "required": ["forecast_percent"] }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^source_occurrence:[A-Za-z0-9_.:-]+$"
+      },
+      "uniqueItems": true
+    }
+  },
+  "additionalProperties": false
+}

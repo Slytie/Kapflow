@@ -237,7 +237,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0274 | EPIC-141 | DONE | high | Async job runtime for document processing |
 | TASK-0275 | EPIC-148 | TODO | high | Storage quota, backup and restore gate |
 | TASK-0276 | EPIC-142 | DONE | high | Implement generated artifact envelope and canonical naming |
-| TASK-0277 | EPIC-151 | TODO | high | Add ceo_transparency_snapshot schema and decision |
+| TASK-0277 | EPIC-151 | DONE | high | Add ceo_transparency_snapshot schema and decision |
 | TASK-0278 | EPIC-142 | DONE | high | Implement schema and bundle validators |
 | TASK-0279 | EPIC-142 | TODO | high | Implement meaningful source_refs/evidence_refs policy |
 | TASK-0280 | EPIC-142 | TODO | high | Implement pointer promotion request and policy checks |
@@ -250,7 +250,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0287 | EPIC-143 | DONE | high | Assumption Closure workflow |
 | TASK-0288 | EPIC-143 | DONE | high | Owner Interface Resolution workflow |
 | TASK-0289 | EPIC-143 | DONE | high | Project State Snapshot workflow |
-| TASK-0290 | EPIC-151 | TODO | high | Risk and CEO Transparency workflow |
+| TASK-0290 | EPIC-151 | DONE | high | Risk and CEO Transparency workflow |
 | TASK-0291 | EPIC-144 | TODO | high | CAPEX project dashboard and shell |
 | TASK-0292 | EPIC-144 | TODO | high | Project Intake workpage |
 | TASK-0293 | EPIC-144 | TODO | high | Corpus Baseline / Packet Review workpage |
@@ -259,7 +259,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0296 | EPIC-144 | TODO | high | Interface Resolution workpage |
 | TASK-0297 | EPIC-144 | TODO | high | Flags / Tasks / Review Queue workpage |
 | TASK-0298 | EPIC-144 | TODO | high | Pointer Promotion workpage |
-| TASK-0299 | EPIC-144 | TODO | high | Risk / Stale / CEO Cockpit |
+| TASK-0299 | EPIC-144 | DONE | high | Risk / Stale / CEO Cockpit |
 | TASK-0300 | EPIC-145 | TODO | high | Raw K12 quarantine and sensitivity manifest |
 | TASK-0301 | EPIC-145 | TODO | high | Sanitized K12 fixture extraction |
 | TASK-0302 | EPIC-145 | TODO | high | K12 expected-output manifest |
@@ -619,7 +619,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0656 | EPIC-143 | TODO | high | Add Safety and Work Permit Readiness workflow |
 | TASK-0657 | EPIC-143 | TODO | medium | Classify workflow extensions as MVP-lite or post-MVP |
 | TASK-0658 | EPIC-142 | TODO | high | Extend closure model with partial handover and observation phase |
-| TASK-0659 | EPIC-151 | TODO | high | Define procurement fields and executive escalation thresholds |
+| TASK-0659 | EPIC-151 | DONE | high | Define procurement fields and executive escalation thresholds |
 | TASK-0660 | EPIC-142 | TODO | high | Align AI trust status and source-binding requirements |
 | TASK-0661 | EPIC-146 | TODO | high | Promote K12 fixture cases into binding real-project catalogue |
 | TASK-0662 | EPIC-149 | TODO | high | Add subject-matter boundary negative tests |

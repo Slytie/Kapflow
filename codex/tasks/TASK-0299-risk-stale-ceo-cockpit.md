@@ -2,7 +2,8 @@
 id: TASK-0299
 epic: EPIC-144
 title: "Risk / Stale / CEO Cockpit"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["frontend"]
 reviewers: ["platform", "qa"]
 depends_on: ["TASK-0290"]
@@ -60,3 +61,6 @@ CEO-facing risk, blockers, forecastability, management actions with drill-down.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence added `docs/planning/capex_workpage_catalog/risk_stale_ceo_cockpit_workpage.yaml` and `onetruth.capex_platform.risk_stale_ceo_cockpit_workpage` for a planning-only cockpit projection from `capex.risk_ceo_transparency.workflow_outputs.v1`.
+- The helper produces deterministic risk cards, stale/blocker cards, CEO management-action cards, SourceRef drilldowns, forecastability display, canonical bytes/digests, and task-specific error codes while rejecting raw content, bad refs, duplicate card IDs, and false precision when not forecastable.
+- This closeout does not activate public CAPEX routes, frontend routes, a CEO cockpit runtime, runtime risk engine, authored workflow packs, official pointers, closure snapshots, migrations, event-registry changes, raw corpus import, or CAPEX product/runtime behavior.

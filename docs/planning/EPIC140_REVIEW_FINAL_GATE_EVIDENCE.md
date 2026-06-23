@@ -22,7 +22,7 @@ Scope: EPIC-140+ second-order review repair tasks 1-10 for foundation/readiness 
 | G-012 | PASS | WORKPAGE_COMMAND_IDEMPOTENCY | Workpage command envelopes replay exact command receipts and reject same-key/different-fingerprint attempts. |
 | G-013 | PASS | DOWNSTREAM_ACTIVATION_BLOCKED | EPIC-150 and downstream activation gates remain blocked/open; no public CAPEX activation was added. |
 | G-014 | PASS | FUTURE_RELATION_POLICY_BLOCKED | Source occurrence sharing/relation policy remains inactive until same tenant/domain/project enforcement is implemented. |
-| G-015 | PASS | TASK_CONTROL_PLANE_CONSISTENT | `TASK-0202..TASK-0207` frontmatter now matches `TASK_INDEX.md`; DONE-on-open task dependency guard is enforced. `TASK-0299 -> TASK-0290` is safe because `TASK-0299` remains TODO/needs-review, not DONE. |
+| G-015 | PASS | TASK_CONTROL_PLANE_CONSISTENT | `TASK-0202..TASK-0207` frontmatter now matches `TASK_INDEX.md`; DONE-on-open task dependency guard is enforced. `TASK-0299 -> TASK-0290` is safe because `TASK-0290` is DONE before the later `TASK-0299` closeout. |
 | G-016 | PASS | PROGRESS_DATA_REPO_OWNED | `frontend/src/data/capexEpicProgressData.json` is regenerated from repo source, validates `meta.codexRule`, `localOnly`, and freshness, and is checked by `capex-progress-check`. |
 | G-017 | PASS | REDTEAM_PROBES_FIRST_CLASS | CAPEX invariant audit reports red-team project-security and workpage activation/idempotency hard gates. |
 | G-018 | PARTIAL | FRONTEND_TESTS_FAILED | Python/backend/control-plane gates pass under Python 3.11.14. Node v20.20.0/npm 10.8.2 install, typecheck, isolated CAPEX progress page test, and build pass; `frontend-workpages-smoke` and `frontend-test` fail/hang in existing logistics/workspace UI suites. |

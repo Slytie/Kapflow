@@ -63,6 +63,11 @@ GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     / "docs/planning/capex_generated_artifacts/"
     "GENERATED_ARTIFACT_VALIDATOR_CONTRACT.yaml"
 )
+CEO_TRANSPARENCY_SNAPSHOT_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_generated_artifacts/"
+    "CEO_TRANSPARENCY_SNAPSHOT_CONTRACT.yaml"
+)
 CORPUS_BASELINE_WORKFLOW_PATH = (
     ROOT
     / "docs/planning/capex_workflow_catalog/"
@@ -70,6 +75,9 @@ CORPUS_BASELINE_WORKFLOW_PATH = (
 )
 GENERATED_ARTIFACT_SCHEMA_PATH = (
     ROOT / "schemas/runtime/capex_generated_artifact_envelope.schema.json"
+)
+CEO_TRANSPARENCY_SCHEMA_PATH = (
+    ROOT / "schemas/runtime/capex_ceo_transparency_snapshot.schema.json"
 )
 TASK_DIR = ROOT / "codex/tasks"
 FRONTMATTER_RE = re.compile(r"\A---\n(?P<body>.*?)\n---\n", re.DOTALL)
@@ -261,6 +269,73 @@ def test_generated_artifact_validator_contract_is_non_promotional() -> None:
     assert contract["source_ref_policy"]["meaningful_source_ref_policy_task"] == (
         "TASK-0279"
     )
+
+
+def test_ceo_transparency_snapshot_contract_closes_task_0277_without_activation() -> None:
+    contract = _load_yaml(CEO_TRANSPARENCY_SNAPSHOT_CONTRACT_PATH)
+    schema = json.loads(CEO_TRANSPARENCY_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+    assert contract["owner_task"] == "TASK-0277"
+    assert contract["source_row"] == "ART-002"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0276"]
+    assert contract["generated_artifact"] == {
+        "artifact_kind": "capex.ceo_transparency_snapshot",
+        "artifact_role": "snapshot",
+        "file_name": "capex.ceo_transparency_snapshot.v1.json",
+        "schema_version": "capex.ceo_transparency_snapshot.v1",
+        "schema_ref": "schemas/runtime/capex_ceo_transparency_snapshot.schema.json",
+        "canonical_envelope_schema_version": "capex.generated_artifact_envelope.v1",
+    }
+    assert schema["properties"]["schema_version"]["const"] == (
+        "capex.ceo_transparency_snapshot.v1"
+    )
+    assert contract["forecastability_policy"] == {
+        "grades": ["forecastable", "bounded_uncertainty", "not_forecastable"],
+        "false_precision_allowed": False,
+        "not_forecastable_blocks_exact_date_cost_percent": True,
+        "exact_forecast_fields_require_forecastable": True,
+        "ceo_snapshot_reports_blockers_without_inventing_dates_or_costs": True,
+    }
+    assert contract["ceo_safe_output_policy"] == {
+        "source_refs_required": True,
+        "input_digests_required": True,
+        "drilldown_refs_required": True,
+        "raw_ai_text_allowed": False,
+        "raw_corpus_fields_allowed": False,
+        "unrestricted_excerpts_allowed": False,
+        "external_status_sets_official_state": False,
+        "generated_material_is_source_authority": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_risk_engine_state": False,
+        "creates_ceo_cockpit_state": False,
+        "creates_closure_snapshots": False,
+        "creates_official_project_state": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "runtime_risk_engine",
+        "ceo_cockpit",
+        "public_api_route",
+        "frontend_route",
+        "official_pointer_creation",
+        "W8_snapshot_freshness_contract",
+        "RiskSignal_contract",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "raw_corpus_import",
+        "ceo_cockpit_activation",
+        "runtime_risk_engine_activation",
+        "closure_snapshot_creation",
+        "official_project_state",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(contract["cannot_be_used_for"])
 
 
 def test_role_packet_register_contract_closes_task_0269_without_baseline_truth() -> None:
@@ -619,7 +694,7 @@ def test_async_document_processing_job_runtime_contract_closes_task_0274_without
     } <= set(contract["cannot_be_used_for"])
 
 
-def test_task_0267_through_0289_close_after_unblocker_pairs() -> None:
+def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
     task_0269 = _frontmatter("TASK-0269")
@@ -629,6 +704,7 @@ def test_task_0267_through_0289_close_after_unblocker_pairs() -> None:
     task_0273 = _frontmatter("TASK-0273")
     task_0274 = _frontmatter("TASK-0274")
     task_0276 = _frontmatter("TASK-0276")
+    task_0277 = _frontmatter("TASK-0277")
     task_0278 = _frontmatter("TASK-0278")
     task_0283 = _frontmatter("TASK-0283")
     task_0284 = _frontmatter("TASK-0284")
@@ -637,6 +713,7 @@ def test_task_0267_through_0289_close_after_unblocker_pairs() -> None:
     task_0287 = _frontmatter("TASK-0287")
     task_0288 = _frontmatter("TASK-0288")
     task_0289 = _frontmatter("TASK-0289")
+    task_0290 = _frontmatter("TASK-0290")
 
     assert task_0267["status"] == "DONE"
     assert task_0267["completed_at"] == "2026-06-17T00:00:00Z"
@@ -660,6 +737,9 @@ def test_task_0267_through_0289_close_after_unblocker_pairs() -> None:
     assert "TASK-0266" in task_0274["depends_on"]
     assert task_0276["status"] == "DONE"
     assert task_0276["completed_at"] == "2026-06-17T00:00:00Z"
+    assert task_0277["status"] == "DONE"
+    assert task_0277["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0276" in task_0277["depends_on"]
     assert task_0278["status"] == "DONE"
     assert task_0278["completed_at"] == "2026-06-17T00:00:00Z"
     assert task_0283["status"] == "DONE"
@@ -688,6 +768,10 @@ def test_task_0267_through_0289_close_after_unblocker_pairs() -> None:
     assert "TASK-0286" in task_0289["depends_on"]
     assert "TASK-0287" in task_0289["depends_on"]
     assert "TASK-0288" in task_0289["depends_on"]
+    assert task_0290["status"] == "DONE"
+    assert task_0290["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0277" in task_0290["depends_on"]
+    assert "TASK-0289" in task_0290["depends_on"]
 
 
 def test_generated_artifact_contract_does_not_claim_policy_or_activation_approval() -> None:

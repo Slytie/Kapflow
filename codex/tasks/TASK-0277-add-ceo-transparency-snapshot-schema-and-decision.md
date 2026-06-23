@@ -2,7 +2,8 @@
 id: TASK-0277
 epic: EPIC-151
 title: "Add ceo_transparency_snapshot schema and decision"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0276"]
@@ -60,3 +61,9 @@ CEO-facing snapshot distinct from internal risk_state_snapshot.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed with planning-only contract/schema/helper evidence:
+  `docs/planning/capex_generated_artifacts/CEO_TRANSPARENCY_SNAPSHOT_CONTRACT.yaml`,
+  `schemas/runtime/capex_ceo_transparency_snapshot.schema.json`, and
+  `onetruth.capex_platform.ceo_transparency_snapshot`.
+- The snapshot uses sanitized SourceRefs, input digests, forecastability grades, caveats, management-action rows, and drilldown refs. It rejects raw AI output, raw corpus fields, and false exact date/cost/percent precision when a snapshot is `not_forecastable`.
+- This closeout does not activate a CEO cockpit, runtime risk engine, public route, frontend route, official pointer, closure snapshot, or CAPEX product/runtime behavior. `TASK-0539` and `TASK-0540` remain open W8/runtime-facing work.

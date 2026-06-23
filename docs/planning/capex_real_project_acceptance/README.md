@@ -35,6 +35,9 @@ with existing repo-native task IDs.
   workpage-to-task generation contract for `SME-RP-G005`.
 - `ANNEX_B_MANDATORY_FIELDS_AND_ESCALATION_THRESHOLDS_DRAFT.md` - commercial
   fields and escalation threshold families.
+- `PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml` - planning-only
+  mandatory field and threshold-family contract for `SME-RP-G006` and
+  `SME-RP-G007`; numeric threshold values remain unsigned and absent.
 - `ANNEX_C_REAL_PROJECT_BINDING_ACCEPTANCE_CATALOGUE.md` - K12 fixture cases as
   the first binding real-project acceptance slice.
 - `ANNEX_D_WORKFLOW_EXTENSION_CLASSIFICATION.md` - MVP / MVP-lite / post-MVP

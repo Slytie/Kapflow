@@ -8,7 +8,8 @@ This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. I
 ## Status
 Imported as TODO backlog unless an individual task records completed repo evidence.
 `TASK-0569` is closed as of 2026-06-09 with the internal CAPEX interface-burden conservation policy helper, architecture doc, and tests.
-`TASK-0659` and `TASK-0663` add SME-RP procurement/escalation and external-system taxonomy obligations for executive transparency and observation boundaries.
+`TASK-0277`, `TASK-0290`, and `TASK-0659` are closed as of 2026-06-23 with planning-only CEO transparency snapshot, Risk/CEO workflow, and procurement field / executive threshold-family contract/helper evidence. `TASK-0539` RiskSignal and `TASK-0540` W8 CEO transparency schema/freshness work remain open.
+`TASK-0663` adds the remaining SME-RP external-system taxonomy obligation for executive transparency and observation boundaries.
 
 ## In scope
 - Source task families/counts: ARCH:24, ART:1, NU:1, SME-RP:2, WFLOW:1.
@@ -34,8 +35,8 @@ Context pack:
 - `docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml`
 
 ## Task stack
-- `TASK-0277` (`ART-002`) - Add ceo_transparency_snapshot schema and decision
-- `TASK-0290` (`WFLOW-008`) - Risk and CEO Transparency workflow
+- `TASK-0277` (`ART-002`) - Add ceo_transparency_snapshot schema and decision - DONE 2026-06-23
+- `TASK-0290` (`WFLOW-008`) - Risk and CEO Transparency workflow - DONE 2026-06-23
 - `TASK-0537` (`ARCH-W8-S01`) - Define reviewed_state_graph contract
 - `TASK-0538` (`ARCH-W8-S02`) - Implement SnapshotBuildRun skeleton
 - `TASK-0539` (`ARCH-W8-S03`) - Add RiskSignal contract
@@ -61,7 +62,7 @@ Context pack:
 - `TASK-0559` (`ARCH-W8-S23`) - Add W8 feature gate/migration lane entries
 - `TASK-0560` (`ARCH-W8-S24`) - Run Waves 1-8 formalism regression
 - `TASK-0569` (`NU-CB-P1-009`) - Add interface-burden conservation policy and tests
-- `TASK-0659` (`SME-RP:TASK-0636`) - Define procurement fields and executive escalation thresholds
+- `TASK-0659` (`SME-RP:TASK-0636`) - Define procurement fields and executive escalation thresholds - DONE 2026-06-23
 - `TASK-0663` (`SME-RP:TASK-0640`) - Define external system mode taxonomy
 
 ## SME-RP real-project acceptance addendum

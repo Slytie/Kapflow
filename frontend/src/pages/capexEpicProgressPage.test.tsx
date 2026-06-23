@@ -23,33 +23,33 @@ describe("CapexEpicProgressPage", () => {
     const summary = screen.getByRole("region", { name: "CAPEX progress summary" });
     const metrics = within(summary).getByRole("group", { name: "CAPEX progress metrics" });
     expect(within(metrics).getByText("432")).toBeInTheDocument();
-    expect(within(metrics).getByText("26.9%")).toBeInTheDocument();
-    expect(within(metrics).getByText("316")).toBeInTheDocument();
+    expect(within(metrics).getByText("28.2%")).toBeInTheDocument();
+    expect(within(metrics).getByText("310")).toBeInTheDocument();
 
     const roadmapProgress = screen.getByRole("region", { name: "CAPEX roadmap progress" });
     const roadmapProgressBar = within(roadmapProgress).getByRole("progressbar", {
       name: "CAPEX roadmap completion"
     });
-    expect(roadmapProgressBar).toHaveAttribute("aria-valuenow", "26.9");
+    expect(roadmapProgressBar).toHaveAttribute("aria-valuenow", "28.2");
     expect(roadmapProgressBar).toHaveAttribute(
       "aria-valuetext",
-      "26.9% complete, 316 remaining"
+      "28.2% complete, 310 remaining"
     );
-    expect(within(roadmapProgress).getByText("116 completed")).toBeInTheDocument();
-    expect(within(roadmapProgress).getByText("316 remaining")).toBeInTheDocument();
+    expect(within(roadmapProgress).getByText("122 completed")).toBeInTheDocument();
+    expect(within(roadmapProgress).getByText("310 remaining")).toBeInTheDocument();
 
     const completionTrend = screen.getByRole("region", { name: "CAPEX completion over time" });
     const trendLine = within(completionTrend).getByRole("img", {
       name: "CAPEX completion trend line"
     });
     expect(trendLine).toHaveAttribute("data-point-count", "8");
-    expect(trendLine).toHaveAttribute("data-projection-date", "2026-09-06");
-    expect(within(completionTrend).getByText("26.9% current")).toBeInTheDocument();
-    expect(within(completionTrend).getByText("84 timestamped completions")).toBeInTheDocument();
+    expect(trendLine).toHaveAttribute("data-projection-date", "2026-08-31");
+    expect(within(completionTrend).getByText("28.2% current")).toBeInTheDocument();
+    expect(within(completionTrend).getByText("90 timestamped completions")).toBeInTheDocument();
     expect(within(completionTrend).getByText("100%")).toBeInTheDocument();
     expect(within(completionTrend).getByText("32 undated baseline")).toBeInTheDocument();
-    expect(within(completionTrend).getByText("116 done")).toBeInTheDocument();
-    expect(within(completionTrend).getByText("Jun 23 to ETA Sep 06 at 100%")).toBeInTheDocument();
+    expect(within(completionTrend).getByText("122 done")).toBeInTheDocument();
+    expect(within(completionTrend).getByText("Jun 23 to ETA Aug 31 at 100%")).toBeInTheDocument();
 
     const timeline = screen.getByTestId("capex-epic-timeline");
     expect(within(timeline).getByRole("button", { name: /EPIC-136/i })).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe("CapexEpicProgressPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Needs fresh check" }));
     const filteredTimeline = screen.getByTestId("capex-epic-timeline");
-    expect(within(filteredTimeline).getByRole("button", { name: /EPIC-141/i })).toBeInTheDocument();
+    expect(within(filteredTimeline).getByRole("button", { name: /EPIC-142/i })).toBeInTheDocument();
     expect(within(filteredTimeline).getByRole("button", { name: /EPIC-144/i })).toBeInTheDocument();
     expect(within(filteredTimeline).queryByRole("button", { name: /EPIC-139/i })).not.toBeInTheDocument();
     expect(within(filteredTimeline).queryByRole("button", { name: /EPIC-152/i })).not.toBeInTheDocument();
@@ -134,6 +134,6 @@ describe("CapexEpicProgressPage", () => {
     await user.clear(screen.getByRole("searchbox"));
     await user.type(screen.getByRole("searchbox"), "TASK-0291");
     expect(within(filteredTimeline).getByRole("button", { name: /EPIC-144/i })).toBeInTheDocument();
-    expect(within(filteredTimeline).queryByRole("button", { name: /EPIC-141/i })).not.toBeInTheDocument();
+    expect(within(filteredTimeline).queryByRole("button", { name: /EPIC-142/i })).not.toBeInTheDocument();
   }, 15000);
 });

@@ -6,7 +6,7 @@ Plan CAPEX workpage projections, command envelopes, read APIs, and stale-command
 This epic was imported from CAPEX v6 on `2026-06-01` as planning backlog only. It does not activate CAPEX runtime behavior by itself.
 
 ## Status
-Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0567` is closed as of 2026-06-08 with internal projection snapshot runtime state, signed cursor helpers, and stale-command guards, and `TASK-0653` is closed with the SME-RP workpage-to-task generation contract. Public CAPEX workpages, read APIs, frontend routes, and richer projection families remain open/blocked.
+Imported as TODO backlog unless an individual task records completed repo evidence. `TASK-0567` is closed as of 2026-06-08 with internal projection snapshot runtime state, signed cursor helpers, and stale-command guards, `TASK-0653` is closed with the SME-RP workpage-to-task generation contract, and `TASK-0299` is closed as of 2026-06-23 with a planning-only Risk / Stale / CEO Cockpit projection contract/helper. Public CAPEX workpages, read APIs, frontend routes, and richer projection families remain open/blocked.
 
 ## In scope
 - Source task families/counts: ARCH:20, ART:1, NU:1, RF:1, SME-RP:1, WP:9.
@@ -41,7 +41,7 @@ Context pack:
 - `TASK-0296` (`WP-006`) - Interface Resolution workpage
 - `TASK-0297` (`WP-007`) - Flags / Tasks / Review Queue workpage
 - `TASK-0298` (`WP-008`) - Pointer Promotion workpage
-- `TASK-0299` (`WP-009`) - Risk / Stale / CEO Cockpit
+- `TASK-0299` (`WP-009`) - Risk / Stale / CEO Cockpit - DONE 2026-06-23
 - `TASK-0377` (`RF-009`) - Workpage projection/command split
 - `TASK-0449` (`ARCH-W5-S01`) - Projection table design note and CED approval
 - `TASK-0450` (`ARCH-W5-S02`) - Projection invalidation table migration draft

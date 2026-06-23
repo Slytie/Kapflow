@@ -2,7 +2,8 @@
 id: TASK-0290
 epic: EPIC-151
 title: "Risk and CEO Transparency workflow"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0277", "TASK-0289"]
@@ -60,3 +61,8 @@ Produce deterministic risk and CEO action snapshot with forecastability discipli
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed with planning-only workflow catalog/helper evidence:
+  `docs/planning/capex_workflow_catalog/risk_ceo_transparency_workflow.yaml`
+  and `onetruth.capex_platform.risk_ceo_transparency_workflow`.
+- The helper requires `capex.project_state_snapshot.workflow_outputs.v1` basis, enforces same tenant/domain/project, known project-state SourceRefs, known project-state component refs, duplicate-risk prevention, deterministic severity/forecastability mapping, CEO drilldown refs, stale/missing/conflict/AI-draft propagation, and waiver caveats.
+- This closeout supplied the prerequisite for later `TASK-0299` and `TASK-0659` planning closeouts, but it does not activate authored workflows, RiskSignal runtime, CEO cockpit/workpages, public routes, frontend routes, migrations, event-registry changes, official pointers, closure snapshots, external-system behavior, or CAPEX product/runtime behavior. `TASK-0539` and `TASK-0540` remain open.

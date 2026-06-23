@@ -43,6 +43,21 @@ PROJECT_STATE_SNAPSHOT_PATH = (
     / "docs/planning/capex_workflow_catalog/"
     "project_state_snapshot_workflow.yaml"
 )
+RISK_CEO_TRANSPARENCY_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_workflow_catalog/"
+    "risk_ceo_transparency_workflow.yaml"
+)
+RISK_STALE_CEO_COCKPIT_WORKPAGE_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_workpage_catalog/"
+    "risk_stale_ceo_cockpit_workpage.yaml"
+)
+PROCUREMENT_FIELDS_THRESHOLDS_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_real_project_acceptance/"
+    "PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml"
+)
 ANNEX_B_PATH = (
     REPO_ROOT
     / "docs/planning/capex_real_project_acceptance/"
@@ -104,6 +119,37 @@ def _project_state_snapshot() -> dict[str, Any]:
     return loaded
 
 
+def _risk_ceo_transparency() -> dict[str, Any]:
+    loaded = yaml.safe_load(RISK_CEO_TRANSPARENCY_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _risk_stale_ceo_cockpit_workpage() -> dict[str, Any]:
+    loaded = yaml.safe_load(
+        RISK_STALE_CEO_COCKPIT_WORKPAGE_PATH.read_text(encoding="utf-8")
+    )
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _procurement_fields_thresholds() -> dict[str, Any]:
+    loaded = yaml.safe_load(PROCUREMENT_FIELDS_THRESHOLDS_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _annex_field_ids() -> list[str]:
+    text = ANNEX_B_PATH.read_text(encoding="utf-8")
+    field_section = text.split("## Procurement / decision package minimum fields", 1)[1]
+    field_section = field_section.split("## Escalation threshold families", 1)[0]
+    return [
+        line.removeprefix("- `").removesuffix("`").strip()
+        for line in field_section.splitlines()
+        if line.startswith("- `")
+    ]
+
+
 def _annex_threshold_families() -> list[str]:
     text = ANNEX_B_PATH.read_text(encoding="utf-8")
     threshold_section = text.split("## Escalation threshold families", 1)[1]
@@ -128,7 +174,12 @@ def test_procurement_escalation_proposal_is_planning_only_catalog_evidence() -> 
         "SME-RP-G007",
         "SME-RP-G012",
     }
-    assert "TASK-0659" in proposal["remaining_activation_task_refs"]
+    assert "TASK-0659" not in proposal["remaining_activation_task_refs"]
+    assert proposal["completed_policy_task_refs"] == ["TASK-0659"]
+    assert (
+        "docs/planning/capex_real_project_acceptance/"
+        "PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml"
+    ) in proposal["policy_contract_refs"]
     assert set(proposal["cannot_be_used_for"]) >= {
         "capex_runtime_activation",
         "product_activation",
@@ -192,8 +243,55 @@ def test_procurement_escalation_thresholds_reference_annex_without_signoff() -> 
         "SME-RP-G006",
         "SME-RP-G007",
     }
-    assert "status: TODO" in task_0659_text
-    assert "TASK-0659" in proposal["remaining_activation_task_refs"]
+    assert "status: DONE" in task_0659_text
+    assert "completed_at: 2026-06-23T00:00:00Z" in task_0659_text
+    assert "TASK-0659" not in proposal["remaining_activation_task_refs"]
+
+
+def test_procurement_fields_thresholds_contract_matches_annex_and_boundaries() -> None:
+    contract = _procurement_fields_thresholds()
+
+    assert contract["schema_version"] == "capex.real_project_acceptance.contract.v1"
+    assert contract["contract_id"] == (
+        "capex.procurement_fields_and_executive_thresholds.v1"
+    )
+    assert contract["owner_task"] == "TASK-0659"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["gate_refs"] == ["SME-RP-G006", "SME-RP-G007"]
+    assert contract["procurement_required_field_register"]["field_ids"] == (
+        _annex_field_ids()
+    )
+    assert contract["executive_escalation_threshold_family_register"][
+        "threshold_families"
+    ] == _annex_threshold_families()
+    assert contract["executive_escalation_threshold_family_register"][
+        "threshold_value_policy"
+    ] == "no_numeric_thresholds_invented_by_platform"
+    assert contract["executive_escalation_threshold_family_register"][
+        "threshold_values_present"
+    ] is False
+    assert contract["commercial_observation_boundary"][
+        "commercial_evidence_can_directly_close_dimensions"
+    ] is False
+    assert set(
+        contract["commercial_observation_boundary"][
+            "commercial_evidence_cannot_close_dimensions"
+        ]
+    ) == {"technical", "effectiveness", "handover", "assumption", "closure"}
+    assert contract["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_tasks": False,
+        "creates_approvals": False,
+        "creates_threshold_values": False,
+        "activates_thresholds": False,
+        "activates_procurement_workflow": False,
+        "creates_erp_or_accounting_behavior": False,
+        "creates_ceo_cockpit_state": False,
+        "creates_official_project_state": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
 
 
 def test_procurement_escalation_proposal_contains_no_raw_corpus_markers() -> None:
@@ -623,3 +721,184 @@ def test_project_state_snapshot_contract_contains_no_raw_corpus_markers() -> Non
 
     for marker in RAW_CORPUS_MARKERS:
         assert marker not in lowered
+
+
+def test_risk_ceo_transparency_contract_is_planning_only_catalog_evidence() -> None:
+    proposal = _risk_ceo_transparency()
+
+    assert proposal["schema_version"] == "capex.workflow_catalog.proposal.v1"
+    assert proposal["proposal_id"] == "capex.risk_ceo_transparency.workflow.v1"
+    assert proposal["source_task_ref"] == "TASK-0290"
+    assert proposal["source_row"] == "WFLOW-008"
+    assert proposal["activation_posture"] == "planning_only_no_capex_activation"
+    assert proposal["acceptance_gates"] == ["AT-BRIDGE-008", "NU-010"]
+    assert proposal["depends_on"]["repo_tasks"] == ["TASK-0277", "TASK-0289"]
+    assert proposal["canonical_outputs"] == [
+        "risk_state_snapshot",
+        "ceo_transparency_snapshot",
+        "risk_ceo_flags",
+    ]
+
+
+def test_risk_ceo_transparency_contract_preserves_forecast_and_truth_boundaries() -> None:
+    proposal = _risk_ceo_transparency()
+
+    assert proposal["risk_state_snapshot"] == {
+        "schema_version": "capex.risk_state_snapshot.v1",
+        "official_truth": False,
+        "duplicate_risk_ids_allowed": False,
+        "source_refs_must_be_in_project_state_snapshot": True,
+        "project_state_component_refs_must_be_known": True,
+    }
+    assert proposal["ceo_transparency_snapshot"] == {
+        "schema_version": "capex.ceo_transparency_snapshot.v1",
+        "artifact_kind": "capex.ceo_transparency_snapshot",
+        "file_name": "capex.ceo_transparency_snapshot.v1.json",
+        "forecastability_grades": [
+            "forecastable",
+            "bounded_uncertainty",
+            "not_forecastable",
+        ],
+        "drilldown_refs_required": True,
+        "raw_ai_text_allowed": False,
+        "false_precision_allowed_when_not_forecastable": False,
+    }
+    assert proposal["forecastability_policy"] == {
+        "missing_evidence_maps_to": "not_forecastable",
+        "conflict_maps_to": "not_forecastable",
+        "stale_pointer_maps_to": "not_forecastable",
+        "ai_draft_only_maps_to": "not_forecastable",
+        "waiver_maps_to": "bounded_uncertainty",
+        "deterministic_severity_mapping": True,
+        "exact_date_cost_percent_without_forecastability_allowed": False,
+    }
+    assert proposal["officialness_policy"] == {
+        "risk_state_snapshot_is_official_truth": False,
+        "ceo_snapshot_is_official_project_truth": False,
+        "ai_draft_resolves_risk": False,
+        "external_status_sets_official_state": False,
+        "waiver_silently_closes_risk": False,
+        "missing_evidence_allows_forecast": False,
+        "conflict_allows_forecast": False,
+        "reviewed_metadata_is_pointer_truth": False,
+    }
+    assert proposal["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_tasks": False,
+        "creates_approvals": False,
+        "creates_risk_engine_state": False,
+        "creates_ceo_cockpit_state": False,
+        "creates_closure_snapshots": False,
+        "creates_official_project_state": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "runtime_risk_engine",
+        "ceo_cockpit",
+        "public_api_route",
+        "frontend_route",
+        "migration",
+        "event_registry_change",
+        "RiskSignal_runtime_contract",
+        "W8_ceo_transparency_freshness_contract",
+    } <= set(proposal["not_implemented_in_this_task"])
+    assert {
+        "authored_workflow_pack_activation",
+        "raw_corpus_import",
+        "ceo_cockpit_activation",
+        "runtime_risk_engine_activation",
+        "closure_snapshot_creation",
+        "official_project_state",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(proposal["cannot_be_used_for"])
+
+
+def test_risk_ceo_transparency_contract_contains_no_raw_corpus_markers() -> None:
+    lowered = RISK_CEO_TRANSPARENCY_PATH.read_text(encoding="utf-8").lower()
+
+    for marker in RAW_CORPUS_MARKERS:
+        assert marker not in lowered
+
+
+def test_risk_stale_ceo_cockpit_workpage_is_planning_only_catalog_evidence() -> None:
+    proposal = _risk_stale_ceo_cockpit_workpage()
+
+    assert proposal["schema_version"] == "capex.workpage_catalog.proposal.v1"
+    assert proposal["proposal_id"] == "capex.risk_stale_ceo_cockpit.workpage.v1"
+    assert proposal["source_task_ref"] == "TASK-0299"
+    assert proposal["source_row"] == "WP-009"
+    assert proposal["activation_posture"] == "planning_only_no_capex_activation"
+    assert proposal["depends_on"]["repo_tasks"] == ["TASK-0290"]
+    assert proposal["required_basis"]["schema_version"] == (
+        "capex.risk_ceo_transparency.workflow_outputs.v1"
+    )
+    assert proposal["canonical_outputs"] == [
+        "risk_cards",
+        "stale_blocker_cards",
+        "ceo_management_action_cards",
+        "source_drilldown_refs",
+        "forecastability_display",
+    ]
+
+
+def test_risk_stale_ceo_cockpit_workpage_preserves_display_truth_boundaries() -> None:
+    proposal = _risk_stale_ceo_cockpit_workpage()
+
+    assert proposal["risk_cards"] == {
+        "schema_version": "capex.risk_cockpit.risk_cards.v1",
+        "source_refs_visible": True,
+        "drilldown_refs_visible": True,
+        "duplicate_card_ids_allowed": False,
+        "official_truth": False,
+    }
+    assert proposal["stale_blocker_cards"]["stale_pointer_flag_required"] is True
+    assert proposal["stale_blocker_cards"]["missing_evidence_flag_required"] is True
+    assert proposal["stale_blocker_cards"]["evidence_conflict_flag_required"] is True
+    assert proposal["stale_blocker_cards"]["ai_draft_only_flag_required"] is True
+    assert proposal["forecastability_display"][
+        "false_precision_allowed_when_not_forecastable"
+    ] is False
+    assert proposal["truth_effects"] == {
+        "creates_public_route": False,
+        "creates_frontend_route": False,
+        "creates_ceo_cockpit_state": False,
+        "creates_risk_engine_state": False,
+        "creates_workflow_run": False,
+        "creates_tasks": False,
+        "creates_approvals": False,
+        "creates_closure_snapshots": False,
+        "creates_official_project_state": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "public_capex_route",
+        "frontend_route",
+        "ceo_cockpit_runtime",
+        "runtime_risk_engine",
+        "authored_workflow_pack",
+        "migration",
+        "event_registry_change",
+    } <= set(proposal["not_implemented_in_this_task"])
+    assert {
+        "capex_runtime_activation",
+        "product_activation",
+        "public_route_activation",
+        "frontend_route_activation",
+        "ceo_cockpit_activation",
+        "runtime_risk_engine_activation",
+        "official_project_state",
+        "official_pointer_creation",
+    } <= set(proposal["cannot_be_used_for"])
+
+
+def test_risk_stale_ceo_cockpit_and_procurement_contracts_have_no_raw_markers() -> None:
+    for path in (RISK_STALE_CEO_COCKPIT_WORKPAGE_PATH, PROCUREMENT_FIELDS_THRESHOLDS_PATH):
+        lowered = path.read_text(encoding="utf-8").lower()
+        for marker in RAW_CORPUS_MARKERS:
+            assert marker not in lowered

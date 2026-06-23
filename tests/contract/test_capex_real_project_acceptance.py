@@ -71,6 +71,10 @@ PROCUREMENT_ESCALATION_PROPOSAL_PATH = (
     / "docs/planning/capex_workflow_catalog/"
     "procurement_escalation_workflow_proposal.yaml"
 )
+ANNEX_B_PATH = REGISTER_DIR / "ANNEX_B_MANDATORY_FIELDS_AND_ESCALATION_THRESHOLDS_DRAFT.md"
+PROCUREMENT_FIELDS_THRESHOLDS_CONTRACT_PATH = (
+    REGISTER_DIR / "PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml"
+)
 TASK_DIR = ROOT / "codex/tasks"
 FRONTMATTER_RE = re.compile(r"\A---\n(?P<body>.*?)\n---\n", re.DOTALL)
 
@@ -221,6 +225,27 @@ def _load_yaml(path: Path) -> dict:
     loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
+
+
+def _annex_field_ids() -> list[str]:
+    text = ANNEX_B_PATH.read_text(encoding="utf-8")
+    field_section = text.split("## Procurement / decision package minimum fields", 1)[1]
+    field_section = field_section.split("## Escalation threshold families", 1)[0]
+    return [
+        line.removeprefix("- `").removesuffix("`").strip()
+        for line in field_section.splitlines()
+        if line.startswith("- `")
+    ]
+
+
+def _annex_threshold_families() -> list[str]:
+    text = ANNEX_B_PATH.read_text(encoding="utf-8")
+    threshold_section = text.split("## Escalation threshold families", 1)[1]
+    return [
+        line.removeprefix("- ").strip()
+        for line in threshold_section.splitlines()
+        if line.startswith("- ")
+    ]
 
 
 def _task_frontmatter(path: Path) -> dict:
@@ -1532,7 +1557,12 @@ def test_procurement_escalation_workflow_proposal_is_planning_only() -> None:
         "SME-RP-G012",
     }
     assert proposal["task_refs"] == ["TASK-0571"]
-    assert "TASK-0659" in proposal["remaining_activation_task_refs"]
+    assert "TASK-0659" not in proposal["remaining_activation_task_refs"]
+    assert proposal["completed_policy_task_refs"] == ["TASK-0659"]
+    assert proposal["policy_contract_refs"] == [
+        "docs/planning/capex_real_project_acceptance/"
+        "PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml"
+    ]
     assert proposal["routing_boundary"] == (
         "procurement_and_ceo_decisions_are_task_chains_not_editable_workpage_status"
     )
@@ -1548,3 +1578,42 @@ def test_procurement_escalation_workflow_proposal_is_planning_only() -> None:
         "threshold_signoff",
         "procurement_field_signoff",
     }
+
+
+def test_procurement_fields_thresholds_contract_matches_sme_rp_annex() -> None:
+    register = _load_register()
+    proposal = register["procurement_escalation_workflow_proposal"]
+    contract = _load_yaml(PROCUREMENT_FIELDS_THRESHOLDS_CONTRACT_PATH)
+
+    assert PROCUREMENT_FIELDS_THRESHOLDS_CONTRACT_PATH.exists()
+    assert proposal["completed_policy_task_refs"] == ["TASK-0659"]
+    assert contract["owner_task"] == "TASK-0659"
+    assert contract["source_task_ref"] == "TASK-0636"
+    assert contract["gate_refs"] == ["SME-RP-G006", "SME-RP-G007"]
+    assert contract["procurement_required_field_register"]["field_ids"] == (
+        _annex_field_ids()
+    )
+    threshold_register = contract[
+        "executive_escalation_threshold_family_register"
+    ]
+    assert threshold_register["threshold_families"] == _annex_threshold_families()
+    assert threshold_register["threshold_value_policy"] == (
+        "no_numeric_thresholds_invented_by_platform"
+    )
+    assert threshold_register["threshold_values_present"] is False
+    assert threshold_register["required_business_signoff_gate_refs"] == [
+        "SME-RP-G006",
+        "SME-RP-G007",
+    ]
+    boundary = contract["commercial_observation_boundary"]
+    assert boundary["commercial_evidence_can_directly_close_dimensions"] is False
+    assert set(boundary["commercial_evidence_cannot_close_dimensions"]) == {
+        "technical",
+        "effectiveness",
+        "handover",
+        "assumption",
+        "closure",
+    }
+    assert contract["truth_effects"]["activates_thresholds"] is False
+    assert contract["truth_effects"]["activates_procurement_workflow"] is False
+    assert contract["truth_effects"]["creates_erp_or_accounting_behavior"] is False

@@ -69,7 +69,7 @@ readiness_prerequisites:
       - docs/planning/epics/EPIC-141.md
       - docs/planning/CAPEX_MASTER_V6_INTAKE.md
   - prerequisite_id: capex.workflow_catalog
-    description: Internal workflow handoff manifest validation exists through TASK-0566, and the procurement/CEO escalation planning proposal exists through TASK-0571; CAPEX workflow packs are not authored, accepted, or activated yet.
+    description: Internal workflow handoff manifest validation exists through TASK-0566, procurement/CEO escalation planning exists through TASK-0571, and procurement field/threshold-family policy evidence exists through TASK-0659; CAPEX workflow packs are not authored, accepted, or activated yet.
     status: open
     task_refs:
       - TASK-0283
@@ -81,13 +81,15 @@ readiness_prerequisites:
       - TASK-0289
       - TASK-0566
       - TASK-0571
+      - TASK-0659
     source_refs:
       - docs/planning/epics/EPIC-143.md
       - docs/planning/CAPEX_V6_CONVERSION_MAP.csv
       - docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md
       - docs/planning/capex_workflow_catalog/procurement_escalation_workflow_proposal.yaml
+      - docs/planning/capex_real_project_acceptance/PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml
   - prerequisite_id: capex.workpage_projection_family
-    description: Internal projection snapshot, signed cursor, and stale-command guard foundation exists through TASK-0567; public CAPEX workpage APIs, frontend routes, projection families, and activation remain future EPIC-144 work.
+    description: Internal projection snapshot, signed cursor, stale-command guard foundation, and planning-only Risk/Stale/CEO cockpit projection evidence exist through TASK-0567 and TASK-0299; public CAPEX workpage APIs, frontend routes, projection families, and activation remain future EPIC-144 work.
     status: open
     task_refs:
       - TASK-0291
@@ -104,6 +106,7 @@ readiness_prerequisites:
       - docs/planning/epics/EPIC-144.md
       - docs/planning/CAPEX_V6_CONVERSION_MAP.csv
       - docs/architecture/CAPEX_HANDOFF_AND_PROJECTION_FOUNDATION.md
+      - docs/planning/capex_workpage_catalog/risk_stale_ceo_cockpit_workpage.yaml
   - prerequisite_id: capex.semantic_quality_gate
     description: CAPEX semantic marker, CB2 backlog manifest, focused Make/GitHub lane, and real-owner CODEOWNERS evidence exist through TASK-0568; hosted branch-protection and richer review-tier automation remain future/operator scope.
     status: satisfied
@@ -174,7 +177,7 @@ disabled_capabilities:
       - TASK-0428
   - capability_id: capex.workpages
     description: CAPEX-specific public workpages and frontend routes are disabled.
-    disabled_reason: TASK-0567 provides internal projection snapshot and stale-command foundation, but EPIC-144 public workpage/API/UX tasks remain TODO.
+    disabled_reason: TASK-0567 provides internal projection snapshot and stale-command foundation, and TASK-0299 provides planning-only cockpit projection evidence, but EPIC-144 public workpage/API/UX tasks remain TODO.
     owner_task_refs:
       - TASK-0291
       - TASK-0292
@@ -184,7 +187,6 @@ disabled_capabilities:
       - TASK-0296
       - TASK-0297
       - TASK-0298
-      - TASK-0299
   - capability_id: capex.production_pilot_activation
     description: Production, pilot, and production-like CAPEX activation are disabled.
     disabled_reason: Lab deploy live evidence, restore/capacity, release, and production-preflight gates remain open.

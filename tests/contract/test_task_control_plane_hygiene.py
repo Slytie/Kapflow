@@ -66,11 +66,15 @@ def test_done_tasks_do_not_depend_on_open_tasks_without_valid_exception() -> Non
     assert violations == []
 
 
-def test_task_0299_open_dependency_is_not_marked_done() -> None:
+def test_task_0299_closes_after_risk_ceo_workflow_dependency() -> None:
     frontmatter = _task_frontmatter_by_id()
     task_0299 = frontmatter["TASK-0299"]
+    task_0290 = frontmatter["TASK-0290"]
 
-    assert _status(task_0299["status"]) == "TODO"
+    assert _status(task_0290["status"]) == "DONE"
+    assert _completed_at(task_0290) == "2026-06-23T00:00:00Z"
+    assert _status(task_0299["status"]) == "DONE"
+    assert _completed_at(task_0299) == "2026-06-23T00:00:00Z"
     assert "TASK-0290" in _dependencies(task_0299)
 
 
@@ -111,6 +115,13 @@ def _task_index_statuses() -> dict[str, str]:
 
 def _status(value: Any) -> str:
     return str(value or "").strip().upper().replace("-", "_")
+
+
+def _completed_at(frontmatter: dict[str, Any]) -> str:
+    raw = frontmatter.get("completed_at")
+    if hasattr(raw, "isoformat"):
+        return raw.isoformat().replace("+00:00", "Z")
+    return str(raw)
 
 
 def _dependencies(frontmatter: dict[str, Any]) -> list[str]:

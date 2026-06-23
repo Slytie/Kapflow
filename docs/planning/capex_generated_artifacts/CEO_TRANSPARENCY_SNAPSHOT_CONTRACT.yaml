@@ -1,0 +1,125 @@
+schema_version: capex.ceo_transparency_snapshot_contract.v1
+contract_id: capex.ceo_transparency_snapshot.v1
+title: CAPEX CEO Transparency Snapshot generated artifact
+owner_task: TASK-0277
+source_row: ART-002
+activation_posture: planning_only_no_capex_activation
+overall_status: schema_helper_recorded_not_activated
+acceptance_gates:
+  - AT-CEO-001
+depends_on:
+  repo_tasks:
+    - TASK-0276
+unblocks:
+  - TASK-0290
+generated_artifact:
+  artifact_kind: capex.ceo_transparency_snapshot
+  artifact_role: snapshot
+  file_name: capex.ceo_transparency_snapshot.v1.json
+  schema_version: capex.ceo_transparency_snapshot.v1
+  schema_ref: schemas/runtime/capex_ceo_transparency_snapshot.schema.json
+  canonical_envelope_schema_version: capex.generated_artifact_envelope.v1
+payload_contract:
+  required_fields:
+    - schema_version
+    - artifact_kind
+    - artifact_file_name
+    - snapshot_id
+    - tenant_id
+    - domain_id
+    - project_id
+    - source_refs
+    - input_digests
+    - forecastability
+    - caveats
+    - management_actions
+    - drilldown_refs
+    - snapshot_digest
+  allowed_payload_material:
+    - sanitized_source_refs
+    - input_digests
+    - forecastability_grade
+    - caveat_rows
+    - management_action_rows
+    - drilldown_refs
+    - aggregate_counts
+    - provenance_metadata
+forecastability_policy:
+  grades:
+    - forecastable
+    - bounded_uncertainty
+    - not_forecastable
+  false_precision_allowed: false
+  not_forecastable_blocks_exact_date_cost_percent: true
+  exact_forecast_fields_require_forecastable: true
+  ceo_snapshot_reports_blockers_without_inventing_dates_or_costs: true
+ceo_safe_output_policy:
+  source_refs_required: true
+  input_digests_required: true
+  drilldown_refs_required: true
+  raw_ai_text_allowed: false
+  raw_corpus_fields_allowed: false
+  unrestricted_excerpts_allowed: false
+  external_status_sets_official_state: false
+  generated_material_is_source_authority: false
+determinism_policy:
+  canonical_bytes: deterministic_compact_ascii_json
+  digest_algorithm: sha256
+  duplicate_ids_rejected:
+    - caveat_id
+    - action_id
+    - drilldown_id
+truth_effects:
+  creates_workflow_run: false
+  creates_risk_engine_state: false
+  creates_ceo_cockpit_state: false
+  creates_closure_snapshots: false
+  creates_official_project_state: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - runtime_risk_engine
+  - ceo_cockpit
+  - public_api_route
+  - frontend_route
+  - workpage_route
+  - closure_snapshot_creation
+  - official_pointer_creation
+  - external_system_activation
+  - capex_product_activation
+  - W8_snapshot_freshness_contract
+  - RiskSignal_contract
+raw_data_boundary:
+  allowed_repo_material:
+    - source_refs
+    - input_digests
+    - sanitized_drilldown_refs
+    - forecastability_grades
+    - caveat_types
+    - management_action_statuses
+    - aggregate_counts
+    - canonical_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_ai_output
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_project_state_text
+    - raw_risk_text
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - ceo_cockpit_activation
+  - runtime_risk_engine_activation
+  - raw_corpus_import
+  - reviewed_baseline_creation
+  - closure_snapshot_creation
+  - official_project_state
+  - official_pointer_creation
+  - production_preflight_approval

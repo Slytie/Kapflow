@@ -1,0 +1,125 @@
+schema_version: capex.workpage_catalog.proposal.v1
+proposal_id: capex.risk_stale_ceo_cockpit.workpage.v1
+title: CAPEX Risk / Stale / CEO Cockpit workpage projection
+activation_posture: planning_only_no_capex_activation
+catalog_surface: planning_only_capex_workpage_catalog
+source_task_ref: TASK-0299
+source_row: WP-009
+acceptance_gates:
+  - AT-CEO-001
+depends_on:
+  repo_tasks:
+    - TASK-0290
+required_basis:
+  schema_version: capex.risk_ceo_transparency.workflow_outputs.v1
+  required_outputs:
+    - risk_state_snapshot
+    - ceo_transparency_snapshot
+    - risk_ceo_flags
+canonical_outputs:
+  - risk_cards
+  - stale_blocker_cards
+  - ceo_management_action_cards
+  - source_drilldown_refs
+  - forecastability_display
+risk_cards:
+  schema_version: capex.risk_cockpit.risk_cards.v1
+  source_refs_visible: true
+  drilldown_refs_visible: true
+  duplicate_card_ids_allowed: false
+  official_truth: false
+stale_blocker_cards:
+  schema_version: capex.risk_cockpit.stale_blocker_cards.v1
+  stale_pointer_flag_required: true
+  missing_evidence_flag_required: true
+  evidence_conflict_flag_required: true
+  ai_draft_only_flag_required: true
+  waiver_caveat_allowed: true
+  blocks_ceo_forecast_when_required: true
+  official_truth: false
+ceo_management_action_cards:
+  schema_version: capex.risk_cockpit.management_action_cards.v1
+  source_refs_visible: true
+  drilldown_refs_visible: true
+  creates_management_action_truth: false
+source_drilldown_refs:
+  schema_version: capex.risk_cockpit.source_drilldowns.v1
+  source_occurrence_refs_required: true
+  target_refs_must_be_known: true
+forecastability_display:
+  schema_version: capex.risk_cockpit.forecastability_display.v1
+  grades:
+    - forecastable
+    - bounded_uncertainty
+    - not_forecastable
+  false_precision_allowed_when_not_forecastable: false
+  caveats_visible: true
+truth_effects:
+  creates_public_route: false
+  creates_frontend_route: false
+  creates_ceo_cockpit_state: false
+  creates_risk_engine_state: false
+  creates_workflow_run: false
+  creates_tasks: false
+  creates_approvals: false
+  creates_closure_snapshots: false
+  creates_official_project_state: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_capex_route
+  - frontend_route
+  - ceo_cockpit_runtime
+  - runtime_risk_engine
+  - authored_workflow_pack
+  - migration
+  - event_registry_change
+  - official_pointer_creation
+  - closure_snapshot_creation
+raw_data_boundary:
+  allowed_repo_material:
+    - sanitized_risk_ids
+    - sanitized_card_ids
+    - sanitized_labels
+    - source_refs
+    - drilldown_refs
+    - input_digests
+    - forecastability_grades
+    - caveat_types
+    - aggregate_counts
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_ai_output
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_project_state_text
+    - raw_risk_text
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - ceo_cockpit_activation
+  - runtime_risk_engine_activation
+  - authored_workflow_pack_activation
+  - raw_corpus_import
+  - reviewed_baseline_creation
+  - closure_snapshot_creation
+  - official_project_state
+  - official_pointer_creation
+  - production_preflight_approval
+remaining_open_after_this_task:
+  - TASK-0539
+  - TASK-0540
+  - TASK-0291
+  - TASK-0292
+  - TASK-0293
+  - TASK-0294
+  - TASK-0295
+  - TASK-0296
+  - TASK-0297
+  - TASK-0298

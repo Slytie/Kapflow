@@ -9,6 +9,7 @@ ART-007, WP-001, WP-002, WP-003, WP-004, WP-005, WP-006, WP-007, ... plus SME-RP
 
 ## Closed foundation rows
 - `TASK-0567` is closed as of 2026-06-08: internal `capex_workpage_projection_snapshots` / `capex_workpage_projection_rows`, signed projection cursors, typed command envelopes, and stale-command guards exist for future CAPEX workpage mutation safety.
+- `TASK-0299` is closed as of 2026-06-23: `docs/planning/capex_workpage_catalog/risk_stale_ceo_cockpit_workpage.yaml` and `onetruth.capex_platform.risk_stale_ceo_cockpit_workpage` define a planning-only Risk / Stale / CEO Cockpit projection from Risk/CEO workflow outputs.
 - This does not add public CAPEX workpage APIs, frontend routes, or CAPEX workpage activation.
 
 ## SME-RP addendum rows

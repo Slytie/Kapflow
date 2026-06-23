@@ -251,7 +251,10 @@ procurement_escalation_workflow_proposal:
   gate_refs: [NU-GATE-011]
   depends_on_gate_refs: [SME-RP-G006, SME-RP-G007, SME-RP-G012]
   task_refs: [TASK-0571]
-  remaining_activation_task_refs: [TASK-0655, TASK-0657, TASK-0659]
+  remaining_activation_task_refs: [TASK-0655, TASK-0657]
+  completed_policy_task_refs: [TASK-0659]
+  policy_contract_refs:
+    - docs/planning/capex_real_project_acceptance/PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml
   routing_boundary: procurement_and_ceo_decisions_are_task_chains_not_editable_workpage_status
   cannot_be_used_for:
     - implementation_approval

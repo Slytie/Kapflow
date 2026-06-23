@@ -1,0 +1,118 @@
+schema_version: capex.real_project_acceptance.contract.v1
+contract_id: capex.procurement_fields_and_executive_thresholds.v1
+title: CAPEX procurement fields and executive escalation threshold families
+activation_posture: planning_only_no_capex_activation
+owner_task: TASK-0659
+source_task_ref: TASK-0636
+source_namespace: SME-RP
+source_annex_ref: Annex B
+gate_refs:
+  - SME-RP-G006
+  - SME-RP-G007
+canonical_outputs:
+  - procurement_required_field_register
+  - executive_escalation_threshold_family_register
+  - commercial_observation_boundary
+procurement_required_field_register:
+  schema_version: capex.procurement_required_field_register.v1
+  all_fields_required: true
+  evidence_posture: observed_or_reconciled_evidence
+  can_create_official_truth: false
+  field_ids:
+    - scope_id
+    - capex_scope
+    - capex_main_group
+    - level_2_group
+    - budget_line
+    - approved_budget
+    - forecast
+    - purchase_requisition
+    - purchase_order
+    - supplier
+    - quotation
+    - change_order
+    - invoice
+    - controlling_allocation
+    - deviation_amount
+    - deviation_category
+    - technical_risk
+    - schedule_impact
+    - residual_risk
+    - evidence_refs
+    - recommendation
+    - decision_maker
+    - escalation_reason
+    - outcome
+    - conditions
+executive_escalation_threshold_family_register:
+  schema_version: capex.executive_escalation_threshold_family_register.v1
+  threshold_value_policy: no_numeric_thresholds_invented_by_platform
+  threshold_values_present: false
+  threshold_values_require_business_signoff: true
+  required_business_signoff_roles:
+    - SME
+    - Project Manager
+    - Controlling
+  required_business_signoff_gate_refs:
+    - SME-RP-G006
+    - SME-RP-G007
+  threshold_families:
+    - budget deviation
+    - schedule shift with production impact
+    - safety or quality impact
+    - residual risk acceptance
+    - supplier dispute or claim exposure
+    - decision despite incomplete evidence
+    - recurring defect / system-effectiveness risk
+commercial_observation_boundary:
+  schema_version: capex.commercial_observation_boundary.v1
+  commercial_evidence_posture: observed_or_reconciled_evidence_only
+  commercial_evidence_can_directly_close_dimensions: false
+  commercial_evidence_cannot_close_dimensions:
+    - technical
+    - effectiveness
+    - handover
+    - assumption
+    - closure
+  commercial_evidence_sets_official_truth: false
+truth_effects:
+  creates_workflow_run: false
+  creates_tasks: false
+  creates_approvals: false
+  creates_threshold_values: false
+  activates_thresholds: false
+  activates_procurement_workflow: false
+  creates_erp_or_accounting_behavior: false
+  creates_ceo_cockpit_state: false
+  creates_official_project_state: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+raw_data_boundary:
+  allowed_repo_material:
+    - Annex B field identifiers
+    - threshold family labels
+    - gate refs
+    - policy names
+    - aggregate counts
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_ai_output
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_project_state_text
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - numeric_threshold_signoff
+  - threshold_activation
+  - procurement_workflow_activation
+  - erp_or_accounting_ledger_behavior
+  - ceo_cockpit_activation
+  - public_route_activation
+  - frontend_route_activation
+  - official_project_state
+  - closure_snapshot_creation
+  - capex_runtime_activation
+  - product_activation

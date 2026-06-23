@@ -2,12 +2,27 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-144/151 Risk cockpit and procurement thresholds closeout)
+- Risk cockpit projection decision: `TASK-0299` records a planning-only Risk / Stale / CEO Cockpit workpage contract/helper that requires `capex.risk_ceo_transparency.workflow_outputs.v1` basis and emits deterministic risk cards, stale/blocker cards, CEO management-action cards, SourceRef drilldowns, and forecastability/caveat display.
+- Display-boundary decision: cockpit projections must keep SourceRefs and drilldown refs visible, propagate stale/missing/conflict/AI-draft-only blockers, record waiver caveats explicitly, reject false date/cost/percent precision when `not_forecastable`, and create no generated workpage authority.
+- Procurement policy decision: `TASK-0659` records Annex B mandatory procurement/commercial fields and executive threshold families as planning-only contract/helper evidence under `SME-RP-G006` and `SME-RP-G007`.
+- Threshold-boundary decision: threshold values remain absent until SME / Project Manager / Controlling signoff; the platform must not invent numeric thresholds, and commercial evidence cannot directly close technical, effectiveness, handover, assumption, or closure dimensions.
+- Activation decision: this closeout adds helper/contract/test evidence only. It adds no public CAPEX route, frontend route, CEO cockpit runtime, runtime risk engine, authored workflow activation, numeric threshold signoff, procurement workflow activation, ERP/accounting behavior, official pointer, closure snapshot, raw corpus import, production approval, or CAPEX runtime/product activation.
+
+## 2026-06-23 (EPIC-151 CEO transparency and risk workflow closeout)
+- CEO transparency decision: `TASK-0277` records `capex.ceo_transparency_snapshot.v1` as a planning-only generated artifact with canonical file `capex.ceo_transparency_snapshot.v1.json`, SourceRefs, input digests, forecastability grade, caveats, management-action rows, drilldown refs, canonical bytes, deterministic digests, and a minimal runtime schema.
+- CEO-safe output decision: CEO snapshot payloads reject raw AI output, raw corpus fields, unrestricted excerpts, raw filenames/paths/blob material, and exact date/cost/percent forecast precision when forecastability is `not_forecastable`.
+- Risk/CEO workflow decision: `TASK-0290` records a planning-only Risk and CEO Transparency workflow contract/helper that requires `capex.project_state_snapshot.workflow_outputs.v1` basis plus sanitized risk observations, then emits deterministic `risk_state_snapshot`, `ceo_transparency_snapshot`, and `risk_ceo_flags` outputs.
+- Forecastability-boundary decision: missing evidence, evidence conflicts, stale pointers, and AI-draft-only states map to `not_forecastable`; waivers create explicit CEO caveats and bounded uncertainty rather than silently closing or assigning responsibility.
+- Dependency decision: `TASK-0290` supplied the prerequisite for later `TASK-0299` and `TASK-0659` closeouts. `TASK-0539` RiskSignal and `TASK-0540` W8 CEO transparency schema/freshness remain open; this tranche closes only ART-002/WFLOW-008 planning evidence.
+- Activation decision: this closeout adds helper/contract/schema/test evidence only. It adds no raw corpus import, runtime risk engine, CEO cockpit/workpage, public route, frontend route, migration, event-registry change, official pointer, closure snapshot, external-system activation, production approval, or CAPEX runtime/product activation.
+
 ## 2026-06-23 (EPIC-141/143 async-job and project-snapshot closeout)
 - Async job decision: `TASK-0274` records a planning-only async document-processing job runtime contract/helper with deterministic `capex.document_processing_job_register.v1`, `capex.document_processing_job_attempt_register.v1`, and `capex.document_processing_job_progress.v1` outputs from sanitized document-manifest basis rows.
 - Runtime-boundary decision: the async job helper models retry, resume, cancel, progress, command receipt, execution-session refs, deterministic idempotency, and no-duplicate planned task/artifact refs without creating durable ingest job tables, queue workers, parser/OCR runtime, extraction execution, migrations, event-registry changes, or public surfaces.
 - Project-snapshot decision: `TASK-0289` records a planning-only Project State Snapshot workflow contract/helper with deterministic `project_state_snapshot`, `project_closure_vector`, and `project_state_snapshot_flags` outputs from Corpus Baseline, Lifecycle Stage State, Governance / Commitment Chain, Assumption Closure, Owner Interface Resolution, and sanitized pointer observations.
 - Closure-boundary decision: project-state snapshot rows summarize reviewed planning state only. Missing evidence, conflicts, AI-draft-only states, stale/missing pointers, and waivers block or qualify closure readiness; the helper creates no closure snapshot, official project state, reviewed baseline, pointer promotion, or evidence sufficiency claim.
-- Dependency decision: `TASK-0274` closes the final imported `INGEST-*` planning tranche row. `TASK-0289` closes the current WFLOW P0 chain prerequisite for later risk/CEO transparency work, while `TASK-0277` remains a separate EPIC-151 blocker for `TASK-0290`.
+- Dependency decision: `TASK-0274` closes the final imported `INGEST-*` planning tranche row. `TASK-0289` closes the current WFLOW P0 chain prerequisite for later risk/CEO transparency work; at that closeout point, `TASK-0277` remained a separate EPIC-151 blocker for `TASK-0290`.
 - Activation decision: this closeout adds helper/contract/test evidence only. It adds no raw corpus import, parser/OCR/search runtime, vector store, durable ingest-job schema, public route, frontend route, authored workflow activation, physical closure snapshot, official pointer creation, production approval, or CAPEX runtime/product activation.
 
 ## 2026-06-23 (EPIC-141/143 batch-hydration and lifecycle-navigation closeout)
@@ -102,7 +117,7 @@ Record any decisions made since the last session so a fresh Codex run can rehydr
 ## 2026-06-17 (EPIC-142/143 sequence and workflow proposal closeout)
 - Sequence-formalism decision: `TASK-0570` records CAPEX closure and pointer transitions as non-commutative; later evidence, basis changes, or pointer activity must create new governed outcomes rather than retroactively rewriting earlier snapshots or pointer generations.
 - Workflow-routing decision: `TASK-0571` records procurement and CEO escalation as canonical task/approval-chain planning evidence, not editable workpage status.
-- Threshold-boundary decision: the procurement escalation proposal references Annex B threshold families but cannot sign off field/threshold values; `TASK-0659` remains the activation blocker for procurement fields and executive thresholds.
+- Threshold-boundary decision: the procurement escalation proposal references Annex B threshold families but cannot sign off field/threshold values; later `TASK-0659` closeout records field and threshold-family definitions, while numeric threshold values and activation remain unsigned.
 - Activation decision: this closeout adds tests and planning/catalog evidence only; it adds no runtime code, migrations, public CAPEX routes, frontend routes, authored workflow pack activation, raw corpus import, or CAPEX product activation.
 
 ## 2026-06-17 (EPIC-140+ review tasks 9-10 repair)

@@ -13,7 +13,10 @@ depends_on_gate_refs:
 remaining_activation_task_refs:
   - TASK-0655
   - TASK-0657
+completed_policy_task_refs:
   - TASK-0659
+policy_contract_refs:
+  - docs/planning/capex_real_project_acceptance/PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml
 canonical_substrate:
   allowed_outputs:
     - task
@@ -125,5 +128,6 @@ cannot_be_used_for:
   - threshold_signoff
   - procurement_field_signoff
 notes:
-  - This proposal defines routing shape only; TASK-0659 remains responsible for mandatory procurement fields and executive threshold signoff.
+  - This proposal defines routing shape only; TASK-0659 now records mandatory procurement fields and executive threshold-family policy evidence.
+  - Numeric threshold values and activation still require SME / Project Manager / Controlling signoff and remain outside this proposal.
   - Future runtime implementation must bind all tasks to tenant, domain, project, capex_scope, source refs, artifacts, approvals, and audited events.

@@ -2,7 +2,8 @@
 id: TASK-0659
 epic: EPIC-151
 title: "Define procurement fields and executive escalation thresholds"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["capex-product", "controlling"]
 reviewers: ["procurement", "plant-management", "capex-sme", "capex-architecture"]
 depends_on: ["TASK-0277", "TASK-0290", "TASK-0571"]
@@ -53,3 +54,10 @@ Define procurement mandatory fields and executive escalation threshold families 
 - Gate refs: `SME-RP-G006;SME-RP-G007`
 - Fixture refs: `K12-T4;K12-T7;K12-T10`
 - Source conditions: `TOP-11;9-A2;9-A3;9-A4;14-D3;14-D10`
+
+## Closeout evidence
+
+- Added `docs/planning/capex_real_project_acceptance/PROCUREMENT_FIELDS_AND_EXECUTIVE_THRESHOLDS_CONTRACT.yaml` for Annex B mandatory procurement/commercial field IDs and executive escalation threshold families.
+- Added `onetruth.capex_platform.procurement_fields_thresholds` to produce deterministic planning-only field, threshold-family, and commercial-observation-boundary outputs with canonical bytes/digests and stable task-specific error codes.
+- Numeric threshold values remain absent pending SME / Project Manager / Controlling signoff through `SME-RP-G006` and `SME-RP-G007`; commercial evidence remains observed/reconciled evidence and cannot directly close technical, effectiveness, handover, assumption, or closure dimensions.
+- This closeout does not activate thresholds, procurement workflows, ERP/accounting behavior, CEO cockpit runtime, public/frontend routes, authored workflow packs, official project truth, closure snapshots, or CAPEX product/runtime behavior.
