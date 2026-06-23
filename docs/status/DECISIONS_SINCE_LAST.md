@@ -2,6 +2,14 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-141/143 chunk-index and owner-interface closeout)
+- Chunk/index decision: `TASK-0272` records deterministic `capex.document_chunk_index.v1`, `capex.document_search_index.v1`, and `capex.evidence_binding_index.v1` planning outputs from sanitized text/page manifest basis rows. Chunk/search/evidence outputs are represented by storage refs, digests, parser hashes, spans, SourceRefs, generated-row refs, and metadata rather than inline raw text.
+- Runtime-boundary decision: chunk/search outputs are projection/index artifact evidence only. Search service latency proof, vector store activation, retrieval runtime, evidence review runtime, reviewed evidence sufficiency, parser/OCR runtime, async jobs, and production index storage remain later work.
+- Owner-interface decision: `TASK-0288` records a planning-only Owner Interface Resolution workflow contract/helper with deterministic `distributed_requirement_register`, `interface_register`, and `owner_interface_flags` outputs from sanitized interface observations, Corpus Baseline refs, and Assumption Closure basis.
+- Responsibility-boundary decision: resolved interfaces require evidence; missing responsibility, missing evidence, conflicting responsibility, AI-draft-only resolution, and waiver-only resolution remain non-authoritative flagged states. Responsibility cannot disappear, AI drafts cannot resolve responsibility, and waivers do not assign responsibility.
+- Dependency decision: `TASK-0273` is now the next EPIC-141 ingest task. `TASK-0289` remains blocked by `TASK-0285`, because lifecycle navigation is still the remaining EPIC-143 prerequisite for project-state snapshot synthesis.
+- Activation decision: this closeout adds helper/contract/test evidence only. It adds no raw corpus import, search runtime, vector store, retrieval runtime, evidence-review runtime, public route, frontend route, authored workflow activation, responsibility assignment authority, physical closure snapshots, reviewed baseline creation, official pointer creation, production approval, or CAPEX runtime/product activation.
+
 ## 2026-06-23 (EPIC-141/143 text-page and assumption-closure closeout)
 - Text/page decision: `TASK-0271` records deterministic `capex.document_text_extract.v1` and `capex.document_page_manifest.v1` planning outputs from sanitized document-manifest basis rows. Text output is represented by storage refs, digests, parser hashes, spans, page numbers, OCR status, and SourceRefs rather than inline raw text.
 - Raw-data decision: text/page manifest inputs reject raw absolute paths, raw filenames, inline/base64 content, raw text fields, raw OCR text, and unrestricted source excerpts. Parser adapters, OCR runtime, async extraction jobs, chunk/search indexes, evidence binding, upload behavior, and reviewed evidence sufficiency remain later work.

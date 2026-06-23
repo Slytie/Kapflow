@@ -1,0 +1,106 @@
+schema_version: capex.workflow_catalog.proposal.v1
+proposal_id: capex.owner_interface_resolution.workflow.v1
+title: CAPEX Owner Interface Resolution workflow
+activation_posture: planning_only_no_capex_activation
+catalog_surface: planning_only_capex_workflow_catalog
+source_task_ref: TASK-0288
+source_row: WFLOW-006
+acceptance_gates:
+  - AT-INTERFACE-001
+depends_on:
+  repo_tasks:
+    - TASK-0284
+    - TASK-0287
+workflow_basis:
+  corpus_baseline_workflow_schema_version: capex.corpus_baseline.workflow_outputs.v1
+  assumption_closure_workflow_schema_version: capex.assumption_closure.workflow_outputs.v1
+  required_basis_refs:
+    - corpus_baseline_workflow_id
+    - assumption_closure_workflow_id
+    - packet_register_id
+canonical_outputs:
+  - distributed_requirement_register
+  - interface_register
+  - owner_interface_flags
+distributed_requirement_register:
+  schema_version: capex.distributed_requirement_register.v1
+  duplicate_requirement_ids_allowed: false
+  assumption_refs_must_be_known: true
+  source_refs_required: true
+interface_register:
+  schema_version: capex.interface_register.v1
+  duplicate_interface_ids_allowed: false
+  no_disappearing_responsibility: true
+  states:
+    - resolved_with_evidence
+    - open_missing_responsibility
+    - open_missing_evidence
+    - blocked_conflict
+    - open_ai_draft_only
+    - open_waiver_only
+owner_interface_flags:
+  schema_version: capex.owner_interface_flags.v1
+  missing_responsibility_flag_required: true
+  missing_evidence_flag_required: true
+  conflicting_responsibility_flag_required: true
+  ai_draft_cannot_resolve_flag_required: true
+  waiver_not_responsibility_flag_required: true
+officialness_policy:
+  responsibility_can_disappear: false
+  ai_draft_resolves_interface: false
+  waiver_assigns_responsibility: false
+  missing_evidence_resolves_interface: false
+  conflicting_evidence_resolves_interface: false
+  reviewed_metadata_is_pointer_truth: false
+truth_effects:
+  creates_workflow_run: false
+  creates_tasks: false
+  creates_approvals: false
+  creates_closure_snapshots: false
+  creates_reviewed_baseline: false
+  writes_artifacts: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - authored_workflow_pack
+  - public_api_route
+  - frontend_route
+  - workpage_route
+  - interface_extractor_runtime
+  - physical_closure_snapshot_creation
+  - stale_reopen_policy
+  - project_state_snapshot_workflow
+  - reviewed_baseline_creation
+  - official_pointer_creation
+raw_data_boundary:
+  allowed_repo_material:
+    - source_refs
+    - assumption_refs
+    - requirement_ids
+    - interface_ids
+    - party_ids
+    - sanitized_requirement_summaries
+    - waiver_ids
+    - aggregate_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_requirement_text
+    - raw_interface_notes
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - authored_workflow_pack_activation
+  - raw_corpus_import
+  - responsibility_assignment_authority
+  - closure_snapshot_creation
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

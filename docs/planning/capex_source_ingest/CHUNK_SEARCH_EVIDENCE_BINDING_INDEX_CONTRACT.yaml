@@ -1,0 +1,123 @@
+schema_version: capex.chunk_search_evidence_binding_index_contract.v1
+contract_id: capex.chunk_search_evidence_binding_index.v1
+owner_task: TASK-0272
+source_row: INGEST-007
+activation_posture: planning_only_no_capex_activation
+overall_status: chunk_search_evidence_binding_index_recorded_not_activated
+acceptance_gates:
+  - AT-SCALE-005
+depends_on:
+  repo_tasks:
+    - TASK-0271
+input_contract:
+  text_extraction_page_manifest_outputs_schema_version: capex.text_extraction_page_manifest.outputs.v1
+  required_chunk_fields:
+    - document_id
+    - text_extract_id
+    - page_ids
+    - chunk_storage_ref
+    - chunk_digest
+    - parser_config_hash
+    - text_span
+    - page_span
+    - source_refs
+  required_search_fields:
+    - chunk_id
+    - document_id
+    - search_storage_ref
+    - search_digest
+    - projection_kind
+    - source_refs
+  required_evidence_binding_fields:
+    - generated_row_ref
+    - chunk_id
+    - document_id
+    - evidence_span
+    - binding_status
+    - source_refs
+document_chunk_index:
+  artifact_kind: capex.document_chunk_index
+  artifact_role: evidence
+  file_name: capex.document_chunk_index.v1.json
+  schema_version: capex.document_chunk_index.v1
+document_search_index:
+  artifact_kind: capex.document_search_index
+  artifact_role: evidence
+  file_name: capex.document_search_index.v1.json
+  schema_version: capex.document_search_index.v1
+evidence_binding_index:
+  artifact_kind: capex.evidence_binding_index
+  artifact_role: evidence
+  file_name: capex.evidence_binding_index.v1.json
+  schema_version: capex.evidence_binding_index.v1
+index_policy:
+  inline_chunk_text_allowed: false
+  unrestricted_source_excerpt_allowed: false
+  chunk_storage_ref_required: true
+  chunk_digest_required: true
+  search_projection_digest_required: true
+  generated_row_ref_shape: generated_row:<artifact_kind>:<row_id>
+  evidence_binding_is_reviewed_truth: false
+  search_latency_runtime_proof_in_scope: false
+privacy_policy:
+  raw_absolute_path_allowed: false
+  raw_filename_allowed: false
+  inline_raw_content_allowed: false
+  base64_content_allowed: false
+  raw_failure_log_allowed: false
+  unrestricted_source_excerpt_allowed: false
+truth_effects:
+  creates_search_service: false
+  creates_vector_store: false
+  creates_reviewed_evidence: false
+  writes_artifacts_by_default: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - search_runtime
+  - vector_store
+  - retrieval_runtime
+  - evidence_review_runtime
+  - parser_adapter
+  - extraction_runtime
+  - async_job_runtime
+  - public_api_route
+  - frontend_route
+raw_data_boundary:
+  allowed_repo_material:
+    - document_ids
+    - text_extract_ids
+    - page_ids
+    - generated_row_refs
+    - source_refs
+    - sanitized_storage_refs
+    - chunk_digests
+    - search_projection_digests
+    - parser_config_hashes
+    - page_numbers
+    - span_numbers
+    - aggregate_output_shapes
+  prohibited_repo_material:
+    - full_project_corpus_files
+    - unrestricted_source_excerpts
+    - raw_project_filenames
+    - absolute_local_paths
+    - raw_document_text
+    - raw_chunk_text
+    - raw_ocr_text
+    - screenshots_or_logs_with_source_content
+    - uploaded_blob_bytes
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - public_route_activation
+  - frontend_route_activation
+  - workflow_pack_activation
+  - raw_corpus_import
+  - parser_runtime_activation
+  - search_runtime_activation
+  - vector_store_activation
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - production_preflight_approval

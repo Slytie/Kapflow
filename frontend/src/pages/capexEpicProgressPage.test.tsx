@@ -22,34 +22,34 @@ describe("CapexEpicProgressPage", () => {
     expect(within(page).getByRole("heading", { name: "CAPEX Epic Progress" })).toBeInTheDocument();
     const summary = screen.getByRole("region", { name: "CAPEX progress summary" });
     const metrics = within(summary).getByRole("group", { name: "CAPEX progress metrics" });
-    expect(within(metrics).getByText("396")).toBeInTheDocument();
-    expect(within(metrics).getByText("18.2%")).toBeInTheDocument();
-    expect(within(metrics).getByText("324")).toBeInTheDocument();
+    expect(within(metrics).getByText("432")).toBeInTheDocument();
+    expect(within(metrics).getByText("26.9%")).toBeInTheDocument();
+    expect(within(metrics).getByText("316")).toBeInTheDocument();
 
     const roadmapProgress = screen.getByRole("region", { name: "CAPEX roadmap progress" });
     const roadmapProgressBar = within(roadmapProgress).getByRole("progressbar", {
       name: "CAPEX roadmap completion"
     });
-    expect(roadmapProgressBar).toHaveAttribute("aria-valuenow", "18.2");
+    expect(roadmapProgressBar).toHaveAttribute("aria-valuenow", "26.9");
     expect(roadmapProgressBar).toHaveAttribute(
       "aria-valuetext",
-      "18.2% complete, 324 remaining"
+      "26.9% complete, 316 remaining"
     );
-    expect(within(roadmapProgress).getByText("72 completed")).toBeInTheDocument();
-    expect(within(roadmapProgress).getByText("324 remaining")).toBeInTheDocument();
+    expect(within(roadmapProgress).getByText("116 completed")).toBeInTheDocument();
+    expect(within(roadmapProgress).getByText("316 remaining")).toBeInTheDocument();
 
     const completionTrend = screen.getByRole("region", { name: "CAPEX completion over time" });
     const trendLine = within(completionTrend).getByRole("img", {
       name: "CAPEX completion trend line"
     });
-    expect(trendLine).toHaveAttribute("data-point-count", "7");
-    expect(trendLine).toHaveAttribute("data-projection-date", "2026-10-08");
-    expect(within(completionTrend).getByText("18.2% current")).toBeInTheDocument();
-    expect(within(completionTrend).getByText("40 timestamped completions")).toBeInTheDocument();
+    expect(trendLine).toHaveAttribute("data-point-count", "8");
+    expect(trendLine).toHaveAttribute("data-projection-date", "2026-09-06");
+    expect(within(completionTrend).getByText("26.9% current")).toBeInTheDocument();
+    expect(within(completionTrend).getByText("84 timestamped completions")).toBeInTheDocument();
     expect(within(completionTrend).getByText("100%")).toBeInTheDocument();
     expect(within(completionTrend).getByText("32 undated baseline")).toBeInTheDocument();
-    expect(within(completionTrend).getByText("72 done")).toBeInTheDocument();
-    expect(within(completionTrend).getByText("Jun 17 to ETA Oct 08 at 100%")).toBeInTheDocument();
+    expect(within(completionTrend).getByText("116 done")).toBeInTheDocument();
+    expect(within(completionTrend).getByText("Jun 23 to ETA Sep 06 at 100%")).toBeInTheDocument();
 
     const timeline = screen.getByTestId("capex-epic-timeline");
     expect(within(timeline).getByRole("button", { name: /EPIC-136/i })).toBeInTheDocument();

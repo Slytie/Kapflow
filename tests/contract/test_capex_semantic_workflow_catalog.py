@@ -28,6 +28,11 @@ ASSUMPTION_CLOSURE_PATH = (
     / "docs/planning/capex_workflow_catalog/"
     "assumption_closure_workflow.yaml"
 )
+OWNER_INTERFACE_PATH = (
+    REPO_ROOT
+    / "docs/planning/capex_workflow_catalog/"
+    "owner_interface_resolution_workflow.yaml"
+)
 ANNEX_B_PATH = (
     REPO_ROOT
     / "docs/planning/capex_real_project_acceptance/"
@@ -67,6 +72,12 @@ def _governance_commitment() -> dict[str, Any]:
 
 def _assumption_closure() -> dict[str, Any]:
     loaded = yaml.safe_load(ASSUMPTION_CLOSURE_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _owner_interface() -> dict[str, Any]:
+    loaded = yaml.safe_load(OWNER_INTERFACE_PATH.read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
 
@@ -355,6 +366,78 @@ def test_assumption_closure_contract_records_negative_closure_policy() -> None:
 
 def test_assumption_closure_contract_contains_no_raw_corpus_markers() -> None:
     lowered = ASSUMPTION_CLOSURE_PATH.read_text(encoding="utf-8").lower()
+
+    for marker in RAW_CORPUS_MARKERS:
+        assert marker not in lowered
+
+
+def test_owner_interface_contract_is_planning_only_catalog_evidence() -> None:
+    proposal = _owner_interface()
+
+    assert proposal["schema_version"] == "capex.workflow_catalog.proposal.v1"
+    assert proposal["proposal_id"] == "capex.owner_interface_resolution.workflow.v1"
+    assert proposal["source_task_ref"] == "TASK-0288"
+    assert proposal["source_row"] == "WFLOW-006"
+    assert proposal["activation_posture"] == "planning_only_no_capex_activation"
+    assert proposal["acceptance_gates"] == ["AT-INTERFACE-001"]
+    assert proposal["depends_on"]["repo_tasks"] == ["TASK-0284", "TASK-0287"]
+    assert proposal["canonical_outputs"] == [
+        "distributed_requirement_register",
+        "interface_register",
+        "owner_interface_flags",
+    ]
+
+
+def test_owner_interface_contract_preserves_responsibility_boundaries() -> None:
+    proposal = _owner_interface()
+
+    assert proposal["distributed_requirement_register"] == {
+        "schema_version": "capex.distributed_requirement_register.v1",
+        "duplicate_requirement_ids_allowed": False,
+        "assumption_refs_must_be_known": True,
+        "source_refs_required": True,
+    }
+    assert proposal["interface_register"]["states"] == [
+        "resolved_with_evidence",
+        "open_missing_responsibility",
+        "open_missing_evidence",
+        "blocked_conflict",
+        "open_ai_draft_only",
+        "open_waiver_only",
+    ]
+    assert proposal["officialness_policy"] == {
+        "responsibility_can_disappear": False,
+        "ai_draft_resolves_interface": False,
+        "waiver_assigns_responsibility": False,
+        "missing_evidence_resolves_interface": False,
+        "conflicting_evidence_resolves_interface": False,
+        "reviewed_metadata_is_pointer_truth": False,
+    }
+    assert proposal["truth_effects"] == {
+        "creates_workflow_run": False,
+        "creates_tasks": False,
+        "creates_approvals": False,
+        "creates_closure_snapshots": False,
+        "creates_reviewed_baseline": False,
+        "writes_artifacts": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "authored_workflow_pack_activation",
+        "raw_corpus_import",
+        "responsibility_assignment_authority",
+        "closure_snapshot_creation",
+        "evidence_sufficiency_claim",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(proposal["cannot_be_used_for"])
+
+
+def test_owner_interface_contract_contains_no_raw_corpus_markers() -> None:
+    lowered = OWNER_INTERFACE_PATH.read_text(encoding="utf-8").lower()
 
     for marker in RAW_CORPUS_MARKERS:
         assert marker not in lowered

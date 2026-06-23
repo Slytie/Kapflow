@@ -18,7 +18,8 @@ INGEST-001, INGEST-002, INGEST-003, INGEST-004, INGEST-005, INGEST-006, INGEST-0
 - `TASK-0269` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/ROLE_PACKET_REGISTER_CONTRACT.yaml` and `onetruth.capex_platform.role_packet_register` record deterministic role assignment and packet register payloads from sanitized SourceOccurrence refs.
 - `TASK-0270` is closed as of 2026-06-17: `docs/planning/capex_source_ingest/DOCUMENT_MANIFEST_CONTRACT.yaml` and `onetruth.capex_platform.document_manifest` record deterministic `capex.document_manifest.v1` and `capex.extraction_state_register.v1` payloads from sanitized source-inventory rows.
 - `TASK-0271` is closed as of 2026-06-23: `docs/planning/capex_source_ingest/TEXT_EXTRACTION_PAGE_MANIFEST_CONTRACT.yaml` and `onetruth.capex_platform.text_extraction_page_manifest` record deterministic `capex.document_text_extract.v1` and `capex.document_page_manifest.v1` payloads from sanitized document-manifest basis rows.
-- This does not close parser adapters, extraction/OCR runtime, async jobs, chunk/search/evidence-binding indexes, source occurrence relations, source locator unions, upload behavior, or reviewed evidence sufficiency.
+- `TASK-0272` is closed as of 2026-06-23: `docs/planning/capex_source_ingest/CHUNK_SEARCH_EVIDENCE_BINDING_INDEX_CONTRACT.yaml` and `onetruth.capex_platform.chunk_search_evidence_binding_index` record deterministic `capex.document_chunk_index.v1`, `capex.document_search_index.v1`, and `capex.evidence_binding_index.v1` payloads from sanitized text/page manifest basis rows.
+- This does not close parser adapters, extraction/OCR runtime, async jobs, search service runtime, vector store activation, retrieval runtime, source occurrence relations, source locator unions, upload behavior, or reviewed evidence sufficiency.
 
 ## SME-RP addendum rows
 - `TASK-0652` is closed with the planning-only source occurrence context and trust taxonomy contract for `SME-RP-G004`.

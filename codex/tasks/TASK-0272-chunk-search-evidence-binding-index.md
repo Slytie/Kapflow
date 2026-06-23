@@ -2,7 +2,8 @@
 id: TASK-0272
 epic: EPIC-141
 title: "Chunk/search/evidence-binding index"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0271"]
@@ -60,3 +61,9 @@ Provide searchable chunks and bind generated rows to evidence snippets.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_source_ingest/CHUNK_SEARCH_EVIDENCE_BINDING_INDEX_CONTRACT.yaml` for the `INGEST-007` chunk/search/evidence-binding planning contract.
+- Added `onetruth.capex_platform.chunk_search_evidence_binding_index` to produce deterministic `capex.document_chunk_index.v1`, `capex.document_search_index.v1`, and `capex.evidence_binding_index.v1` payloads from sanitized text/page manifest basis rows.
+- Evidence: chunk/search/evidence-binding unit tests and CAPEX ingest/generated-artifact contract tests passed on 2026-06-23.
+- Closeout posture: `INGEST-007` closes planning/internal index artifact shape evidence only; real search service latency proof, vector store activation, retrieval runtime, evidence review runtime, reviewed evidence sufficiency, public routes, workflow pack activation, raw corpus import, official pointer creation, and CAPEX runtime/product activation remain later gated work.

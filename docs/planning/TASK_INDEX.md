@@ -232,7 +232,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0269 | EPIC-141 | DONE | high | Implement role assignment and packet register artifacts |
 | TASK-0270 | EPIC-141 | DONE | high | Document manifest and extraction-state artifact |
 | TASK-0271 | EPIC-141 | DONE | high | Text extraction and page manifest contracts |
-| TASK-0272 | EPIC-141 | TODO | high | Chunk/search/evidence-binding index |
+| TASK-0272 | EPIC-141 | DONE | high | Chunk/search/evidence-binding index |
 | TASK-0273 | EPIC-141 | TODO | high | Batch artifact link/provenance hydration |
 | TASK-0274 | EPIC-141 | TODO | high | Async job runtime for document processing |
 | TASK-0275 | EPIC-148 | TODO | high | Storage quota, backup and restore gate |
@@ -248,7 +248,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0285 | EPIC-143 | TODO | medium | Lifecycle Stage State workflow |
 | TASK-0286 | EPIC-143 | DONE | high | Governance / Commitment Chain workflow |
 | TASK-0287 | EPIC-143 | DONE | high | Assumption Closure workflow |
-| TASK-0288 | EPIC-143 | TODO | high | Owner Interface Resolution workflow |
+| TASK-0288 | EPIC-143 | DONE | high | Owner Interface Resolution workflow |
 | TASK-0289 | EPIC-143 | TODO | high | Project State Snapshot workflow |
 | TASK-0290 | EPIC-151 | TODO | high | Risk and CEO Transparency workflow |
 | TASK-0291 | EPIC-144 | TODO | high | CAPEX project dashboard and shell |

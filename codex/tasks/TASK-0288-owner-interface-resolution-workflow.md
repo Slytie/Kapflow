@@ -2,7 +2,8 @@
 id: TASK-0288
 epic: EPIC-143
 title: "Owner Interface Resolution workflow"
-status: TODO
+status: DONE
+completed_at: 2026-06-23T00:00:00Z
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0284", "TASK-0287"]
@@ -60,3 +61,9 @@ Resolve owner/site/supplier interfaces and responsibility.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_workflow_catalog/owner_interface_resolution_workflow.yaml` for the `WFLOW-006` Owner Interface Resolution workflow planning contract.
+- Added `onetruth.capex_platform.owner_interface_resolution_workflow` to produce deterministic `distributed_requirement_register`, `interface_register`, and `owner_interface_flags` outputs from sanitized interface observations, Corpus Baseline refs, and Assumption Closure basis.
+- Evidence: Owner Interface Resolution workflow unit tests and CAPEX workflow catalog contract tests passed on 2026-06-23.
+- Closeout posture: `WFLOW-006` closes planning/internal output-shape evidence only; authored workflow pack activation, public routes, Interface Resolution workpages, runtime interface extraction, canonical responsibility assignment authority, physical closure snapshots, reviewed baseline truth, official pointer creation, and CAPEX runtime/product activation remain later gated work.

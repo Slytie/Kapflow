@@ -52,7 +52,7 @@ def test_capex_epic_progress_data_records_repo_owned_local_rule() -> None:
     meta = _load_data()["meta"]
 
     assert meta["localOnly"] is True
-    assert meta["lastUpdated"] == "2026-06-17"
+    assert meta["lastUpdated"] == "2026-06-23"
     assert (
         meta["codexRule"]
         == "When a CAPEX task is completed, set status: DONE, add completed_at in ISO 8601 timezone form, add completion/closeout evidence, and regenerate this progress data in the same change."
@@ -64,10 +64,10 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
 
     assert data["schemaVersion"] == "capex.epic_progress.v2"
     assert data["summary"]["taskCount"] == 432
-    assert data["summary"]["estimate"]["completedTasks"] == 114
-    assert data["summary"]["estimate"]["remainingTasks"] == 318
-    assert data["summary"]["estimate"]["etaDate"] == "2026-09-03"
-    assert data["summary"]["estimate"]["label"] == "ETA 2026-09-03"
+    assert data["summary"]["estimate"]["completedTasks"] == 116
+    assert data["summary"]["estimate"]["remainingTasks"] == 316
+    assert data["summary"]["estimate"]["etaDate"] == "2026-09-06"
+    assert data["summary"]["estimate"]["label"] == "ETA 2026-09-06"
     assert all("estimate" in epic for epic in data["epics"])
 
     epic139 = next(epic for epic in data["epics"] if epic["id"] == "EPIC-139")
@@ -98,6 +98,7 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     assert task_statuses["TASK-0269"] == "done"
     assert task_statuses["TASK-0270"] == "done"
     assert task_statuses["TASK-0271"] == "done"
+    assert task_statuses["TASK-0272"] == "done"
     assert task_statuses["TASK-0276"] == "done"
     assert task_statuses["TASK-0278"] == "done"
     assert task_statuses["TASK-0283"] == "done"
@@ -105,6 +106,7 @@ def test_capex_epic_progress_data_uses_v2_estimates() -> None:
     assert task_statuses["TASK-0285"] == "not_started"
     assert task_statuses["TASK-0286"] == "done"
     assert task_statuses["TASK-0287"] == "done"
+    assert task_statuses["TASK-0288"] == "done"
 
 
 def test_epic139_redo_final_acceptance_releases_red_interlocks() -> None:

@@ -43,6 +43,11 @@ TEXT_EXTRACTION_PAGE_MANIFEST_CONTRACT_PATH = (
     / "docs/planning/capex_source_ingest/"
     "TEXT_EXTRACTION_PAGE_MANIFEST_CONTRACT.yaml"
 )
+CHUNK_SEARCH_EVIDENCE_BINDING_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "CHUNK_SEARCH_EVIDENCE_BINDING_INDEX_CONTRACT.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -419,12 +424,76 @@ def test_text_extraction_page_manifest_contract_closes_task_0271_without_runtime
     } <= set(contract["cannot_be_used_for"])
 
 
+def test_chunk_search_evidence_binding_contract_closes_task_0272_without_runtime() -> None:
+    contract = _load_yaml(CHUNK_SEARCH_EVIDENCE_BINDING_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0272"
+    assert contract["source_row"] == "INGEST-007"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0271"]
+    assert contract["document_chunk_index"] == {
+        "artifact_kind": "capex.document_chunk_index",
+        "artifact_role": "evidence",
+        "file_name": "capex.document_chunk_index.v1.json",
+        "schema_version": "capex.document_chunk_index.v1",
+    }
+    assert contract["document_search_index"] == {
+        "artifact_kind": "capex.document_search_index",
+        "artifact_role": "evidence",
+        "file_name": "capex.document_search_index.v1.json",
+        "schema_version": "capex.document_search_index.v1",
+    }
+    assert contract["evidence_binding_index"] == {
+        "artifact_kind": "capex.evidence_binding_index",
+        "artifact_role": "evidence",
+        "file_name": "capex.evidence_binding_index.v1.json",
+        "schema_version": "capex.evidence_binding_index.v1",
+    }
+    assert contract["index_policy"] == {
+        "inline_chunk_text_allowed": False,
+        "unrestricted_source_excerpt_allowed": False,
+        "chunk_storage_ref_required": True,
+        "chunk_digest_required": True,
+        "search_projection_digest_required": True,
+        "generated_row_ref_shape": "generated_row:<artifact_kind>:<row_id>",
+        "evidence_binding_is_reviewed_truth": False,
+        "search_latency_runtime_proof_in_scope": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_search_service": False,
+        "creates_vector_store": False,
+        "creates_reviewed_evidence": False,
+        "writes_artifacts_by_default": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "search_runtime",
+        "vector_store",
+        "retrieval_runtime",
+        "evidence_review_runtime",
+        "public_api_route",
+        "frontend_route",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "raw_corpus_import",
+        "search_runtime_activation",
+        "vector_store_activation",
+        "evidence_sufficiency_claim",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(contract["cannot_be_used_for"])
+
+
 def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
     task_0269 = _frontmatter("TASK-0269")
     task_0270 = _frontmatter("TASK-0270")
     task_0271 = _frontmatter("TASK-0271")
+    task_0272 = _frontmatter("TASK-0272")
     task_0276 = _frontmatter("TASK-0276")
     task_0278 = _frontmatter("TASK-0278")
     task_0283 = _frontmatter("TASK-0283")
@@ -432,6 +501,7 @@ def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
     task_0285 = _frontmatter("TASK-0285")
     task_0286 = _frontmatter("TASK-0286")
     task_0287 = _frontmatter("TASK-0287")
+    task_0288 = _frontmatter("TASK-0288")
 
     assert task_0267["status"] == "DONE"
     assert task_0267["completed_at"] == "2026-06-17T00:00:00Z"
@@ -444,6 +514,9 @@ def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
     assert task_0271["status"] == "DONE"
     assert task_0271["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0270" in task_0271["depends_on"]
+    assert task_0272["status"] == "DONE"
+    assert task_0272["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0271" in task_0272["depends_on"]
     assert task_0276["status"] == "DONE"
     assert task_0276["completed_at"] == "2026-06-17T00:00:00Z"
     assert task_0278["status"] == "DONE"
@@ -463,6 +536,10 @@ def test_task_0267_through_0287_close_after_unblocker_pairs() -> None:
     assert task_0287["status"] == "DONE"
     assert task_0287["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0286" in task_0287["depends_on"]
+    assert task_0288["status"] == "DONE"
+    assert task_0288["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0284" in task_0288["depends_on"]
+    assert "TASK-0287" in task_0288["depends_on"]
 
 
 def test_generated_artifact_contract_does_not_claim_policy_or_activation_approval() -> None:
