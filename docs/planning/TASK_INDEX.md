@@ -334,7 +334,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0371 | EPIC-140 | DONE | high | Project-scope query helper |
 | TASK-0372 | EPIC-141 | DONE | high | Artifact list pagination adapter |
 | TASK-0373 | EPIC-141 | DONE | high | Batch relation hydration |
-| TASK-0374 | EPIC-141 | TODO | high | Bulk ingest adapter seam |
+| TASK-0374 | EPIC-141 | DONE | high | Bulk ingest adapter seam |
 | TASK-0375 | EPIC-142 | TODO | high | Generated artifact helper migration |
 | TASK-0376 | EPIC-142 | TODO | high | Pointer promotion validator isolation |
 | TASK-0377 | EPIC-144 | TODO | high | Workpage projection/command split |
@@ -351,7 +351,7 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0388 | EPIC-140 | DONE | high | Create pilot storage gate checklist |
 | TASK-0389 | EPIC-140 | DONE | high | Add architecture snippets and code pattern register |
 | TASK-0390 | EPIC-140 | DONE | high | W1 closeout review and old-decision update |
-| TASK-0391 | EPIC-141 | TODO | high | Create content_identity and capex_source_occurrence runtime schema |
+| TASK-0391 | EPIC-141 | DONE | high | Create content_identity and capex_source_occurrence runtime schema |
 | TASK-0392 | EPIC-141 | TODO | high | Add source_occurrence_relation with duplicate/archive/derivative/redaction relation types |
 | TASK-0393 | EPIC-141 | TODO | high | Add ingest_batch, ingest_job, ingest_attempt, ingest_job_log state model |
 | TASK-0394 | EPIC-141 | TODO | high | Add archive lineage support and nested-archive extraction metadata contract |

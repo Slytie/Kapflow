@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-141 bulk ingest adapter seam and W2 schema reconciliation closeout)
+- Bulk-ingest seam decision: `TASK-0374` closes `RF-006` by adding `onetruth.capex_platform.bulk_ingest_adapter_seam`, a deterministic planning-only adapter boundary that accepts sanitized staged descriptors and wraps `plan_staged_corpus_ingest(...)`.
+- Adapter-boundary decision: the seam requires tenant/domain/project scope, adapter request ID, ingest batch ID, idempotency key, actor, timestamp, supported descriptor modes, deterministic descriptor fingerprinting, and duplicate descriptor rejection while banning raw content, base64, source paths, raw filenames, absolute paths, and blob bytes.
+- W2 schema reconciliation decision: `TASK-0391` closes `ARCH-W2-S01` by reconciling to existing `TASK-0564` physical evidence for `capex_content_identities` and `capex_source_occurrences` across Alembic, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, repositories, resolver tests, and schema-parity tests.
+- Schema-boundary decision: no duplicate migration or second source-occurrence table is added; source occurrence relations, ingest job tables, locator unions, extraction runtime, evidence binding, and activation stay in later tasks.
+- Activation decision: this closeout adds helper/contract/test/docs evidence only. It adds no public route, frontend route, JSON/base64 upload route, local source-path ingest, artifact ingress command usage, raw corpus import, source occurrence creation, artifact creation, official pointer, reviewed-baseline claim, production approval, or CAPEX runtime/product activation.
+
 ## 2026-06-23 (EPIC-141 artifact pagination and relation hydration RF closeout)
 - Artifact list pagination decision: `TASK-0372` closes `RF-004` by adding bounded workflow-run and subject artifact page adapters with SQL-level `limit`/`offset`, optional `artifact_kind`, deterministic ordering, and tenant/domain/project scope checks before relation hydration.
 - Route compatibility decision: existing artifact list endpoint envelopes and route shapes are preserved; workflow-run and subject branches now call paginated read commands instead of broad-loading artifact sets and slicing in memory.

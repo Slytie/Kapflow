@@ -78,6 +78,33 @@ manifest_first_phases:
     required_evidence:
       - TASK-0267
     output_state: digest_inventory_pipeline_required
+rf_closeout_surface:
+  owner_task: TASK-0374
+  source_row: RF-006
+  adapter_helper: onetruth.capex_platform.bulk_ingest_adapter_seam
+  interface_kind: staged_descriptor_manifest
+  wraps_planner: onetruth.capex_platform.staged_corpus_ingest.plan_staged_corpus_ingest
+  descriptor_modes:
+    - object_store_manifest
+    - folder_manifest
+    - source_root_snapshot
+  boundary_policy:
+    raw_corpus_import: false
+    json_base64_artifact_route_used: false
+    local_source_path_artifact_route_used: false
+    artifact_ingest_command_used: false
+    artifact_ingress_descriptor_request_bytes_used: false
+    source_occurrence_creation: false
+    artifact_version_creation: false
+    official_pointer_creation: false
+    public_route_added: false
+    frontend_route_added: false
+  deterministic_evidence:
+    descriptor_fingerprint_required: true
+    idempotency_key_required: true
+    adapter_request_id_required: true
+    duplicate_descriptor_ids_rejected: true
+    canonical_output_digest_helper: bulk_ingest_adapter_seam_digest
 rollback_recovery_posture:
   rollback_mode: disable_affected_staged_ingest_batch
   preserve:

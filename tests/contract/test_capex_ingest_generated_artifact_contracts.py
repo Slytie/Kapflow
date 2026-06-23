@@ -58,6 +58,11 @@ ASYNC_DOCUMENT_PROCESSING_JOB_RUNTIME_CONTRACT_PATH = (
     / "docs/planning/capex_source_ingest/"
     "ASYNC_DOCUMENT_PROCESSING_JOB_RUNTIME_CONTRACT.yaml"
 )
+CONTENT_IDENTITY_SOURCE_OCCURRENCE_RECONCILIATION_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "CONTENT_IDENTITY_SOURCE_OCCURRENCE_RUNTIME_SCHEMA_RECONCILIATION.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -137,6 +142,39 @@ def test_bulk_staged_corpus_ingest_architecture_is_planning_only_and_manifest_fi
         "quarantine_and_leak_scan_handoff",
         "source_inventory_handoff",
     ]
+    assert contract["rf_closeout_surface"] == {
+        "owner_task": "TASK-0374",
+        "source_row": "RF-006",
+        "adapter_helper": "onetruth.capex_platform.bulk_ingest_adapter_seam",
+        "interface_kind": "staged_descriptor_manifest",
+        "wraps_planner": (
+            "onetruth.capex_platform.staged_corpus_ingest.plan_staged_corpus_ingest"
+        ),
+        "descriptor_modes": [
+            "object_store_manifest",
+            "folder_manifest",
+            "source_root_snapshot",
+        ],
+        "boundary_policy": {
+            "raw_corpus_import": False,
+            "json_base64_artifact_route_used": False,
+            "local_source_path_artifact_route_used": False,
+            "artifact_ingest_command_used": False,
+            "artifact_ingress_descriptor_request_bytes_used": False,
+            "source_occurrence_creation": False,
+            "artifact_version_creation": False,
+            "official_pointer_creation": False,
+            "public_route_added": False,
+            "frontend_route_added": False,
+        },
+        "deterministic_evidence": {
+            "descriptor_fingerprint_required": True,
+            "idempotency_key_required": True,
+            "adapter_request_id_required": True,
+            "duplicate_descriptor_ids_rejected": True,
+            "canonical_output_digest_helper": "bulk_ingest_adapter_seam_digest",
+        },
+    }
 
 
 def test_bulk_staged_corpus_ingest_contract_does_not_activate_raw_or_truth_surfaces() -> None:
@@ -780,6 +818,84 @@ def test_async_document_processing_job_runtime_contract_closes_task_0274_without
     } <= set(contract["cannot_be_used_for"])
 
 
+def test_content_identity_source_occurrence_schema_is_reconciled_without_duplicate_migration() -> None:
+    contract = _load_yaml(CONTENT_IDENTITY_SOURCE_OCCURRENCE_RECONCILIATION_PATH)
+
+    assert contract["owner_task"] == "TASK-0391"
+    assert contract["source_row"] == "ARCH-W2-S01"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["reconciled_by_task"] == "TASK-0564"
+    assert contract["duplicate_migration_required"] is False
+    assert contract["behavior_change_required"] is False
+    assert contract["runtime_state"] == {
+        "alembic_revision": (
+            "alembic/versions/20260608_0013_capex_source_occurrence_resolver.py"
+        ),
+        "sqlite_bootstrap_ddl": "src/onetruth/infrastructure/events/event_store.py",
+        "sqlalchemy_models": "src/onetruth/infrastructure/db/models.py",
+        "repository": (
+            "src/onetruth/infrastructure/repositories/capex_source_occurrences.py"
+        ),
+        "resolver": "src/onetruth/capex_platform/source_refs.py",
+        "runtime_schemas": [
+            "schemas/runtime/capex_content_identity.schema.json",
+            "schemas/runtime/capex_source_occurrence.schema.json",
+        ],
+    }
+    assert contract["required_tables"]["capex_content_identities"][
+        "unique_constraints"
+    ] == [
+        {
+            "name": "uq_capex_content_identities_digest",
+            "columns": [
+                "tenant_id",
+                "domain_id",
+                "digest_algorithm",
+                "content_digest",
+            ],
+        }
+    ]
+    assert contract["required_tables"]["capex_source_occurrences"][
+        "unique_constraints"
+    ] == [
+        {
+            "name": "uq_capex_source_occurrences_source_ref",
+            "columns": ["tenant_id", "domain_id", "source_ref"],
+        }
+    ]
+    assert {
+        "ix_capex_content_identities_digest_lookup",
+    } == set(contract["required_tables"]["capex_content_identities"]["indexes"])
+    assert {
+        "ix_capex_source_occurrences_scope_status",
+        "ix_capex_source_occurrences_content_identity",
+    } == set(contract["required_tables"]["capex_source_occurrences"]["indexes"])
+    assert {
+        "absolute_path",
+        "base64_content",
+        "blob_bytes",
+        "content_base64",
+        "document_text",
+        "raw_content",
+        "source_path",
+    } <= set(contract["raw_data_boundary"]["prohibited_columns"])
+    assert {
+        "duplicate_migration",
+        "source_occurrence_relation",
+        "ingest_job_tables",
+        "locator_union",
+        "extraction_runtime",
+        "raw_corpus_import",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "capex_runtime_activation",
+        "product_activation",
+        "raw_corpus_import",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+    } <= set(contract["cannot_be_used_for"])
+
+
 def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
@@ -802,6 +918,8 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0290 = _frontmatter("TASK-0290")
     task_0372 = _frontmatter("TASK-0372")
     task_0373 = _frontmatter("TASK-0373")
+    task_0374 = _frontmatter("TASK-0374")
+    task_0391 = _frontmatter("TASK-0391")
     task_0539 = _frontmatter("TASK-0539")
     task_0540 = _frontmatter("TASK-0540")
 
@@ -869,6 +987,13 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     assert task_0373["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0273" in task_0373["depends_on"]
     assert "TASK-0372" in task_0373["depends_on"]
+    assert task_0374["status"] == "DONE"
+    assert task_0374["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0266" in task_0374["depends_on"]
+    assert "TASK-0267" in task_0374["depends_on"]
+    assert task_0391["status"] == "DONE"
+    assert task_0391["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0564" in task_0391["depends_on"]
     assert task_0539["status"] == "DONE"
     assert task_0539["completed_at"] == "2026-06-23T00:00:00Z"
     assert task_0540["status"] == "DONE"

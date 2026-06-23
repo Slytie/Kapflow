@@ -2,10 +2,11 @@
 id: TASK-0374
 epic: EPIC-141
 title: "Bulk ingest adapter seam"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0266", "TASK-0267"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,11 @@ Introduce staged ingest interface separate from JSON/base64 command route.
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `onetruth.capex_platform.bulk_ingest_adapter_seam` as a planning-only adapter boundary over sanitized staged descriptors.
+- Extended `docs/planning/capex_source_ingest/BULK_STAGED_CORPUS_INGEST_ARCHITECTURE.yaml` with the `RF-006` closeout surface for the internal bulk ingest adapter seam.
+- Added unit coverage for deterministic adapter output/digest, object/folder/source-root descriptor modes, duplicate descriptor IDs, invalid mode/basis/digests, raw body/base64/source-path/raw-filename/absolute-path bans, and no runtime/official truth effects.
+
+## Closeout posture
+- This closes adapter-boundary evidence only. It does not add a public route, frontend route, JSON/base64 upload route, local source-path ingest, artifact ingress command usage, source occurrence creation, artifact version creation, official pointer creation, raw corpus import, reviewed-baseline claim, or CAPEX runtime/product activation.

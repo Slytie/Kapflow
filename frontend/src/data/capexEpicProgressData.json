@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 432,
-    "done": 128,
+    "done": 130,
     "in_progress": 0,
-    "not_started": 301,
+    "not_started": 299,
     "blocked": 1,
     "needs_review": 2,
     "total": 432,
     "estimate": {
-      "percentComplete": 29.6,
-      "completedTasks": 128,
-      "remainingTasks": 304,
+      "percentComplete": 30.1,
+      "completedTasks": 130,
+      "remainingTasks": 302,
       "remainingBlockedOrReviewTasks": 3,
-      "completedWithTimestamps": 96,
-      "completionTimestampCoverage": 75.0,
-      "etaDate": "2026-08-25",
+      "completedWithTimestamps": 98,
+      "completionTimestampCoverage": 75.4,
+      "etaDate": "2026-08-24",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-25",
+      "label": "ETA 2026-08-24",
       "caveat": "3 blocked or needs-review task(s) remain."
     }
   },
@@ -4757,9 +4757,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 14,
+        "done": 16,
         "in_progress": 0,
-        "not_started": 39,
+        "not_started": 37,
         "blocked": 0,
         "needs_review": 0,
         "total": 53
@@ -5458,9 +5458,9 @@
           "epicId": "EPIC-141",
           "title": "Bulk ingest adapter seam",
           "plainPurpose": "Introduce staged ingest interface separate from JSON/base64 command route.",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task RF-006 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5472,7 +5472,10 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0266",
+            "TASK-0267"
+          ],
           "owners": [
             "platform"
           ],
@@ -5503,20 +5506,24 @@
             "source_only_dependency_notes": "phase preflight and safety net",
             "recommended_source_branch": "feature/capex-rf-006"
           },
-          "evidence": [],
+          "evidence": [
+            "Added onetruth.capex_platform.bulk_ingest_adapter_seam as a planning-only adapter boundary over sanitized staged descriptors.",
+            "Extended docs/planning/capex_source_ingest/BULK_STAGED_CORPUS_INGEST_ARCHITECTURE.yaml with the RF-006 closeout surface for the internal bulk ingest adapter seam.",
+            "Added unit coverage for deterministic adapter output/digest, object/folder/source-root descriptor modes, duplicate descriptor IDs, invalid mode/basis/digests, raw body/base64/source-path/raw-filename/absolute-path bans, and no runtime/official truth effects."
+          ],
           "taskPath": "codex/tasks/TASK-0374-bulk-ingest-adapter-seam.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0391",
           "epicId": "EPIC-141",
           "title": "Create content_identity and capex_source_occurrence runtime schema",
           "plainPurpose": "No existing behavior change; backfill not required until CAPEX domain activated",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task file records DONE status and completion or closeout evidence.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W2-S01 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5528,7 +5535,9 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0564"
+          ],
           "owners": [
             "platform"
           ],
@@ -5559,11 +5568,15 @@
             "source_only_dependency_notes": "W1 project_id and BlobRef",
             "recommended_source_branch": "foundation/* or capex-runtime-disabled/*"
           },
-          "evidence": [],
+          "evidence": [
+            "Added docs/planning/capex_source_ingest/CONTENT_IDENTITY_SOURCE_OCCURRENCE_RUNTIME_SCHEMA_RECONCILIATION.yaml to reconcile ARCH-W2-S01 to the existing TASK-0564 physical schema evidence.",
+            "Extended source-occurrence schema parity coverage for the Alembic/bootstrap/model/runtime schema posture, required fields, unique constraints, indexes, no-raw-column boundary, scoped content identity uniqueness, and same-digest multiple occurrence behavior.",
+            "Recorded that capex_content_identities and capex_source_occurrences already exist in Alembic, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, repositories, resolver tests, and schema-parity tests."
+          ],
           "taskPath": "codex/tasks/TASK-0391-create-content-identity-and-capex-source-occurrence-runtime-schema.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0392",
@@ -7830,16 +7843,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 26.4,
-        "completedTasks": 14,
-        "remainingTasks": 39,
+        "percentComplete": 30.2,
+        "completedTasks": 16,
+        "remainingTasks": 37,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 13,
-        "completionTimestampCoverage": 92.9,
-        "etaDate": "2026-08-10",
+        "completedWithTimestamps": 15,
+        "completionTimestampCoverage": 93.8,
+        "etaDate": "2026-08-01",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-08-10",
+        "label": "ETA 2026-08-01",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -14912,10 +14925,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 0,
         "completionTimestampCoverage": 0.0,
-        "etaDate": "2026-07-01",
+        "etaDate": "2026-06-30",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-01",
+        "label": "ETA 2026-06-30",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },
@@ -19982,10 +19995,10 @@
         "remainingBlockedOrReviewTasks": 0,
         "completedWithTimestamps": 1,
         "completionTimestampCoverage": 100.0,
-        "etaDate": "2026-07-08",
+        "etaDate": "2026-07-07",
         "etaConfidence": "low",
         "etaSource": "global_completed_at",
-        "label": "ETA 2026-07-08",
+        "label": "ETA 2026-07-07",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

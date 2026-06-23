@@ -1,0 +1,111 @@
+schema_version: capex.source_occurrence_runtime_schema_reconciliation.v1
+contract_id: capex.content_identity_source_occurrence_runtime_schema.reconciled.v1
+owner_task: TASK-0391
+source_row: ARCH-W2-S01
+activation_posture: planning_only_no_capex_activation
+reconciled_by_task: TASK-0564
+duplicate_migration_required: false
+behavior_change_required: false
+backfill_required_before_capex_activation: false
+runtime_state:
+  alembic_revision: alembic/versions/20260608_0013_capex_source_occurrence_resolver.py
+  sqlite_bootstrap_ddl: src/onetruth/infrastructure/events/event_store.py
+  sqlalchemy_models: src/onetruth/infrastructure/db/models.py
+  repository: src/onetruth/infrastructure/repositories/capex_source_occurrences.py
+  resolver: src/onetruth/capex_platform/source_refs.py
+  runtime_schemas:
+    - schemas/runtime/capex_content_identity.schema.json
+    - schemas/runtime/capex_source_occurrence.schema.json
+required_tables:
+  capex_content_identities:
+    primary_key:
+      - content_identity_id
+    required_columns:
+      - content_identity_id
+      - tenant_id
+      - domain_id
+      - digest_algorithm
+      - content_digest
+      - metadata_json
+      - created_at
+    optional_columns:
+      - byte_size
+      - media_type
+      - canonicalization_profile
+    unique_constraints:
+      - name: uq_capex_content_identities_digest
+        columns:
+          - tenant_id
+          - domain_id
+          - digest_algorithm
+          - content_digest
+    indexes:
+      - ix_capex_content_identities_digest_lookup
+  capex_source_occurrences:
+    primary_key:
+      - source_occurrence_id
+    required_columns:
+      - source_occurrence_id
+      - tenant_id
+      - domain_id
+      - content_identity_id
+      - occurrence_kind
+      - status
+      - source_ref
+      - locator_json
+      - metadata_json
+      - registered_by_actor_id
+      - registered_by_actor_type
+      - created_at
+      - updated_at
+    optional_columns:
+      - project_id
+    unique_constraints:
+      - name: uq_capex_source_occurrences_source_ref
+        columns:
+          - tenant_id
+          - domain_id
+          - source_ref
+    indexes:
+      - ix_capex_source_occurrences_scope_status
+      - ix_capex_source_occurrences_content_identity
+source_ref_policy:
+  canonical_shape: source_occurrence:{source_occurrence_id}
+  resolver_helper: onetruth.capex_platform.source_refs.resolve_source_ref
+  meaningful_source_ref_check: true
+raw_data_boundary:
+  raw_locator_columns_allowed: false
+  inline_text_columns_allowed: false
+  blob_byte_columns_allowed: false
+  prohibited_columns:
+    - absolute_path
+    - base64_content
+    - blob_bytes
+    - content_base64
+    - document_text
+    - file_name
+    - filename
+    - local_path
+    - ocr_text
+    - raw_bytes
+    - raw_content
+    - raw_filename
+    - source_path
+not_implemented_in_this_task:
+  - duplicate_migration
+  - source_occurrence_relation
+  - ingest_batch_tables
+  - ingest_job_tables
+  - locator_union
+  - extraction_runtime
+  - evidence_binding_runtime
+  - public_api_route
+  - frontend_route
+  - raw_corpus_import
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - evidence_sufficiency_claim

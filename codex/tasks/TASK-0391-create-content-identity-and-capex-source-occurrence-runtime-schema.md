@@ -2,10 +2,11 @@
 id: TASK-0391
 epic: EPIC-141
 title: "Create content_identity and capex_source_occurrence runtime schema"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0564"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,11 @@ No existing behavior change; backfill not required until CAPEX domain activated
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+
+## Closeout evidence
+- Added `docs/planning/capex_source_ingest/CONTENT_IDENTITY_SOURCE_OCCURRENCE_RUNTIME_SCHEMA_RECONCILIATION.yaml` to reconcile `ARCH-W2-S01` to the existing `TASK-0564` physical schema evidence.
+- Extended source-occurrence schema parity coverage for the Alembic/bootstrap/model/runtime schema posture, required fields, unique constraints, indexes, no-raw-column boundary, scoped content identity uniqueness, and same-digest multiple occurrence behavior.
+- Recorded that `capex_content_identities` and `capex_source_occurrences` already exist in Alembic, SQLite bootstrap DDL, SQLAlchemy models, runtime schemas, repositories, resolver tests, and schema-parity tests.
+
+## Closeout posture
+- This closes W2 schema reconciliation only. It adds no duplicate migration, source occurrence relation table, ingest job tables, locator union, extraction runtime, evidence binding runtime, public route, frontend route, raw corpus import, reviewed-baseline claim, official pointer creation, or CAPEX runtime/product activation.
