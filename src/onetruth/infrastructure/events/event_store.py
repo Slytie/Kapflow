@@ -30,6 +30,9 @@ class SQLiteSchemaRepairError(RuntimeError):
 
 
 _REQUIRED_LINK_TYPES_BY_EVENT: dict[str, set[str]] | None = None
+COMMAND_RECEIPT_INPUT_HASH_PROFILE = (
+    "onetruth.command_receipt_input.canonical_json.sha256.v1"
+)
 
 _PROJECT_SCOPE_COLUMN_REPAIRS = {
     "timeline_events": "project_id",
@@ -397,6 +400,8 @@ _CAPEX_EMPTY_SHELL_DROP_ORDER = (
 
 
 def _repair_partial_sqlite_bootstrap_schema(connection: sqlite3.Connection) -> None:
+    _repair_command_receipt_hash_profile(connection)
+
     for table_name, column_name in _PROJECT_SCOPE_COLUMN_REPAIRS.items():
         _ensure_nullable_text_column(connection, table_name, column_name)
 
@@ -461,6 +466,31 @@ def _ensure_nullable_text_column(
     if column_name in _sqlite_column_names(connection, table_name):
         return
     connection.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" TEXT')
+
+
+def _repair_command_receipt_hash_profile(connection: sqlite3.Connection) -> None:
+    if not _sqlite_table_exists(connection, "command_receipts"):
+        return
+    if "request_fingerprint_profile" not in _sqlite_column_names(connection, "command_receipts"):
+        connection.execute(
+            'ALTER TABLE "command_receipts" ADD COLUMN "request_fingerprint_profile" TEXT'
+        )
+    connection.execute(
+        """
+        UPDATE command_receipts
+        SET request_fingerprint_profile = ?
+        WHERE request_fingerprint_profile IS NULL OR request_fingerprint_profile = ''
+        """,
+        (COMMAND_RECEIPT_INPUT_HASH_PROFILE,),
+    )
+    connection.execute(
+        """
+        UPDATE command_receipts
+        SET request_fingerprint = 'sha256:' || request_fingerprint
+        WHERE length(request_fingerprint) = 64
+          AND request_fingerprint NOT LIKE 'sha256:%'
+        """
+    )
 
 
 def _backfill_artifact_project_scope(connection: sqlite3.Connection) -> None:
@@ -546,6 +576,7 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             scope_key TEXT NOT NULL,
             idempotency_key TEXT NOT NULL,
             request_fingerprint TEXT NOT NULL,
+            request_fingerprint_profile TEXT NOT NULL DEFAULT 'onetruth.command_receipt_input.canonical_json.sha256.v1',
             result_json TEXT NOT NULL,
             tenant_id TEXT,
             domain_id TEXT,
@@ -559,6 +590,44 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             ON command_receipts (workflow_run_id);
         CREATE INDEX IF NOT EXISTS ix_command_receipts_scope_lookup
             ON command_receipts (tenant_id, domain_id, command_name, scope_key);
+
+        CREATE TABLE IF NOT EXISTS effect_ledger_entries (
+            effect_ledger_entry_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            workflow_run_id TEXT,
+            command_name TEXT NOT NULL,
+            scope_key TEXT NOT NULL,
+            idempotency_key TEXT NOT NULL,
+            request_fingerprint TEXT NOT NULL,
+            request_fingerprint_profile TEXT NOT NULL,
+            effect_key TEXT NOT NULL,
+            effect_kind TEXT NOT NULL,
+            target_kind TEXT NOT NULL,
+            target_ref TEXT NOT NULL,
+            payload_hash TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            status TEXT NOT NULL,
+            result_json TEXT,
+            metadata_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            applied_at TEXT,
+            UNIQUE (command_name, scope_key, idempotency_key, effect_key),
+            FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_effect_ledger_entries_scope_status
+            ON effect_ledger_entries (
+                tenant_id,
+                domain_id,
+                command_name,
+                scope_key,
+                status
+            );
+        CREATE INDEX IF NOT EXISTS ix_effect_ledger_entries_target
+            ON effect_ledger_entries (target_kind, target_ref);
+        CREATE INDEX IF NOT EXISTS ix_effect_ledger_entries_workflow_run_id
+            ON effect_ledger_entries (workflow_run_id);
 
         CREATE TABLE IF NOT EXISTS capex_projects (
             project_id TEXT PRIMARY KEY,
@@ -1732,6 +1801,7 @@ def get_command_receipt(
             scope_key,
             idempotency_key,
             request_fingerprint,
+            request_fingerprint_profile,
             result_json,
             tenant_id,
             domain_id,
@@ -1749,6 +1819,7 @@ def get_command_receipt(
         "scope_key": row["scope_key"],
         "idempotency_key": row["idempotency_key"],
         "request_fingerprint": row["request_fingerprint"],
+        "request_fingerprint_profile": row["request_fingerprint_profile"],
         "result_json": json.loads(row["result_json"]),
         "tenant_id": row["tenant_id"],
         "domain_id": row["domain_id"],
@@ -1768,6 +1839,7 @@ def create_command_receipt(
     tenant_id: str | None,
     domain_id: str | None,
     workflow_run_id: str | None,
+    request_fingerprint_profile: str = COMMAND_RECEIPT_INPUT_HASH_PROFILE,
     created_at: str | None = None,
 ) -> None:
     connection.execute(
@@ -1777,19 +1849,21 @@ def create_command_receipt(
             scope_key,
             idempotency_key,
             request_fingerprint,
+            request_fingerprint_profile,
             result_json,
             tenant_id,
             domain_id,
             workflow_run_id,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))
         """,
         (
             command_name,
             scope_key,
             idempotency_key,
             request_fingerprint,
+            request_fingerprint_profile,
             json.dumps(result_json, separators=(",", ":"), sort_keys=True),
             tenant_id,
             domain_id,

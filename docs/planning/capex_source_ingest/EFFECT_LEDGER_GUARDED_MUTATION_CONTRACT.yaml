@@ -1,0 +1,83 @@
+schema_version: capex.effect_ledger_guarded_mutation_contract.v1
+contract_id: capex.effect_ledger_guarded_mutation.runtime_schema.v1
+owner_task: TASK-0397
+source_row: ARCH-W2-S07
+activation_posture: planning_only_no_capex_activation
+overall_status: effect_ledger_guarded_mutation_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0396
+required_runtime_state:
+  alembic_revision: alembic/versions/20260624_0019_command_receipts_effect_ledger.py
+  sqlite_bootstrap_ddl: src/onetruth/infrastructure/events/event_store.py
+  sqlalchemy_models: src/onetruth/infrastructure/db/models.py
+  repository: src/onetruth/infrastructure/repositories/effect_ledger.py
+  guarded_helper: src/onetruth/application/handlers/_shared/effect_ledger.py
+  runtime_schema: schemas/runtime/effect_ledger_entry.schema.json
+required_table:
+  effect_ledger_entries:
+    primary_key:
+      - effect_ledger_entry_id
+    unique_constraints:
+      - name: uq_effect_ledger_command_effect
+        columns:
+          - command_name
+          - scope_key
+          - idempotency_key
+          - effect_key
+    indexes:
+      - ix_effect_ledger_entries_scope_status
+      - ix_effect_ledger_entries_target
+      - ix_effect_ledger_entries_workflow_run_id
+effect_plan_policy:
+  command_receipt_basis_required: true
+  tenant_domain_scope_required: true
+  workflow_scope_preserved_when_present: true
+  deterministic_effect_entry_id_required: true
+  effect_key_unique_per_command_scope: true
+  payload_hash_format: "sha256:<64 lowercase hex>"
+  same_effect_key_same_payload_behavior: replay_applied_effect
+  same_effect_key_different_payload_error_code: effect_ledger_conflict
+  transaction_rollback_leaves_no_partial_effects: true
+  broad_command_rewire_required_in_this_task: false
+raw_data_boundary:
+  inline_raw_material_allowed: false
+  raw_corpus_import_allowed: false
+  prohibited_material:
+    - absolute_path
+    - base64_content
+    - blob_bytes
+    - content_base64
+    - document_text
+    - file_name
+    - filename
+    - local_path
+    - ocr_text
+    - raw_bytes
+    - raw_content
+    - raw_filename
+    - raw_log
+    - source_path
+truth_effects:
+  creates_effect_ledger_entries: true
+  emits_timeline_events: false
+  creates_artifact_versions: false
+  creates_source_occurrences: false
+  creates_ingest_jobs: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_api_route
+  - frontend_route
+  - event_registry_change
+  - capex_workflow_activation
+  - raw_corpus_import
+  - official_pointer_creation
+  - reviewed_baseline_creation
+  - broad_command_handler_rewire
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - official_pointer_creation
+  - reviewed_baseline_creation

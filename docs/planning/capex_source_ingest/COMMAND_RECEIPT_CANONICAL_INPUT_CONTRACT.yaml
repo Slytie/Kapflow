@@ -1,0 +1,88 @@
+schema_version: capex.command_receipt_canonical_input_contract.v1
+contract_id: capex.command_receipt_canonical_input.runtime_schema.v1
+owner_task: TASK-0396
+source_row: ARCH-W2-S06
+activation_posture: planning_only_no_capex_activation
+overall_status: command_receipt_canonical_input_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0233
+    - TASK-0234
+    - TASK-0235
+    - TASK-0236
+    - TASK-0237
+    - TASK-0238
+    - TASK-0239
+    - TASK-0240
+required_runtime_state:
+  alembic_revision: alembic/versions/20260624_0019_command_receipts_effect_ledger.py
+  sqlite_bootstrap_ddl: src/onetruth/infrastructure/events/event_store.py
+  sqlalchemy_models: src/onetruth/infrastructure/db/models.py
+  command_boundary: src/onetruth/application/handlers/_shared/command_boundary.py
+  runtime_schema: schemas/runtime/command_receipt.schema.json
+hash_profile:
+  profile_id: onetruth.command_receipt_input.canonical_json.sha256.v1
+  digest_format: "sha256:<64 lowercase hex>"
+  canonical_json:
+    sort_keys: true
+    separators:
+      - ","
+      - ":"
+    ensure_ascii: true
+    allow_nan: false
+  stored_columns:
+    request_fingerprint: required_sha256_digest
+    request_fingerprint_profile: required_profile_id
+scope_policy:
+  uniqueness_columns:
+    - command_name
+    - scope_key
+    - idempotency_key
+  tenant_domain_workflow_scope_preserved: true
+  same_scope_same_hash_behavior: replay_stored_result
+  same_scope_different_hash_error_code: command_receipt_mismatch
+  corrupt_stored_hash_or_profile_error_code: command_receipt_corrupt
+compatibility_policy:
+  legacy_bare_hex_backfill: true
+  second_receipt_system_allowed: false
+  public_command_shape_changed: false
+raw_data_boundary:
+  inline_raw_command_material_allowed: false
+  raw_corpus_import_allowed: false
+  prohibited_material:
+    - absolute_path
+    - base64_content
+    - blob_bytes
+    - content_base64
+    - document_text
+    - file_name
+    - filename
+    - local_path
+    - ocr_text
+    - raw_bytes
+    - raw_content
+    - raw_filename
+    - raw_log
+    - source_path
+truth_effects:
+  creates_second_receipt_system: false
+  emits_timeline_events: false
+  creates_artifact_versions: false
+  creates_source_occurrences: false
+  creates_ingest_jobs: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_api_route
+  - frontend_route
+  - event_registry_change
+  - capex_workflow_activation
+  - raw_corpus_import
+  - official_pointer_creation
+  - reviewed_baseline_creation
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - official_pointer_creation
+  - reviewed_baseline_creation

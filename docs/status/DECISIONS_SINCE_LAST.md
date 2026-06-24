@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-141 W2 command receipt and EffectLedger closeout)
+- Command receipt decision: `TASK-0396` closes `ARCH-W2-S06` by hardening the existing `command_receipts` substrate with canonical JSON input hashing, `sha256:` request fingerprints, and the stored `onetruth.command_receipt_input.canonical_json.sha256.v1` profile.
+- Receipt-replay decision: same command/scope/idempotency and same hash replays the stored result; same scope with different canonical input raises `command_receipt_mismatch`; malformed stored hashes or profiles raise `command_receipt_corrupt`; legacy bare 64-hex receipt rows are backfilled to `sha256:` shape.
+- EffectLedger decision: `TASK-0397` closes `ARCH-W2-S07` by adding durable `effect_ledger_entries`, an EffectLedger repository, runtime schema/model/bootstrap/Alembic coverage, and a guarded mutation helper for deterministic command-scoped effect reservations.
+- Effect-boundary decision: guarded mutations require tenant/domain scope, deterministic `effect_key` and payload hash, canonical target refs, duplicate-effect rejection, raw-material bans, replay of matching applied effects, conflict on same `effect_key` with different payload/scope, and transaction rollback without partial planned effects.
+- Activation decision: this closeout adds internal runtime foundation, contracts, schemas, tests, and docs only. It adds no public route, frontend route, CAPEX workflow activation, event-registry change, raw corpus import, official pointer, reviewed-baseline claim, broad command-handler rewiring, production approval, or CAPEX runtime/product activation.
+
 ## 2026-06-23 (EPIC-141 W2 archive lineage and manifest attestation closeout)
 - Archive lineage decision: `TASK-0394` closes `ARCH-W2-S04` by adding a metadata-only archive lineage contract/helper that emits deterministic `capex.archive_lineage_register.v1` and `capex.nested_archive_member_metadata.v1` outputs over existing source occurrence and `capex_source_occurrence_relations` rows.
 - Archive-boundary decision: archive lineage accepts only existing `archive_contains` / `archive_member_of` relation rows, requires same tenant/domain/project, known source occurrences, no self-links, no containment cycles, checked nesting depth, sanitized logical member refs, optional `sha256:` member digests, deterministic ordering/digests, and raw-material bans.

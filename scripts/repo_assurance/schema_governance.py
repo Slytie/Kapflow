@@ -106,6 +106,8 @@ def validate_runtime_schema_coverage(state: AssuranceState) -> None:
     collector = state.collector
     required = {
         "workflow_run": ROOT / "schemas/runtime/workflow_run.schema.json",
+        "command_receipt": ROOT / "schemas/runtime/command_receipt.schema.json",
+        "effect_ledger_entry": ROOT / "schemas/runtime/effect_ledger_entry.schema.json",
         "capex_project": ROOT / "schemas/runtime/capex_project.schema.json",
         "project_membership": ROOT / "schemas/runtime/project_membership.schema.json",
         "capex_project_authorization": ROOT / "schemas/runtime/capex_project_authorization.schema.json",

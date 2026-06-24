@@ -6,7 +6,9 @@ import sqlite3
 import pytest
 
 from onetruth.application.handlers._shared.command_boundary import (
+    COMMAND_RECEIPT_INPUT_HASH_PROFILE,
     _execute_with_command_receipt,
+    _command_request_fingerprint,
     _prepare_command_receipt,
     _public_command_scope_key,
 )
@@ -236,6 +238,69 @@ def test_execute_with_command_receipt_replays_same_scope_and_fingerprint() -> No
     assert calls == 1
 
 
+def test_command_receipt_canonical_hash_vector_is_stable_across_key_order() -> None:
+    assert (
+        _command_request_fingerprint({"b": 2, "a": 1})
+        == "sha256:43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
+    )
+    assert _command_request_fingerprint({"a": 1, "b": 2}) == _command_request_fingerprint(
+        {"b": 2, "a": 1}
+    )
+
+
+def test_command_receipt_hash_rejects_nan_input() -> None:
+    with pytest.raises(CommandError) as excinfo:
+        _prepare_command_receipt(
+            command_name="tasks.claim",
+            payload={
+                "human_task_id": "ht-nan-001",
+                "idempotency_key": "idem-nan-001",
+            },
+            fingerprint_payload={"human_task_id": "ht-nan-001", "score": float("nan")},
+            tenant_id="tenant-a",
+            domain_id="domain-x",
+            workflow_run_id="wr-001",
+            idempotency_required=True,
+        )
+
+    assert excinfo.value.code == "command_receipt_input_not_canonical_json"
+
+
+def test_command_receipt_persists_hash_profile_and_sha256_prefix() -> None:
+    connection = _connection()
+    receipt = _prepare_command_receipt(
+        command_name="tasks.claim",
+        payload={
+            "human_task_id": "ht-profile-001",
+            "idempotency_key": "idem-profile-001",
+        },
+        fingerprint_payload={"human_task_id": "ht-profile-001", "actor_id": "agent-a"},
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        workflow_run_id="wr-001",
+        idempotency_required=True,
+    )
+    assert receipt is not None
+
+    _execute_with_command_receipt(
+        connection,
+        receipt=receipt,
+        operation=lambda: {"human_task_id": "ht-profile-001"},
+    )
+
+    row = connection.execute(
+        """
+        SELECT request_fingerprint, request_fingerprint_profile
+        FROM command_receipts
+        WHERE idempotency_key = 'idem-profile-001'
+        """
+    ).fetchone()
+    assert row is not None
+    assert str(row["request_fingerprint"]).startswith("sha256:")
+    assert row["request_fingerprint_profile"] == COMMAND_RECEIPT_INPUT_HASH_PROFILE
+    assert receipt.request_fingerprint_profile == COMMAND_RECEIPT_INPUT_HASH_PROFILE
+
+
 def test_execute_with_command_receipt_rejects_same_scope_key_with_different_fingerprint() -> None:
     connection = _connection()
     base_payload = {
@@ -286,6 +351,52 @@ def test_execute_with_command_receipt_rejects_same_scope_key_with_different_fing
     assert excinfo.value.message == (
         "idempotency key was already used for a different request in this command scope"
     )
+
+
+@pytest.mark.parametrize(
+    ("column", "value"),
+    [
+        ("request_fingerprint", "bad-digest"),
+        ("request_fingerprint_profile", "legacy-or-invalid-profile"),
+    ],
+)
+def test_execute_with_command_receipt_rejects_corrupted_stored_hash_or_profile(
+    column: str,
+    value: str,
+) -> None:
+    connection = _connection()
+    payload = {
+        "human_task_id": "ht-corrupt-001",
+        "idempotency_key": "idem-corrupt-001",
+    }
+    receipt = _prepare_command_receipt(
+        command_name="tasks.claim",
+        payload=payload,
+        fingerprint_payload={"human_task_id": "ht-corrupt-001", "actor_id": "agent-a"},
+        tenant_id="tenant-a",
+        domain_id="domain-x",
+        workflow_run_id="wr-001",
+        idempotency_required=True,
+    )
+    assert receipt is not None
+    _execute_with_command_receipt(
+        connection,
+        receipt=receipt,
+        operation=lambda: {"human_task_id": "ht-corrupt-001"},
+    )
+    connection.execute(
+        f"UPDATE command_receipts SET {column} = ? WHERE idempotency_key = ?",
+        (value, "idem-corrupt-001"),
+    )
+
+    with pytest.raises(CommandError) as excinfo:
+        _execute_with_command_receipt(
+            connection,
+            receipt=receipt,
+            operation=lambda: {"human_task_id": "ht-corrupt-001"},
+        )
+
+    assert excinfo.value.code == "command_receipt_corrupt"
 
 
 def test_same_idempotency_key_can_be_reused_across_scopes() -> None:

@@ -2,7 +2,8 @@
 id: TASK-0396
 epic: EPIC-141
 title: "Implement CommandReceipt canonical input hash and corrupted-idempotency rejection"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
 depends_on: ["TASK-0233", "TASK-0234", "TASK-0235", "TASK-0236", "TASK-0237", "TASK-0238", "TASK-0239", "TASK-0240"]
@@ -60,3 +61,5 @@ Use canonical JSON/profile with test vectors
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed as internal runtime foundation evidence: command receipts now store `sha256:` canonical input hashes and the `onetruth.command_receipt_input.canonical_json.sha256.v1` profile, reject non-canonical JSON hash inputs, replay same-scope/same-hash receipts, reject same-scope/different-hash requests as `command_receipt_mismatch`, and reject malformed stored hash/profile rows as `command_receipt_corrupt`.
+- Closeout evidence includes `docs/planning/capex_source_ingest/COMMAND_RECEIPT_CANONICAL_INPUT_CONTRACT.yaml`, Alembic/SQLite/model/schema parity for the receipt profile field, and focused receipt tests. No second receipt system, public route, frontend route, CAPEX workflow activation, raw corpus import, event-registry change, official pointer, reviewed-baseline claim, or product activation is introduced.

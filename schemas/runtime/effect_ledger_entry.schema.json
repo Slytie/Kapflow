@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EffectLedgerEntry",
+  "type": "object",
+  "required": [
+    "effect_ledger_entry_id",
+    "tenant_id",
+    "domain_id",
+    "command_name",
+    "scope_key",
+    "idempotency_key",
+    "request_fingerprint",
+    "request_fingerprint_profile",
+    "effect_key",
+    "effect_kind",
+    "target_kind",
+    "target_ref",
+    "payload_hash",
+    "payload_json",
+    "status",
+    "metadata_json",
+    "created_at"
+  ],
+  "properties": {
+    "effect_ledger_entry_id": {
+      "type": "string",
+      "pattern": "^effect-ledger:[0-9a-f]{64}$"
+    },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "workflow_run_id": { "type": ["string", "null"] },
+    "command_name": { "type": "string" },
+    "scope_key": { "type": "string" },
+    "idempotency_key": { "type": "string" },
+    "request_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "request_fingerprint_profile": {
+      "type": "string",
+      "const": "onetruth.command_receipt_input.canonical_json.sha256.v1"
+    },
+    "effect_key": { "type": "string" },
+    "effect_kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{1,63}$"
+    },
+    "target_kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{1,63}$"
+    },
+    "target_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/#@-]{0,254}$"
+    },
+    "payload_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "payload_json": { "type": "object" },
+    "status": {
+      "type": "string",
+      "enum": ["planned", "applied"]
+    },
+    "result_json": { "type": ["object", "null"] },
+    "metadata_json": { "type": "object" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "applied_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "additionalProperties": false
+}

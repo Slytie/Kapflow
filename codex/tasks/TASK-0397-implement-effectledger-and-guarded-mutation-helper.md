@@ -2,10 +2,11 @@
 id: TASK-0397
 epic: EPIC-141
 title: "Implement EffectLedger and guarded mutation helper"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0396"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,5 @@ Specialist review required
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closed as internal runtime foundation evidence: `effect_ledger_entries`, the EffectLedger repository, and the guarded mutation helper reserve deterministic command-scoped effect rows, replay matching applied effects, fail closed on same `effect_key` with different payload/scope, and roll back planned effect reservations with the surrounding transaction.
+- Closeout evidence includes `docs/planning/capex_source_ingest/EFFECT_LEDGER_GUARDED_MUTATION_CONTRACT.yaml`, Alembic/SQLite/model/runtime-schema parity, and focused EffectLedger tests. Broad command-handler rewiring, public routes, frontend routes, event-registry changes, official pointers, reviewed-baseline claims, CAPEX workflow activation, raw corpus import, and product activation remain out of scope.

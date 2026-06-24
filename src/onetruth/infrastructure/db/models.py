@@ -6,6 +6,10 @@ from typing import Any, Optional
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+COMMAND_RECEIPT_INPUT_HASH_PROFILE = (
+    "onetruth.command_receipt_input.canonical_json.sha256.v1"
+)
+
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -83,7 +87,12 @@ class CommandReceipt(Base):
     command_name: Mapped[str] = mapped_column(String(128), nullable=False)
     scope_key: Mapped[str] = mapped_column(Text, nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(71), nullable=False)
+    request_fingerprint_profile: Mapped[str] = mapped_column(
+        String(128),
+        nullable=False,
+        default=COMMAND_RECEIPT_INPUT_HASH_PROFILE,
+    )
     result_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     tenant_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     domain_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
@@ -93,6 +102,61 @@ class CommandReceipt(Base):
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class EffectLedgerEntry(Base):
+    __tablename__ = "effect_ledger_entries"
+    __table_args__ = (
+        UniqueConstraint(
+            "command_name",
+            "scope_key",
+            "idempotency_key",
+            "effect_key",
+            name="uq_effect_ledger_command_effect",
+        ),
+        Index(
+            "ix_effect_ledger_entries_scope_status",
+            "tenant_id",
+            "domain_id",
+            "command_name",
+            "scope_key",
+            "status",
+        ),
+        Index(
+            "ix_effect_ledger_entries_target",
+            "target_kind",
+            "target_ref",
+        ),
+        Index(
+            "ix_effect_ledger_entries_workflow_run_id",
+            "workflow_run_id",
+        ),
+    )
+
+    effect_ledger_entry_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    workflow_run_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("workflow_runs.workflow_run_id"),
+        nullable=True,
+    )
+    command_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    scope_key: Mapped[str] = mapped_column(Text, nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(71), nullable=False)
+    request_fingerprint_profile: Mapped[str] = mapped_column(String(128), nullable=False)
+    effect_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    effect_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    result_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    applied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class CapexProject(Base):

@@ -33,6 +33,8 @@ REQUIRED_PROVENANCE_COLUMNS = {
 }
 
 REQUIRED_NEW_TABLES = {
+    "command_receipts",
+    "effect_ledger_entries",
     "artifact_provenance_edges",
     "workflow_run_inputs",
     "task_input_bindings",
@@ -46,7 +48,44 @@ REQUIRED_NEW_TABLES = {
     "capex_ingest_job_logs",
 }
 
+REQUIRED_COMMAND_RECEIPT_COLUMNS = {
+    "request_fingerprint",
+    "request_fingerprint_profile",
+}
+
+REQUIRED_EFFECT_LEDGER_COLUMNS = {
+    "effect_ledger_entry_id",
+    "tenant_id",
+    "domain_id",
+    "workflow_run_id",
+    "command_name",
+    "scope_key",
+    "idempotency_key",
+    "request_fingerprint",
+    "request_fingerprint_profile",
+    "effect_key",
+    "effect_kind",
+    "target_kind",
+    "target_ref",
+    "payload_hash",
+    "payload_json",
+    "status",
+    "result_json",
+    "metadata_json",
+    "created_at",
+    "applied_at",
+}
+
 REQUIRED_INDEXES_BY_TABLE = {
+    "command_receipts": {
+        "ix_command_receipts_workflow_run_id",
+        "ix_command_receipts_scope_lookup",
+    },
+    "effect_ledger_entries": {
+        "ix_effect_ledger_entries_scope_status",
+        "ix_effect_ledger_entries_target",
+        "ix_effect_ledger_entries_workflow_run_id",
+    },
     "artifact_versions": {
         "ix_artifact_versions_canonical_address",
         "ix_artifact_versions_project_scope",
@@ -181,6 +220,8 @@ def test_models_include_strategy_a_expand_schema_surfaces() -> None:
     assert REQUIRED_POINTER_COLUMNS <= _model_columns("artifact_pointers")
     assert REQUIRED_VERSION_COLUMNS <= _model_columns("artifact_versions")
     assert REQUIRED_PROVENANCE_COLUMNS <= _model_columns("artifact_provenance_edges")
+    assert REQUIRED_COMMAND_RECEIPT_COLUMNS <= _model_columns("command_receipts")
+    assert REQUIRED_EFFECT_LEDGER_COLUMNS <= _model_columns("effect_ledger_entries")
     assert _model_primary_key_columns("artifact_pointers") == EXPECTED_POINTER_PK_COLUMNS
 
     for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():
@@ -196,6 +237,11 @@ def test_bootstrap_schema_matches_strategy_a_expand_schema_surfaces() -> None:
         assert REQUIRED_PROVENANCE_COLUMNS <= _sqlite_columns(
             connection,
             "artifact_provenance_edges",
+        )
+        assert REQUIRED_COMMAND_RECEIPT_COLUMNS <= _sqlite_columns(connection, "command_receipts")
+        assert REQUIRED_EFFECT_LEDGER_COLUMNS <= _sqlite_columns(
+            connection,
+            "effect_ledger_entries",
         )
         assert _sqlite_primary_key_columns(connection, "artifact_pointers") == EXPECTED_POINTER_PK_COLUMNS
         for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():

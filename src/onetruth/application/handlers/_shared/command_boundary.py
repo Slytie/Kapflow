@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import re
 import sqlite3
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator
@@ -21,6 +22,10 @@ from onetruth.infrastructure.repositories.task_runs import get_task_run
 from onetruth.infrastructure.repositories.workflow_runs import get_workflow_run
 
 VALID_ACTOR_TYPES = {"human", "agent", "service", "system"}
+COMMAND_RECEIPT_INPUT_HASH_PROFILE = (
+    "onetruth.command_receipt_input.canonical_json.sha256.v1"
+)
+_SHA256_DIGEST_RE = re.compile(r"\Asha256:[0-9a-f]{64}\Z")
 
 
 @dataclass
@@ -36,6 +41,7 @@ class CommandReceiptContext:
     scope_key: str
     idempotency_key: str
     request_fingerprint: str
+    request_fingerprint_profile: str
     event_idempotency_base: str
     tenant_id: str | None
     domain_id: str | None
@@ -372,11 +378,72 @@ def _public_command_scope_key(command_name: str, payload: dict[str, Any]) -> str
 
 
 def _canonical_json(value: Any) -> str:
-    return json.dumps(value, separators=(",", ":"), sort_keys=True, ensure_ascii=True)
+    return json.dumps(
+        value,
+        separators=(",", ":"),
+        sort_keys=True,
+        ensure_ascii=True,
+        allow_nan=False,
+    )
+
+
+def _canonical_command_input_bytes(value: Any) -> bytes:
+    try:
+        return _canonical_json(value).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise CommandError(
+            code="command_receipt_input_not_canonical_json",
+            message="command input fingerprint payload must be canonical JSON",
+            details={"hash_profile": COMMAND_RECEIPT_INPUT_HASH_PROFILE},
+        ) from exc
 
 
 def _command_request_fingerprint(payload: dict[str, Any]) -> str:
-    return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+    return f"sha256:{hashlib.sha256(_canonical_command_input_bytes(payload)).hexdigest()}"
+
+
+def _assert_stored_command_receipt_valid(
+    existing: dict[str, Any],
+    *,
+    receipt: CommandReceiptContext,
+) -> None:
+    existing_profile = existing.get("request_fingerprint_profile")
+    existing_fingerprint = existing.get("request_fingerprint")
+    if (
+        existing_profile != COMMAND_RECEIPT_INPUT_HASH_PROFILE
+        or not isinstance(existing_fingerprint, str)
+        or _SHA256_DIGEST_RE.fullmatch(existing_fingerprint) is None
+    ):
+        raise CommandError(
+            code="command_receipt_corrupt",
+            message="stored command receipt hash profile or fingerprint is invalid",
+            details={
+                "command_name": receipt.command_name,
+                "scope_key": receipt.scope_key,
+                "idempotency_key": receipt.idempotency_key,
+                "expected_hash_profile": COMMAND_RECEIPT_INPUT_HASH_PROFILE,
+            },
+        )
+
+
+def _assert_command_receipt_matches(
+    existing: dict[str, Any],
+    *,
+    receipt: CommandReceiptContext,
+) -> None:
+    _assert_stored_command_receipt_valid(existing, receipt=receipt)
+    if existing["request_fingerprint"] == receipt.request_fingerprint:
+        return
+    raise CommandError(
+        code="command_receipt_mismatch",
+        message="idempotency key was already used for a different request in this command scope",
+        details={
+            "command_name": receipt.command_name,
+            "scope_key": receipt.scope_key,
+            "idempotency_key": receipt.idempotency_key,
+            "hash_profile": receipt.request_fingerprint_profile,
+        },
+    )
 
 
 def _scoped_event_idempotency_base(
@@ -419,6 +486,7 @@ def _prepare_command_receipt(
         scope_key=scope_key,
         idempotency_key=normalized_idempotency_key,
         request_fingerprint=_command_request_fingerprint(fingerprint_payload),
+        request_fingerprint_profile=COMMAND_RECEIPT_INPUT_HASH_PROFILE,
         event_idempotency_base=_scoped_event_idempotency_base(
             command_name=command_name,
             scope_key=scope_key,
@@ -496,16 +564,7 @@ def _execute_with_command_receipt(
                 idempotency_key=receipt.idempotency_key,
             )
             if existing is not None:
-                if existing["request_fingerprint"] != receipt.request_fingerprint:
-                    raise CommandError(
-                        code="command_receipt_mismatch",
-                        message="idempotency key was already used for a different request in this command scope",
-                        details={
-                            "command_name": receipt.command_name,
-                            "scope_key": receipt.scope_key,
-                            "idempotency_key": receipt.idempotency_key,
-                        },
-                    )
+                _assert_command_receipt_matches(existing, receipt=receipt)
                 _rollback_transaction(connection, frame)
                 return dict(existing["result_json"]), True
 
@@ -517,6 +576,7 @@ def _execute_with_command_receipt(
                 scope_key=receipt.scope_key,
                 idempotency_key=receipt.idempotency_key,
                 request_fingerprint=receipt.request_fingerprint,
+                request_fingerprint_profile=receipt.request_fingerprint_profile,
                 result_json=result,
                 tenant_id=receipt.tenant_id,
                 domain_id=receipt.domain_id,
@@ -533,7 +593,8 @@ def _execute_with_command_receipt(
                 scope_key=receipt.scope_key,
                 idempotency_key=receipt.idempotency_key,
             )
-            if existing is not None and existing["request_fingerprint"] == receipt.request_fingerprint:
+            if existing is not None:
+                _assert_command_receipt_matches(existing, receipt=receipt)
                 return dict(existing["result_json"]), True
         raise
     except Exception:
@@ -558,6 +619,8 @@ def _command_receipt_payload(
                 "command_name": receipt.command_name,
                 "scope_key": receipt.scope_key,
                 "idempotency_key": receipt.idempotency_key,
+                "request_fingerprint": receipt.request_fingerprint,
+                "request_fingerprint_profile": receipt.request_fingerprint_profile,
             }
             if receipt is not None
             else None

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CommandReceipt",
+  "type": "object",
+  "required": [
+    "command_receipt_id",
+    "command_name",
+    "scope_key",
+    "idempotency_key",
+    "request_fingerprint",
+    "request_fingerprint_profile",
+    "result_json",
+    "created_at"
+  ],
+  "properties": {
+    "command_receipt_id": { "type": "integer" },
+    "command_name": { "type": "string" },
+    "scope_key": { "type": "string" },
+    "idempotency_key": { "type": "string" },
+    "request_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "request_fingerprint_profile": {
+      "type": "string",
+      "const": "onetruth.command_receipt_input.canonical_json.sha256.v1"
+    },
+    "result_json": { "type": "object" },
+    "tenant_id": { "type": ["string", "null"] },
+    "domain_id": { "type": ["string", "null"] },
+    "workflow_run_id": { "type": ["string", "null"] },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

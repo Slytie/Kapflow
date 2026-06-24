@@ -83,6 +83,16 @@ MANIFEST_GENERATION_ATTESTATION_CONTRACT_PATH = (
     / "docs/planning/capex_source_ingest/"
     "MANIFEST_GENERATION_ATTESTATION_CONTRACT.yaml"
 )
+COMMAND_RECEIPT_CANONICAL_INPUT_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "COMMAND_RECEIPT_CANONICAL_INPUT_CONTRACT.yaml"
+)
+EFFECT_LEDGER_GUARDED_MUTATION_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "EFFECT_LEDGER_GUARDED_MUTATION_CONTRACT.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -1219,6 +1229,132 @@ def test_manifest_generation_attestation_contract_closes_task_0395_without_activ
     } <= set(contract["cannot_be_used_for"])
 
 
+def test_command_receipt_canonical_input_contract_closes_task_0396_without_activation() -> None:
+    contract = _load_yaml(COMMAND_RECEIPT_CANONICAL_INPUT_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0396"
+    assert contract["source_row"] == "ARCH-W2-S06"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["hash_profile"] == {
+        "profile_id": "onetruth.command_receipt_input.canonical_json.sha256.v1",
+        "digest_format": "sha256:<64 lowercase hex>",
+        "canonical_json": {
+            "sort_keys": True,
+            "separators": [",", ":"],
+            "ensure_ascii": True,
+            "allow_nan": False,
+        },
+        "stored_columns": {
+            "request_fingerprint": "required_sha256_digest",
+            "request_fingerprint_profile": "required_profile_id",
+        },
+    }
+    assert contract["scope_policy"] == {
+        "uniqueness_columns": [
+            "command_name",
+            "scope_key",
+            "idempotency_key",
+        ],
+        "tenant_domain_workflow_scope_preserved": True,
+        "same_scope_same_hash_behavior": "replay_stored_result",
+        "same_scope_different_hash_error_code": "command_receipt_mismatch",
+        "corrupt_stored_hash_or_profile_error_code": "command_receipt_corrupt",
+    }
+    assert contract["compatibility_policy"] == {
+        "legacy_bare_hex_backfill": True,
+        "second_receipt_system_allowed": False,
+        "public_command_shape_changed": False,
+    }
+    assert {
+        "absolute_path",
+        "base64_content",
+        "blob_bytes",
+        "content_base64",
+        "document_text",
+        "filename",
+        "raw_content",
+        "raw_log",
+        "source_path",
+    } <= set(contract["raw_data_boundary"]["prohibited_material"])
+    assert contract["truth_effects"] == {
+        "creates_second_receipt_system": False,
+        "emits_timeline_events": False,
+        "creates_artifact_versions": False,
+        "creates_source_occurrences": False,
+        "creates_ingest_jobs": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+        "capex_workflow_activation",
+        "raw_corpus_import",
+        "official_pointer_creation",
+        "reviewed_baseline_creation",
+    } <= set(contract["not_implemented_in_this_task"])
+
+
+def test_effect_ledger_guarded_mutation_contract_closes_task_0397_without_activation() -> None:
+    contract = _load_yaml(EFFECT_LEDGER_GUARDED_MUTATION_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0397"
+    assert contract["source_row"] == "ARCH-W2-S07"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0396"]
+    assert contract["required_table"]["effect_ledger_entries"] == {
+        "primary_key": ["effect_ledger_entry_id"],
+        "unique_constraints": [
+            {
+                "name": "uq_effect_ledger_command_effect",
+                "columns": [
+                    "command_name",
+                    "scope_key",
+                    "idempotency_key",
+                    "effect_key",
+                ],
+            }
+        ],
+        "indexes": [
+            "ix_effect_ledger_entries_scope_status",
+            "ix_effect_ledger_entries_target",
+            "ix_effect_ledger_entries_workflow_run_id",
+        ],
+    }
+    assert contract["effect_plan_policy"] == {
+        "command_receipt_basis_required": True,
+        "tenant_domain_scope_required": True,
+        "workflow_scope_preserved_when_present": True,
+        "deterministic_effect_entry_id_required": True,
+        "effect_key_unique_per_command_scope": True,
+        "payload_hash_format": "sha256:<64 lowercase hex>",
+        "same_effect_key_same_payload_behavior": "replay_applied_effect",
+        "same_effect_key_different_payload_error_code": "effect_ledger_conflict",
+        "transaction_rollback_leaves_no_partial_effects": True,
+        "broad_command_rewire_required_in_this_task": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_effect_ledger_entries": True,
+        "emits_timeline_events": False,
+        "creates_artifact_versions": False,
+        "creates_source_occurrences": False,
+        "creates_ingest_jobs": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+        "capex_workflow_activation",
+        "raw_corpus_import",
+        "official_pointer_creation",
+        "reviewed_baseline_creation",
+        "broad_command_handler_rewire",
+    } <= set(contract["not_implemented_in_this_task"])
+
+
 def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
@@ -1245,6 +1381,10 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0391 = _frontmatter("TASK-0391")
     task_0392 = _frontmatter("TASK-0392")
     task_0393 = _frontmatter("TASK-0393")
+    task_0394 = _frontmatter("TASK-0394")
+    task_0395 = _frontmatter("TASK-0395")
+    task_0396 = _frontmatter("TASK-0396")
+    task_0397 = _frontmatter("TASK-0397")
     task_0539 = _frontmatter("TASK-0539")
     task_0540 = _frontmatter("TASK-0540")
 
@@ -1325,6 +1465,21 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     assert task_0393["status"] == "DONE"
     assert task_0393["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0391" in task_0393["depends_on"]
+    assert task_0394["status"] == "DONE"
+    assert task_0394["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0392" in task_0394["depends_on"]
+    assert "TASK-0393" in task_0394["depends_on"]
+    assert task_0395["status"] == "DONE"
+    assert task_0395["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0391" in task_0395["depends_on"]
+    assert "TASK-0392" in task_0395["depends_on"]
+    assert task_0396["status"] == "DONE"
+    assert task_0396["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0233" in task_0396["depends_on"]
+    assert "TASK-0240" in task_0396["depends_on"]
+    assert task_0397["status"] == "DONE"
+    assert task_0397["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0396" in task_0397["depends_on"]
     assert task_0539["status"] == "DONE"
     assert task_0539["completed_at"] == "2026-06-23T00:00:00Z"
     assert task_0540["status"] == "DONE"

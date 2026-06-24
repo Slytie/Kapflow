@@ -356,8 +356,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0393 | EPIC-141 | DONE | high | Add ingest_batch, ingest_job, ingest_attempt, ingest_job_log state model |
 | TASK-0394 | EPIC-141 | DONE | high | Add archive lineage support and nested-archive extraction metadata contract |
 | TASK-0395 | EPIC-141 | DONE | medium | Add manifest_generation attestation model for generated corpus registers |
-| TASK-0396 | EPIC-141 | TODO | high | Implement CommandReceipt canonical input hash and corrupted-idempotency rejection |
-| TASK-0397 | EPIC-141 | TODO | high | Implement EffectLedger and guarded mutation helper |
+| TASK-0396 | EPIC-141 | DONE | high | Implement CommandReceipt canonical input hash and corrupted-idempotency rejection |
+| TASK-0397 | EPIC-141 | DONE | high | Implement EffectLedger and guarded mutation helper |
 | TASK-0398 | EPIC-141 | TODO | high | Split ToolExecution from ToolExecutionAttempt with lease-token stale completion rejection |
 | TASK-0399 | EPIC-141 | TODO | high | Add ProjectConcurrencyPolicy and ProjectRuntimeSlot minimal implementation |
 | TASK-0400 | EPIC-141 | TODO | medium | Add RuntimeOutbox after-commit dispatch scaffold |
