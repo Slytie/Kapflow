@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexProjectConcurrencyPolicy",
+  "type": "object",
+  "required": [
+    "project_concurrency_policy_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "lock_family",
+    "max_active_slots",
+    "state",
+    "policy_version",
+    "metadata_json",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "project_concurrency_policy_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "lock_family": {
+      "type": "string",
+      "enum": ["ingest", "pointer"]
+    },
+    "max_active_slots": { "type": "integer", "minimum": 1 },
+    "state": {
+      "type": "string",
+      "enum": ["active", "inactive"]
+    },
+    "policy_version": { "type": "string" },
+    "metadata_json": { "type": "object" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

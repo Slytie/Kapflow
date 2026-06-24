@@ -2,10 +2,11 @@
 id: TASK-0399
 epic: EPIC-141
 title: "Add ProjectConcurrencyPolicy and ProjectRuntimeSlot minimal implementation"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0385", "TASK-0563"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,7 @@ Start with ingest and pointer locks only
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence records internal `capex_project_concurrency_policies` and `capex_project_runtime_slots` state with SQLite/Alembic/model parity, runtime schemas, and `onetruth.infrastructure.repositories.capex_project_runtime_slots`.
+- The minimal policy supports only `ingest` and `pointer` lock families with project-scoped default `max_active_slots = 1`; matching holder/lease acquisition replays, conflicts fail closed, and expired slots may be reclaimed.
+- Slot keys are constrained to canonical `ingest:<ref>` and `pointer:<ref>` shapes, stale release tokens fail closed, and metadata rejects raw corpus material.
+- No broad command enforcement, worker rewiring, public route, frontend route, event-registry change, raw corpus import, official pointer, reviewed-baseline claim, or CAPEX product/runtime activation is included.

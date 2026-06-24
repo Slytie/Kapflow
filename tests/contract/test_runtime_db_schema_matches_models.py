@@ -46,6 +46,9 @@ REQUIRED_NEW_TABLES = {
     "capex_ingest_jobs",
     "capex_ingest_attempts",
     "capex_ingest_job_logs",
+    "tool_execution_attempts",
+    "capex_project_concurrency_policies",
+    "capex_project_runtime_slots",
 }
 
 REQUIRED_COMMAND_RECEIPT_COLUMNS = {
@@ -74,6 +77,55 @@ REQUIRED_EFFECT_LEDGER_COLUMNS = {
     "metadata_json",
     "created_at",
     "applied_at",
+}
+
+REQUIRED_TOOL_EXECUTION_ATTEMPT_COLUMNS = {
+    "tool_execution_attempt_id",
+    "tool_execution_id",
+    "execution_session_id",
+    "attempt_no",
+    "lease_token",
+    "state",
+    "active_tool_execution_id",
+    "output_artifact_version_ids",
+    "started_at",
+    "completed_at",
+    "error_code",
+    "created_at",
+    "updated_at",
+}
+
+REQUIRED_PROJECT_CONCURRENCY_POLICY_COLUMNS = {
+    "project_concurrency_policy_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "lock_family",
+    "max_active_slots",
+    "state",
+    "policy_version",
+    "metadata_json",
+    "created_at",
+    "updated_at",
+}
+
+REQUIRED_PROJECT_RUNTIME_SLOT_COLUMNS = {
+    "project_runtime_slot_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "lock_family",
+    "slot_key",
+    "holder_ref",
+    "lease_token",
+    "state",
+    "active_family_key",
+    "acquired_at",
+    "expires_at",
+    "released_at",
+    "metadata_json",
+    "created_at",
+    "updated_at",
 }
 
 REQUIRED_INDEXES_BY_TABLE = {
@@ -138,6 +190,17 @@ REQUIRED_INDEXES_BY_TABLE = {
         "ix_capex_ingest_job_logs_job_created",
         "ix_capex_ingest_job_logs_attempt_created",
         "ix_capex_ingest_job_logs_scope_kind",
+    },
+    "tool_execution_attempts": {
+        "ix_tool_execution_attempts_tool_state",
+        "ix_tool_execution_attempts_session_state",
+    },
+    "capex_project_concurrency_policies": {
+        "ix_capex_project_concurrency_policies_scope",
+    },
+    "capex_project_runtime_slots": {
+        "ix_capex_project_runtime_slots_scope_state",
+        "ix_capex_project_runtime_slots_slot_key",
     },
 }
 
@@ -222,6 +285,15 @@ def test_models_include_strategy_a_expand_schema_surfaces() -> None:
     assert REQUIRED_PROVENANCE_COLUMNS <= _model_columns("artifact_provenance_edges")
     assert REQUIRED_COMMAND_RECEIPT_COLUMNS <= _model_columns("command_receipts")
     assert REQUIRED_EFFECT_LEDGER_COLUMNS <= _model_columns("effect_ledger_entries")
+    assert REQUIRED_TOOL_EXECUTION_ATTEMPT_COLUMNS <= _model_columns(
+        "tool_execution_attempts",
+    )
+    assert REQUIRED_PROJECT_CONCURRENCY_POLICY_COLUMNS <= _model_columns(
+        "capex_project_concurrency_policies",
+    )
+    assert REQUIRED_PROJECT_RUNTIME_SLOT_COLUMNS <= _model_columns(
+        "capex_project_runtime_slots",
+    )
     assert _model_primary_key_columns("artifact_pointers") == EXPECTED_POINTER_PK_COLUMNS
 
     for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():
@@ -242,6 +314,18 @@ def test_bootstrap_schema_matches_strategy_a_expand_schema_surfaces() -> None:
         assert REQUIRED_EFFECT_LEDGER_COLUMNS <= _sqlite_columns(
             connection,
             "effect_ledger_entries",
+        )
+        assert REQUIRED_TOOL_EXECUTION_ATTEMPT_COLUMNS <= _sqlite_columns(
+            connection,
+            "tool_execution_attempts",
+        )
+        assert REQUIRED_PROJECT_CONCURRENCY_POLICY_COLUMNS <= _sqlite_columns(
+            connection,
+            "capex_project_concurrency_policies",
+        )
+        assert REQUIRED_PROJECT_RUNTIME_SLOT_COLUMNS <= _sqlite_columns(
+            connection,
+            "capex_project_runtime_slots",
         )
         assert _sqlite_primary_key_columns(connection, "artifact_pointers") == EXPECTED_POINTER_PK_COLUMNS
         for table_name, expected_indexes in REQUIRED_INDEXES_BY_TABLE.items():

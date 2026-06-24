@@ -2,10 +2,11 @@
 id: TASK-0398
 epic: EPIC-141
 title: "Split ToolExecution from ToolExecutionAttempt with lease-token stale completion rejection"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0396"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,7 @@ Do not change all workers at once
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence records the internal `tool_execution_attempts` table, runtime schema, SQLite/Alembic/model parity, and `onetruth.infrastructure.repositories.tool_execution_attempts` helper as the W2 attempt split foundation.
+- `onetruth.application.handlers.execution_runtime.start_tool_execution_attempt_command(...)` creates one active attempt per logical `tool_executions` row and preserves legacy logical-row compatibility.
+- `complete_tool_execution_command(...)` keeps legacy completion behavior when no active attempt exists, but requires matching `tool_execution_attempt_id` and `lease_token` once an active attempt is present; missing or stale leases fail closed without logical completion or completion events.
+- No worker migration, public route, frontend route, event-registry change, raw corpus import, official pointer, reviewed-baseline claim, or CAPEX product/runtime activation is included.

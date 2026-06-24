@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-141 W2 attempt and runtime slot closeout)
+- ToolExecutionAttempt decision: `TASK-0398` closes `ARCH-W2-S08` by adding internal `tool_execution_attempts`, a repository helper, runtime schema/model/bootstrap/Alembic coverage, and `execution_runtime.start_tool_execution_attempt_command(...)` as the attempt/lease foundation over existing logical `tool_executions`.
+- Attempt-boundary decision: legacy tool completion remains compatible when no active attempt exists; once an active attempt exists, completion must provide matching `tool_execution_attempt_id` and `lease_token`. Missing leases raise `tool_execution_attempt_lease_required`; wrong or stale leases raise `tool_execution_attempt_stale_completion` without logical completion or completion-event emission.
+- ProjectRuntimeSlot decision: `TASK-0399` closes `ARCH-W2-S09` by adding internal `capex_project_concurrency_policies` and `capex_project_runtime_slots`, runtime schemas/model/bootstrap/Alembic coverage, and a repository helper for project-scoped `ingest` and `pointer` lock families only.
+- Slot-boundary decision: default policy is one active slot per project and lock family; matching holder/lease acquisition replays, conflicting active slots raise `project_runtime_slot_conflict`, expired slots may be reclaimed, stale release tokens raise `project_runtime_slot_stale_release`, and slot metadata rejects raw corpus material.
+- Activation decision: this closeout adds internal runtime foundation, contracts, schemas, tests, and docs only. It adds no public route, frontend route, worker rewiring, broad command enforcement, event-registry change, raw corpus import, official pointer, reviewed-baseline claim, production approval, or CAPEX runtime/product activation.
+
 ## 2026-06-23 (EPIC-141 W2 command receipt and EffectLedger closeout)
 - Command receipt decision: `TASK-0396` closes `ARCH-W2-S06` by hardening the existing `command_receipts` substrate with canonical JSON input hashing, `sha256:` request fingerprints, and the stored `onetruth.command_receipt_input.canonical_json.sha256.v1` profile.
 - Receipt-replay decision: same command/scope/idempotency and same hash replays the stored result; same scope with different canonical input raises `command_receipt_mismatch`; malformed stored hashes or profiles raise `command_receipt_corrupt`; legacy bare 64-hex receipt rows are backfilled to `sha256:` shape.

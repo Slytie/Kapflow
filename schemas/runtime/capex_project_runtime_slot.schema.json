@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexProjectRuntimeSlot",
+  "type": "object",
+  "required": [
+    "project_runtime_slot_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "lock_family",
+    "slot_key",
+    "holder_ref",
+    "lease_token",
+    "state",
+    "acquired_at",
+    "metadata_json",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "project_runtime_slot_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "lock_family": {
+      "type": "string",
+      "enum": ["ingest", "pointer"]
+    },
+    "slot_key": {
+      "type": "string",
+      "pattern": "^(ingest|pointer):[A-Za-z0-9_.:/#@-]+$"
+    },
+    "holder_ref": { "type": "string" },
+    "lease_token": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["active", "released", "expired"]
+    },
+    "active_family_key": { "type": ["string", "null"] },
+    "acquired_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": ["string", "null"], "format": "date-time" },
+    "released_at": { "type": ["string", "null"], "format": "date-time" },
+    "metadata_json": { "type": "object" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

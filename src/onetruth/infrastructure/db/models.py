@@ -326,6 +326,99 @@ class CapexProjectFeature(Base):
     )
 
 
+class CapexProjectConcurrencyPolicy(Base):
+    __tablename__ = "capex_project_concurrency_policies"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "lock_family",
+            name="uq_capex_project_concurrency_policy_family",
+        ),
+        Index(
+            "ix_capex_project_concurrency_policies_scope",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "state",
+        ),
+    )
+
+    project_concurrency_policy_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    lock_family: Mapped[str] = mapped_column(String(64), nullable=False)
+    max_active_slots: Mapped[int] = mapped_column(Integer, nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexProjectRuntimeSlot(Base):
+    __tablename__ = "capex_project_runtime_slots"
+    __table_args__ = (
+        UniqueConstraint(
+            "active_family_key",
+            name="uq_capex_project_runtime_slots_active_family",
+        ),
+        Index(
+            "ix_capex_project_runtime_slots_scope_state",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "lock_family",
+            "state",
+        ),
+        Index(
+            "ix_capex_project_runtime_slots_slot_key",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "lock_family",
+            "slot_key",
+        ),
+    )
+
+    project_runtime_slot_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    lock_family: Mapped[str] = mapped_column(String(64), nullable=False)
+    slot_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    holder_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+    lease_token: Mapped[str] = mapped_column(String(255), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    active_family_key: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    acquired_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    released_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
 class CapexUserProjectView(Base):
     __tablename__ = "capex_user_project_view"
     __table_args__ = (
@@ -1779,6 +1872,67 @@ class ToolExecution(Base):
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     error_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+
+
+class ToolExecutionAttempt(Base):
+    __tablename__ = "tool_execution_attempts"
+    __table_args__ = (
+        UniqueConstraint(
+            "tool_execution_id",
+            "attempt_no",
+            name="uq_tool_execution_attempts_tool_attempt_no",
+        ),
+        UniqueConstraint(
+            "tool_execution_id",
+            "lease_token",
+            name="uq_tool_execution_attempts_tool_lease",
+        ),
+        UniqueConstraint(
+            "active_tool_execution_id",
+            name="uq_tool_execution_attempts_active_tool",
+        ),
+        Index(
+            "ix_tool_execution_attempts_tool_state",
+            "tool_execution_id",
+            "state",
+            "attempt_no",
+        ),
+        Index(
+            "ix_tool_execution_attempts_session_state",
+            "execution_session_id",
+            "state",
+        ),
+    )
+
+    tool_execution_attempt_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    tool_execution_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("tool_executions.tool_execution_id"),
+        nullable=False,
+    )
+    execution_session_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("execution_sessions.execution_session_id"),
+        nullable=False,
+    )
+    attempt_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    lease_token: Mapped[str] = mapped_column(String(255), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    active_tool_execution_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        nullable=True,
+    )
+    output_artifact_version_ids: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
 
 
 class PolicyDecision(Base):

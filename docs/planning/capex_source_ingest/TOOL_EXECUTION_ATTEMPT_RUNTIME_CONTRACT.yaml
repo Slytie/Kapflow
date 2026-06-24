@@ -1,0 +1,96 @@
+schema_version: capex.tool_execution_attempt_runtime_contract.v1
+contract_id: capex.tool_execution_attempt.runtime_schema.v1
+owner_task: TASK-0398
+source_row: ARCH-W2-S08
+activation_posture: planning_only_no_capex_activation
+overall_status: tool_execution_attempt_runtime_foundation_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0396
+required_runtime_state:
+  alembic_revision: alembic/versions/20260624_0020_tool_attempts_project_slots.py
+  sqlite_bootstrap_ddl: src/onetruth/infrastructure/events/event_store.py
+  sqlalchemy_models: src/onetruth/infrastructure/db/models.py
+  repository: src/onetruth/infrastructure/repositories/tool_execution_attempts.py
+  command_handler: src/onetruth/application/handlers/execution_runtime.py
+  runtime_schema: schemas/runtime/tool_execution_attempt.schema.json
+required_table:
+  tool_execution_attempts:
+    primary_key:
+      - tool_execution_attempt_id
+    unique_constraints:
+      - name: uq_tool_execution_attempts_tool_attempt_no
+        columns:
+          - tool_execution_id
+          - attempt_no
+      - name: uq_tool_execution_attempts_tool_lease
+        columns:
+          - tool_execution_id
+          - lease_token
+      - name: uq_tool_execution_attempts_active_tool
+        columns:
+          - active_tool_execution_id
+    indexes:
+      - ix_tool_execution_attempts_tool_state
+      - ix_tool_execution_attempts_session_state
+attempt_policy:
+  logical_tool_execution_row_preserved: true
+  attempts_table_added: true
+  attempt_numbers_monotonic_per_tool_execution: true
+  one_active_attempt_per_tool_execution: true
+  active_attempt_states:
+    - RUNNING
+  terminal_attempt_states:
+    - COMPLETED
+    - FAILED
+    - CANCELED
+  lease_token_required_when_active_attempt_exists: true
+  stale_completion_error_code: tool_execution_attempt_stale_completion
+  missing_lease_error_code: tool_execution_attempt_lease_required
+  active_attempt_conflict_error_code: tool_execution_attempt_active_conflict
+  legacy_completion_without_active_attempt_supported: true
+  event_registry_change_required: false
+  worker_rewire_required_in_this_task: false
+raw_data_boundary:
+  inline_raw_attempt_material_allowed: false
+  raw_corpus_import_allowed: false
+  prohibited_material:
+    - absolute_path
+    - base64_content
+    - blob_bytes
+    - content_base64
+    - document_text
+    - file_name
+    - filename
+    - local_path
+    - ocr_text
+    - raw_bytes
+    - raw_content
+    - raw_filename
+    - raw_log
+    - source_path
+truth_effects:
+  creates_tool_execution_attempt_rows: true
+  changes_tool_execution_current_state: true
+  emits_new_event_types: false
+  creates_artifact_versions: false
+  creates_source_occurrences: false
+  creates_ingest_jobs: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_api_route
+  - frontend_route
+  - event_registry_change
+  - worker_migration
+  - capex_workflow_activation
+  - raw_corpus_import
+  - official_pointer_creation
+  - reviewed_baseline_creation
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - broad_worker_rewire
+  - official_pointer_creation
+  - reviewed_baseline_creation

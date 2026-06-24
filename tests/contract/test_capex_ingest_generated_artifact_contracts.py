@@ -93,6 +93,16 @@ EFFECT_LEDGER_GUARDED_MUTATION_CONTRACT_PATH = (
     / "docs/planning/capex_source_ingest/"
     "EFFECT_LEDGER_GUARDED_MUTATION_CONTRACT.yaml"
 )
+TOOL_EXECUTION_ATTEMPT_RUNTIME_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "TOOL_EXECUTION_ATTEMPT_RUNTIME_CONTRACT.yaml"
+)
+PROJECT_CONCURRENCY_RUNTIME_SLOT_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "PROJECT_CONCURRENCY_RUNTIME_SLOT_CONTRACT.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -1355,6 +1365,140 @@ def test_effect_ledger_guarded_mutation_contract_closes_task_0397_without_activa
     } <= set(contract["not_implemented_in_this_task"])
 
 
+def test_tool_execution_attempt_runtime_contract_closes_task_0398_without_worker_rewire() -> None:
+    contract = _load_yaml(TOOL_EXECUTION_ATTEMPT_RUNTIME_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0398"
+    assert contract["source_row"] == "ARCH-W2-S08"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0396"]
+    assert contract["required_table"]["tool_execution_attempts"] == {
+        "primary_key": ["tool_execution_attempt_id"],
+        "unique_constraints": [
+            {
+                "name": "uq_tool_execution_attempts_tool_attempt_no",
+                "columns": ["tool_execution_id", "attempt_no"],
+            },
+            {
+                "name": "uq_tool_execution_attempts_tool_lease",
+                "columns": ["tool_execution_id", "lease_token"],
+            },
+            {
+                "name": "uq_tool_execution_attempts_active_tool",
+                "columns": ["active_tool_execution_id"],
+            },
+        ],
+        "indexes": [
+            "ix_tool_execution_attempts_tool_state",
+            "ix_tool_execution_attempts_session_state",
+        ],
+    }
+    assert contract["attempt_policy"] == {
+        "logical_tool_execution_row_preserved": True,
+        "attempts_table_added": True,
+        "attempt_numbers_monotonic_per_tool_execution": True,
+        "one_active_attempt_per_tool_execution": True,
+        "active_attempt_states": ["RUNNING"],
+        "terminal_attempt_states": ["COMPLETED", "FAILED", "CANCELED"],
+        "lease_token_required_when_active_attempt_exists": True,
+        "stale_completion_error_code": "tool_execution_attempt_stale_completion",
+        "missing_lease_error_code": "tool_execution_attempt_lease_required",
+        "active_attempt_conflict_error_code": "tool_execution_attempt_active_conflict",
+        "legacy_completion_without_active_attempt_supported": True,
+        "event_registry_change_required": False,
+        "worker_rewire_required_in_this_task": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_tool_execution_attempt_rows": True,
+        "changes_tool_execution_current_state": True,
+        "emits_new_event_types": False,
+        "creates_artifact_versions": False,
+        "creates_source_occurrences": False,
+        "creates_ingest_jobs": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+        "worker_migration",
+        "capex_workflow_activation",
+        "raw_corpus_import",
+        "official_pointer_creation",
+        "reviewed_baseline_creation",
+    } <= set(contract["not_implemented_in_this_task"])
+
+
+def test_project_concurrency_runtime_slot_contract_closes_task_0399_without_activation() -> None:
+    contract = _load_yaml(PROJECT_CONCURRENCY_RUNTIME_SLOT_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0399"
+    assert contract["source_row"] == "ARCH-W2-S09"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0385", "TASK-0563"]
+    assert contract["required_tables"]["capex_project_concurrency_policies"] == {
+        "primary_key": ["project_concurrency_policy_id"],
+        "unique_constraints": [
+            {
+                "name": "uq_capex_project_concurrency_policy_family",
+                "columns": ["tenant_id", "domain_id", "project_id", "lock_family"],
+            }
+        ],
+        "indexes": ["ix_capex_project_concurrency_policies_scope"],
+    }
+    assert contract["required_tables"]["capex_project_runtime_slots"] == {
+        "primary_key": ["project_runtime_slot_id"],
+        "unique_constraints": [
+            {
+                "name": "uq_capex_project_runtime_slots_active_family",
+                "columns": ["active_family_key"],
+            }
+        ],
+        "indexes": [
+            "ix_capex_project_runtime_slots_scope_state",
+            "ix_capex_project_runtime_slots_slot_key",
+        ],
+    }
+    assert contract["lock_policy"] == {
+        "supported_lock_families": ["ingest", "pointer"],
+        "default_max_active_slots": 1,
+        "slot_key_shapes": {
+            "ingest": "ingest:<ref>",
+            "pointer": "pointer:<ref>",
+        },
+        "active_family_key_unique": True,
+        "matching_holder_lease_replays": True,
+        "expired_slots_reclaimable": True,
+        "unsupported_family_error_code": "project_runtime_slot_family_unsupported",
+        "active_conflict_error_code": "project_runtime_slot_conflict",
+        "stale_release_error_code": "project_runtime_slot_stale_release",
+        "broad_command_enforcement_required_in_this_task": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_project_concurrency_policy_rows": True,
+        "creates_project_runtime_slot_rows": True,
+        "enforces_ingest_or_pointer_commands_globally": False,
+        "emits_timeline_events": False,
+        "creates_artifact_versions": False,
+        "creates_source_occurrences": False,
+        "creates_ingest_jobs": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+        "worker_rewire",
+        "broad_command_enforcement",
+        "capex_workflow_activation",
+        "raw_corpus_import",
+        "official_pointer_creation",
+        "reviewed_baseline_creation",
+    } <= set(contract["not_implemented_in_this_task"])
+
+
 def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
@@ -1385,6 +1529,8 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0395 = _frontmatter("TASK-0395")
     task_0396 = _frontmatter("TASK-0396")
     task_0397 = _frontmatter("TASK-0397")
+    task_0398 = _frontmatter("TASK-0398")
+    task_0399 = _frontmatter("TASK-0399")
     task_0539 = _frontmatter("TASK-0539")
     task_0540 = _frontmatter("TASK-0540")
 
@@ -1480,6 +1626,13 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     assert task_0397["status"] == "DONE"
     assert task_0397["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0396" in task_0397["depends_on"]
+    assert task_0398["status"] == "DONE"
+    assert task_0398["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0396" in task_0398["depends_on"]
+    assert task_0399["status"] == "DONE"
+    assert task_0399["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0385" in task_0399["depends_on"]
+    assert "TASK-0563" in task_0399["depends_on"]
     assert task_0539["status"] == "DONE"
     assert task_0539["completed_at"] == "2026-06-23T00:00:00Z"
     assert task_0540["status"] == "DONE"

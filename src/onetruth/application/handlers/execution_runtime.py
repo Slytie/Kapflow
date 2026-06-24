@@ -42,6 +42,12 @@ from onetruth.infrastructure.repositories.tool_executions import (
     list_tool_executions_for_session,
     transition_tool_execution_state,
 )
+from onetruth.infrastructure.repositories.tool_execution_attempts import (
+    ToolExecutionAttemptError,
+    complete_tool_execution_attempt,
+    create_tool_execution_attempt,
+    get_active_tool_execution_attempt,
+)
 
 EXECUTION_SESSION_STATES = {
     "CREATED",
@@ -63,6 +69,10 @@ TOOL_EXECUTION_STATES = {
     "CANCELED",
 }
 POLICY_DECISIONS = {"allow", "deny", "require_approval"}
+
+
+def _attempt_error_to_command_error(error: ToolExecutionAttemptError) -> CommandError:
+    return CommandError(code=error.code, message=error.code, details=error.details)
 
 
 def create_execution_session_command(
@@ -795,6 +805,100 @@ def evaluate_policy_decision_command(
     return return_payload
 
 
+def start_tool_execution_attempt_command(
+    connection: sqlite3.Connection,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    _require_fields(
+        payload,
+        ["tool_execution_id", "lease_token"],
+    )
+    requested_tool_execution_attempt_id = payload.get("tool_execution_attempt_id")
+    tool_execution_attempt_id = str(requested_tool_execution_attempt_id or f"txa-{uuid4()}")
+    lease_token = str(payload["lease_token"])
+    _begin_transaction(connection)
+    try:
+        tool_execution = get_tool_execution(connection, str(payload["tool_execution_id"]))
+        if tool_execution is None:
+            raise CommandError(
+                code="tool_execution_not_found",
+                message="tool execution not found",
+                details={"tool_execution_id": str(payload["tool_execution_id"])},
+            )
+        if str(tool_execution["state"]) not in {"APPROVED", "RUNNING"}:
+            raise CommandError(
+                code="tool_execution_not_attemptable",
+                message="tool execution attempts can only start from APPROVED or RUNNING",
+                details={
+                    "tool_execution_id": str(payload["tool_execution_id"]),
+                    "state": str(tool_execution["state"]),
+                },
+            )
+        session = get_execution_session(connection, str(tool_execution["execution_session_id"]))
+        if session is None:
+            raise CommandError(
+                code="execution_session_not_found",
+                message="execution session not found for tool execution",
+                details={"execution_session_id": str(tool_execution["execution_session_id"])},
+            )
+        active = get_active_tool_execution_attempt(
+            connection,
+            tool_execution_id=str(payload["tool_execution_id"]),
+        )
+        if active is not None:
+            if (
+                active["lease_token"] == lease_token
+                and (
+                    requested_tool_execution_attempt_id is None
+                    or active["tool_execution_attempt_id"] == tool_execution_attempt_id
+                )
+            ):
+                connection.rollback()
+                return active
+            raise CommandError(
+                code="tool_execution_attempt_active_conflict",
+                message="tool execution already has an active attempt",
+                details={
+                    "tool_execution_id": str(payload["tool_execution_id"]),
+                    "active_tool_execution_attempt_id": active["tool_execution_attempt_id"],
+                },
+            )
+        now = utc_now_iso()
+        attempt = create_tool_execution_attempt(
+            connection,
+            tool_execution_attempt_id=tool_execution_attempt_id,
+            tool_execution_id=str(payload["tool_execution_id"]),
+            execution_session_id=str(tool_execution["execution_session_id"]),
+            lease_token=lease_token,
+            started_at=now,
+        )
+        if str(tool_execution["state"]) == "APPROVED":
+            transitioned = transition_tool_execution_state(
+                connection,
+                tool_execution_id=str(payload["tool_execution_id"]),
+                from_states=["APPROVED"],
+                to_state="RUNNING",
+                policy_decision_id=tool_execution.get("policy_decision_id"),
+                output_artifact_version_ids=None,
+                completed_at=None,
+                error_code=None,
+            )
+            if transitioned is None:
+                raise CommandError(
+                    code="tool_execution_transition_conflict",
+                    message="tool execution transition failed while starting attempt",
+                    details={"tool_execution_id": str(payload["tool_execution_id"])},
+                )
+        connection.commit()
+        return attempt
+    except ToolExecutionAttemptError as exc:
+        connection.rollback()
+        raise _attempt_error_to_command_error(exc) from exc
+    except Exception:
+        connection.rollback()
+        raise
+
+
 def complete_tool_execution_command(
     connection: sqlite3.Connection,
     payload: dict[str, Any],
@@ -817,6 +921,16 @@ def complete_tool_execution_command(
         payload=payload,
         fingerprint_payload={
             "tool_execution_id": str(payload["tool_execution_id"]),
+            "tool_execution_attempt_id": (
+                str(payload["tool_execution_attempt_id"])
+                if payload.get("tool_execution_attempt_id") is not None
+                else None
+            ),
+            "lease_token": (
+                str(payload["lease_token"])
+                if payload.get("lease_token") is not None
+                else None
+            ),
             "result": result,
             "output_artifact_version_ids": payload.get("output_artifact_version_ids"),
             "error_code": payload.get("error_code"),
@@ -846,6 +960,20 @@ def complete_tool_execution_command(
                 message="tool execution not found",
                 details={"tool_execution_id": str(payload["tool_execution_id"])},
             )
+        active_attempt = get_active_tool_execution_attempt(
+            connection,
+            tool_execution_id=str(payload["tool_execution_id"]),
+        )
+        has_attempt_completion_fields = (
+            payload.get("tool_execution_attempt_id") is not None
+            or payload.get("lease_token") is not None
+        )
+        if active_attempt is None and has_attempt_completion_fields:
+            raise CommandError(
+                code="tool_execution_attempt_stale_completion",
+                message="tool execution attempt is no longer active",
+                details={"tool_execution_id": str(payload["tool_execution_id"])},
+            )
         if str(tool_execution["state"]) not in {"APPROVED", "RUNNING"}:
             raise CommandError(
                 code="tool_execution_not_completable",
@@ -863,6 +991,16 @@ def complete_tool_execution_command(
                 details={"execution_session_id": str(tool_execution["execution_session_id"])},
             )
         workflow_scope = _workflow_scope(connection, str(session["workflow_run_id"]))
+        if active_attempt is not None:
+            if (
+                payload.get("tool_execution_attempt_id") is None
+                or payload.get("lease_token") is None
+            ):
+                raise CommandError(
+                    code="tool_execution_attempt_lease_required",
+                    message="active tool execution attempt requires attempt id and lease token",
+                    details={"tool_execution_id": str(payload["tool_execution_id"])},
+                )
         output_artifact_version_ids = payload.get("output_artifact_version_ids")
         if output_artifact_version_ids is not None:
             if not isinstance(output_artifact_version_ids, list):
@@ -890,6 +1028,28 @@ def complete_tool_execution_command(
                         },
                     )
         now = utc_now_iso()
+        if active_attempt is not None:
+            try:
+                complete_tool_execution_attempt(
+                    connection,
+                    tool_execution_attempt_id=str(payload["tool_execution_attempt_id"]),
+                    tool_execution_id=str(payload["tool_execution_id"]),
+                    lease_token=str(payload["lease_token"]),
+                    state=to_state,
+                    output_artifact_version_ids=(
+                        [str(item) for item in output_artifact_version_ids]
+                        if isinstance(output_artifact_version_ids, list)
+                        else None
+                    ),
+                    completed_at=now,
+                    error_code=(
+                        str(payload["error_code"])
+                        if payload.get("error_code") is not None
+                        else None
+                    ),
+                )
+            except ToolExecutionAttemptError as exc:
+                raise _attempt_error_to_command_error(exc) from exc
         transitioned = transition_tool_execution_state(
             connection,
             tool_execution_id=str(payload["tool_execution_id"]),

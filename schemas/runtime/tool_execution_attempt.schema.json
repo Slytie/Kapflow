@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ToolExecutionAttempt",
+  "type": "object",
+  "required": [
+    "tool_execution_attempt_id",
+    "tool_execution_id",
+    "execution_session_id",
+    "attempt_no",
+    "lease_token",
+    "state",
+    "started_at",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "tool_execution_attempt_id": { "type": "string" },
+    "tool_execution_id": { "type": "string" },
+    "execution_session_id": { "type": "string" },
+    "attempt_no": { "type": "integer", "minimum": 1 },
+    "lease_token": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["RUNNING", "COMPLETED", "FAILED", "CANCELED"]
+    },
+    "active_tool_execution_id": { "type": ["string", "null"] },
+    "output_artifact_version_ids": {
+      "type": ["array", "null"],
+      "items": { "type": "string" }
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "error_code": { "type": ["string", "null"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

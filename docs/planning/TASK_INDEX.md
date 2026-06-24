@@ -358,8 +358,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0395 | EPIC-141 | DONE | medium | Add manifest_generation attestation model for generated corpus registers |
 | TASK-0396 | EPIC-141 | DONE | high | Implement CommandReceipt canonical input hash and corrupted-idempotency rejection |
 | TASK-0397 | EPIC-141 | DONE | high | Implement EffectLedger and guarded mutation helper |
-| TASK-0398 | EPIC-141 | TODO | high | Split ToolExecution from ToolExecutionAttempt with lease-token stale completion rejection |
-| TASK-0399 | EPIC-141 | TODO | high | Add ProjectConcurrencyPolicy and ProjectRuntimeSlot minimal implementation |
+| TASK-0398 | EPIC-141 | DONE | high | Split ToolExecution from ToolExecutionAttempt with lease-token stale completion rejection |
+| TASK-0399 | EPIC-141 | DONE | high | Add ProjectConcurrencyPolicy and ProjectRuntimeSlot minimal implementation |
 | TASK-0400 | EPIC-141 | TODO | medium | Add RuntimeOutbox after-commit dispatch scaffold |
 | TASK-0401 | EPIC-141 | TODO | high | Define ArtifactVersionIdentityContract and add identity fields |
 | TASK-0402 | EPIC-141 | TODO | high | Harden ArtifactProvenanceEdge as runtime-computed immutable typed edge |

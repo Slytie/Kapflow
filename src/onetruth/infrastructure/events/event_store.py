@@ -95,6 +95,37 @@ _CAPEX_REQUIRED_COLUMNS_BY_TABLE: dict[str, set[str]] = {
         "created_at",
         "updated_at",
     },
+    "capex_project_concurrency_policies": {
+        "project_concurrency_policy_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "lock_family",
+        "max_active_slots",
+        "state",
+        "policy_version",
+        "metadata_json",
+        "created_at",
+        "updated_at",
+    },
+    "capex_project_runtime_slots": {
+        "project_runtime_slot_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "lock_family",
+        "slot_key",
+        "holder_ref",
+        "lease_token",
+        "state",
+        "active_family_key",
+        "acquired_at",
+        "expires_at",
+        "released_at",
+        "metadata_json",
+        "created_at",
+        "updated_at",
+    },
     "capex_user_project_view": {
         "user_project_view_id",
         "tenant_id",
@@ -392,6 +423,8 @@ _CAPEX_EMPTY_SHELL_DROP_ORDER = (
     "capex_source_occurrences",
     "capex_content_identities",
     "capex_user_project_view",
+    "capex_project_runtime_slots",
+    "capex_project_concurrency_policies",
     "capex_project_feature",
     "capex_project_authorization",
     "project_memberships",
@@ -707,6 +740,67 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS ix_capex_project_feature_lookup
             ON capex_project_feature (tenant_id, domain_id, feature_key, state);
+
+        CREATE TABLE IF NOT EXISTS capex_project_concurrency_policies (
+            project_concurrency_policy_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            lock_family TEXT NOT NULL,
+            max_active_slots INTEGER NOT NULL,
+            state TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            UNIQUE (tenant_id, domain_id, project_id, lock_family)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_project_concurrency_policies_scope
+            ON capex_project_concurrency_policies (
+                tenant_id,
+                domain_id,
+                project_id,
+                state
+            );
+
+        CREATE TABLE IF NOT EXISTS capex_project_runtime_slots (
+            project_runtime_slot_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            lock_family TEXT NOT NULL,
+            slot_key TEXT NOT NULL,
+            holder_ref TEXT NOT NULL,
+            lease_token TEXT NOT NULL,
+            state TEXT NOT NULL,
+            active_family_key TEXT UNIQUE,
+            acquired_at TEXT NOT NULL,
+            expires_at TEXT,
+            released_at TEXT,
+            metadata_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_project_runtime_slots_scope_state
+            ON capex_project_runtime_slots (
+                tenant_id,
+                domain_id,
+                project_id,
+                lock_family,
+                state
+            );
+        CREATE INDEX IF NOT EXISTS ix_capex_project_runtime_slots_slot_key
+            ON capex_project_runtime_slots (
+                tenant_id,
+                domain_id,
+                project_id,
+                lock_family,
+                slot_key
+            );
 
         CREATE TABLE IF NOT EXISTS capex_user_project_view (
             user_project_view_id TEXT PRIMARY KEY,
@@ -1593,6 +1687,31 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
 
         CREATE INDEX IF NOT EXISTS ix_tool_executions_session_state
             ON tool_executions (execution_session_id, state);
+
+        CREATE TABLE IF NOT EXISTS tool_execution_attempts (
+            tool_execution_attempt_id TEXT PRIMARY KEY,
+            tool_execution_id TEXT NOT NULL,
+            execution_session_id TEXT NOT NULL,
+            attempt_no INTEGER NOT NULL,
+            lease_token TEXT NOT NULL,
+            state TEXT NOT NULL,
+            active_tool_execution_id TEXT UNIQUE,
+            output_artifact_version_ids TEXT,
+            started_at TEXT NOT NULL,
+            completed_at TEXT,
+            error_code TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (tool_execution_id) REFERENCES tool_executions(tool_execution_id),
+            FOREIGN KEY (execution_session_id) REFERENCES execution_sessions(execution_session_id),
+            UNIQUE (tool_execution_id, attempt_no),
+            UNIQUE (tool_execution_id, lease_token)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_tool_execution_attempts_tool_state
+            ON tool_execution_attempts (tool_execution_id, state, attempt_no);
+        CREATE INDEX IF NOT EXISTS ix_tool_execution_attempts_session_state
+            ON tool_execution_attempts (execution_session_id, state);
 
         CREATE TABLE IF NOT EXISTS policy_decisions (
             policy_decision_id TEXT PRIMARY KEY,

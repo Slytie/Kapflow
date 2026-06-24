@@ -1,0 +1,101 @@
+schema_version: capex.project_concurrency_runtime_slot_contract.v1
+contract_id: capex.project_concurrency.runtime_slot.v1
+owner_task: TASK-0399
+source_row: ARCH-W2-S09
+activation_posture: planning_only_no_capex_activation
+overall_status: project_runtime_slot_foundation_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0385
+    - TASK-0563
+required_runtime_state:
+  alembic_revision: alembic/versions/20260624_0020_tool_attempts_project_slots.py
+  sqlite_bootstrap_ddl: src/onetruth/infrastructure/events/event_store.py
+  sqlalchemy_models: src/onetruth/infrastructure/db/models.py
+  repository: src/onetruth/infrastructure/repositories/capex_project_runtime_slots.py
+  runtime_schemas:
+    - schemas/runtime/capex_project_concurrency_policy.schema.json
+    - schemas/runtime/capex_project_runtime_slot.schema.json
+required_tables:
+  capex_project_concurrency_policies:
+    primary_key:
+      - project_concurrency_policy_id
+    unique_constraints:
+      - name: uq_capex_project_concurrency_policy_family
+        columns:
+          - tenant_id
+          - domain_id
+          - project_id
+          - lock_family
+    indexes:
+      - ix_capex_project_concurrency_policies_scope
+  capex_project_runtime_slots:
+    primary_key:
+      - project_runtime_slot_id
+    unique_constraints:
+      - name: uq_capex_project_runtime_slots_active_family
+        columns:
+          - active_family_key
+    indexes:
+      - ix_capex_project_runtime_slots_scope_state
+      - ix_capex_project_runtime_slots_slot_key
+lock_policy:
+  supported_lock_families:
+    - ingest
+    - pointer
+  default_max_active_slots: 1
+  slot_key_shapes:
+    ingest: "ingest:<ref>"
+    pointer: "pointer:<ref>"
+  active_family_key_unique: true
+  matching_holder_lease_replays: true
+  expired_slots_reclaimable: true
+  unsupported_family_error_code: project_runtime_slot_family_unsupported
+  active_conflict_error_code: project_runtime_slot_conflict
+  stale_release_error_code: project_runtime_slot_stale_release
+  broad_command_enforcement_required_in_this_task: false
+raw_data_boundary:
+  inline_raw_slot_material_allowed: false
+  raw_corpus_import_allowed: false
+  prohibited_material:
+    - absolute_path
+    - base64_content
+    - blob_bytes
+    - content_base64
+    - document_text
+    - file_name
+    - filename
+    - local_path
+    - ocr_text
+    - raw_bytes
+    - raw_content
+    - raw_filename
+    - raw_log
+    - source_path
+truth_effects:
+  creates_project_concurrency_policy_rows: true
+  creates_project_runtime_slot_rows: true
+  enforces_ingest_or_pointer_commands_globally: false
+  emits_timeline_events: false
+  creates_artifact_versions: false
+  creates_source_occurrences: false
+  creates_ingest_jobs: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_api_route
+  - frontend_route
+  - event_registry_change
+  - worker_rewire
+  - broad_command_enforcement
+  - capex_workflow_activation
+  - raw_corpus_import
+  - official_pointer_creation
+  - reviewed_baseline_creation
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - broad_command_enforcement
+  - official_pointer_creation
+  - reviewed_baseline_creation
