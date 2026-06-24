@@ -63,6 +63,16 @@ CONTENT_IDENTITY_SOURCE_OCCURRENCE_RECONCILIATION_PATH = (
     / "docs/planning/capex_source_ingest/"
     "CONTENT_IDENTITY_SOURCE_OCCURRENCE_RUNTIME_SCHEMA_RECONCILIATION.yaml"
 )
+SOURCE_OCCURRENCE_RELATION_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "SOURCE_OCCURRENCE_RELATION_CONTRACT.yaml"
+)
+INGEST_JOB_STATE_MODEL_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "INGEST_JOB_STATE_MODEL_CONTRACT.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -896,6 +906,140 @@ def test_content_identity_source_occurrence_schema_is_reconciled_without_duplica
     } <= set(contract["cannot_be_used_for"])
 
 
+def test_source_occurrence_relation_contract_closes_task_0392_without_activation() -> None:
+    contract = _load_yaml(SOURCE_OCCURRENCE_RELATION_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0392"
+    assert contract["source_row"] == "ARCH-W2-S02"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0391"]
+    assert contract["required_runtime_state"] == {
+        "alembic_revision": (
+            "alembic/versions/20260624_0018_capex_w2_source_relations_ingest_jobs.py"
+        ),
+        "sqlite_bootstrap_ddl": "src/onetruth/infrastructure/events/event_store.py",
+        "sqlalchemy_models": "src/onetruth/infrastructure/db/models.py",
+        "repository": (
+            "src/onetruth/infrastructure/repositories/"
+            "capex_source_occurrence_relations.py"
+        ),
+        "runtime_schema": "schemas/runtime/capex_source_occurrence_relation.schema.json",
+    }
+    assert {
+        "duplicate_of",
+        "archive_contains",
+        "archive_member_of",
+        "derivative_of",
+        "redaction_of",
+    } == set(contract["relation_policy"]["allowed_relation_types"])
+    assert contract["relation_policy"]["same_tenant_domain_project_required"] is True
+    assert contract["relation_policy"]["project_scope_required"] is True
+    assert contract["relation_policy"]["self_relation_allowed"] is False
+    assert contract["relation_policy"]["duplicate_inverse_active_relation_allowed"] is False
+    assert {
+        "ix_capex_source_occurrence_relations_source",
+        "ix_capex_source_occurrence_relations_target",
+        "ix_capex_source_occurrence_relations_scope_type",
+    } == set(
+        contract["required_table"]["capex_source_occurrence_relations"]["indexes"]
+    )
+    assert contract["truth_effects"] == {
+        "creates_relation_rows": True,
+        "creates_source_occurrences": False,
+        "creates_content_identities": False,
+        "creates_artifact_versions": False,
+        "creates_ingest_jobs": False,
+        "starts_workers": False,
+        "runs_extractor": False,
+        "emits_timeline_events": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "public_relation_command",
+        "public_api_route",
+        "frontend_route",
+        "locator_union",
+        "archive_extraction_runtime",
+        "evidence_binding_runtime",
+        "raw_corpus_import",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "capex_runtime_activation",
+        "product_activation",
+        "raw_corpus_import",
+        "source_locator_union_activation",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+    } <= set(contract["cannot_be_used_for"])
+
+
+def test_ingest_job_state_model_contract_closes_task_0393_without_activation() -> None:
+    contract = _load_yaml(INGEST_JOB_STATE_MODEL_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0393"
+    assert contract["source_row"] == "ARCH-W2-S03"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0391"]
+    assert contract["required_runtime_state"] == {
+        "alembic_revision": (
+            "alembic/versions/20260624_0018_capex_w2_source_relations_ingest_jobs.py"
+        ),
+        "sqlite_bootstrap_ddl": "src/onetruth/infrastructure/events/event_store.py",
+        "sqlalchemy_models": "src/onetruth/infrastructure/db/models.py",
+        "repository": "src/onetruth/infrastructure/repositories/capex_ingest_jobs.py",
+        "runtime_schemas": [
+            "schemas/runtime/capex_ingest_batch.schema.json",
+            "schemas/runtime/capex_ingest_job.schema.json",
+            "schemas/runtime/capex_ingest_attempt.schema.json",
+            "schemas/runtime/capex_ingest_job_log.schema.json",
+        ],
+    }
+    assert contract["state_model_policy"]["same_tenant_domain_project_required"] is True
+    assert contract["state_model_policy"]["attempt_numbers_monotonic"] is True
+    assert contract["state_model_policy"]["command_receipts_created_by_this_task"] is False
+    assert contract["state_model_policy"]["execution_sessions_created_by_this_task"] is False
+    assert {
+        "capex_ingest_batches",
+        "capex_ingest_jobs",
+        "capex_ingest_attempts",
+        "capex_ingest_job_logs",
+    } == set(contract["required_tables"])
+    assert contract["truth_effects"] == {
+        "creates_ingest_state_rows": True,
+        "creates_command_receipts": False,
+        "creates_execution_sessions": False,
+        "creates_source_occurrences": False,
+        "creates_artifact_versions": False,
+        "starts_workers": False,
+        "enqueues_runtime_jobs": False,
+        "runs_parser_adapter": False,
+        "emits_timeline_events": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "queue_worker",
+        "parser_adapter",
+        "extraction_runtime",
+        "ocr_runtime",
+        "search_runtime",
+        "public_api_route",
+        "frontend_route",
+        "upload_route",
+        "event_registry_change",
+        "raw_corpus_import",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "capex_runtime_activation",
+        "product_activation",
+        "raw_corpus_import",
+        "worker_activation",
+        "parser_runtime_activation",
+        "official_pointer_creation",
+    } <= set(contract["cannot_be_used_for"])
+
+
 def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
@@ -920,6 +1064,8 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0373 = _frontmatter("TASK-0373")
     task_0374 = _frontmatter("TASK-0374")
     task_0391 = _frontmatter("TASK-0391")
+    task_0392 = _frontmatter("TASK-0392")
+    task_0393 = _frontmatter("TASK-0393")
     task_0539 = _frontmatter("TASK-0539")
     task_0540 = _frontmatter("TASK-0540")
 
@@ -994,6 +1140,12 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     assert task_0391["status"] == "DONE"
     assert task_0391["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0564" in task_0391["depends_on"]
+    assert task_0392["status"] == "DONE"
+    assert task_0392["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0391" in task_0392["depends_on"]
+    assert task_0393["status"] == "DONE"
+    assert task_0393["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0391" in task_0393["depends_on"]
     assert task_0539["status"] == "DONE"
     assert task_0539["completed_at"] == "2026-06-23T00:00:00Z"
     assert task_0540["status"] == "DONE"

@@ -72,13 +72,17 @@ rows:
     gate_refs:
       - NU-GATE-004
     task_refs:
+      - TASK-0392
+      - TASK-0393
       - TASK-0564
       - TASK-0578
     evidence_paths:
+      - tests/unit/test_capex_source_occurrence_relations.py
+      - tests/unit/test_capex_ingest_job_state.py
       - tests/unit/test_capex_source_occurrence_resolver.py
       - tests/integration/test_capex_source_occurrence_schema_parity.py
       - docs/architecture/CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md
-    rationale: Empty, malformed, unresolved, cross-scope, and non-resolvable SourceRefs fail closed.
+    rationale: Empty, malformed, unresolved, cross-scope, and non-resolvable SourceRefs fail closed; internal source occurrence relations and ingest state enforce same-project scope, terminal-state guards, monotonic attempts, and raw-material bans.
   - cb2_id: CB2-T006
     title: Broader evidence binding and corpus-source governance
     phase: P4/P5 evidence binding

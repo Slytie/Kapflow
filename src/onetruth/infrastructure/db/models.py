@@ -401,6 +401,293 @@ class CapexSourceOccurrence(Base):
     )
 
 
+class CapexSourceOccurrenceRelation(Base):
+    __tablename__ = "capex_source_occurrence_relations"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "relation_type",
+            "source_occurrence_id",
+            "target_source_occurrence_id",
+            name="uq_capex_source_occurrence_relations_pair",
+        ),
+        Index(
+            "ix_capex_source_occurrence_relations_source",
+            "source_occurrence_id",
+            "relation_type",
+            "status",
+        ),
+        Index(
+            "ix_capex_source_occurrence_relations_target",
+            "target_source_occurrence_id",
+            "relation_type",
+            "status",
+        ),
+        Index(
+            "ix_capex_source_occurrence_relations_scope_type",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "relation_type",
+            "status",
+        ),
+    )
+
+    source_occurrence_relation_id: Mapped[str] = mapped_column(
+        String(255),
+        primary_key=True,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    relation_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_occurrence_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_source_occurrences.source_occurrence_id"),
+        nullable=False,
+    )
+    target_source_occurrence_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_source_occurrences.source_occurrence_id"),
+        nullable=False,
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    basis_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexIngestBatch(Base):
+    __tablename__ = "capex_ingest_batches"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "idempotency_key",
+            name="uq_capex_ingest_batches_scope_idempotency",
+        ),
+        Index(
+            "ix_capex_ingest_batches_scope_status",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "status",
+        ),
+    )
+
+    ingest_batch_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    intake_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    descriptor_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_by_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by_actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexIngestJob(Base):
+    __tablename__ = "capex_ingest_jobs"
+    __table_args__ = (
+        UniqueConstraint(
+            "ingest_batch_id",
+            "job_kind",
+            "idempotency_key",
+            name="uq_capex_ingest_jobs_batch_kind_idempotency",
+        ),
+        Index(
+            "ix_capex_ingest_jobs_batch_status",
+            "ingest_batch_id",
+            "status",
+            "priority",
+            "created_at",
+        ),
+        Index(
+            "ix_capex_ingest_jobs_scope_status",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "status",
+        ),
+    )
+
+    ingest_job_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    ingest_batch_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_ingest_batches.ingest_batch_id"),
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    job_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(255), nullable=False)
+    command_receipt_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("command_receipts.command_receipt_id"),
+        nullable=True,
+    )
+    planned_task_refs_json: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    planned_artifact_refs_json: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+    terminal_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+
+class CapexIngestAttempt(Base):
+    __tablename__ = "capex_ingest_attempts"
+    __table_args__ = (
+        UniqueConstraint(
+            "ingest_job_id",
+            "attempt_no",
+            name="uq_capex_ingest_attempts_job_attempt_no",
+        ),
+        Index(
+            "ix_capex_ingest_attempts_job_status",
+            "ingest_job_id",
+            "status",
+            "attempt_no",
+        ),
+        Index(
+            "ix_capex_ingest_attempts_execution_session",
+            "execution_session_id",
+        ),
+    )
+
+    ingest_attempt_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    ingest_job_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_ingest_jobs.ingest_job_id"),
+        nullable=False,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    attempt_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    execution_session_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("execution_sessions.execution_session_id"),
+        nullable=True,
+    )
+    command_receipt_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("command_receipts.command_receipt_id"),
+        nullable=True,
+    )
+    lease_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_code: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class CapexIngestJobLog(Base):
+    __tablename__ = "capex_ingest_job_logs"
+    __table_args__ = (
+        Index(
+            "ix_capex_ingest_job_logs_job_created",
+            "ingest_job_id",
+            "created_at",
+        ),
+        Index(
+            "ix_capex_ingest_job_logs_attempt_created",
+            "ingest_attempt_id",
+            "created_at",
+        ),
+        Index(
+            "ix_capex_ingest_job_logs_scope_kind",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "log_kind",
+            "severity",
+        ),
+    )
+
+    ingest_job_log_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    ingest_job_id: Mapped[str] = mapped_column(
+        String(255),
+        ForeignKey("capex_ingest_jobs.ingest_job_id"),
+        nullable=False,
+    )
+    ingest_attempt_id: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        ForeignKey("capex_ingest_attempts.ingest_attempt_id"),
+        nullable=True,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    log_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    severity: Mapped[str] = mapped_column(String(32), nullable=False)
+    message_code: Mapped[str] = mapped_column(String(128), nullable=False)
+    message_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
 class CapexSourceRootBinding(Base):
     __tablename__ = "capex_source_root_bindings"
     __table_args__ = (

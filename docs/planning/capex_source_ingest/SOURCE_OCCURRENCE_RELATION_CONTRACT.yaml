@@ -1,0 +1,112 @@
+schema_version: capex.source_occurrence_relation_contract.v1
+contract_id: capex.source_occurrence_relation.runtime_schema.v1
+owner_task: TASK-0392
+source_row: ARCH-W2-S02
+activation_posture: planning_only_no_capex_activation
+overall_status: internal_relation_state_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0391
+required_runtime_state:
+  alembic_revision: alembic/versions/20260624_0018_capex_w2_source_relations_ingest_jobs.py
+  sqlite_bootstrap_ddl: src/onetruth/infrastructure/events/event_store.py
+  sqlalchemy_models: src/onetruth/infrastructure/db/models.py
+  repository: src/onetruth/infrastructure/repositories/capex_source_occurrence_relations.py
+  runtime_schema: schemas/runtime/capex_source_occurrence_relation.schema.json
+required_table:
+  capex_source_occurrence_relations:
+    primary_key:
+      - source_occurrence_relation_id
+    required_columns:
+      - source_occurrence_relation_id
+      - tenant_id
+      - domain_id
+      - project_id
+      - relation_type
+      - source_occurrence_id
+      - target_source_occurrence_id
+      - status
+      - basis_ref
+      - policy_version
+      - metadata_json
+      - created_by_actor_id
+      - created_by_actor_type
+      - created_at
+      - updated_at
+    unique_constraints:
+      - name: uq_capex_source_occurrence_relations_pair
+        columns:
+          - tenant_id
+          - domain_id
+          - project_id
+          - relation_type
+          - source_occurrence_id
+          - target_source_occurrence_id
+    indexes:
+      - ix_capex_source_occurrence_relations_source
+      - ix_capex_source_occurrence_relations_target
+      - ix_capex_source_occurrence_relations_scope_type
+relation_policy:
+  project_scope_required: true
+  same_tenant_domain_project_required: true
+  self_relation_allowed: false
+  duplicate_inverse_active_relation_allowed: false
+  allowed_relation_types:
+    - duplicate_of
+    - archive_contains
+    - archive_member_of
+    - derivative_of
+    - redaction_of
+  allowed_statuses:
+    - active
+    - superseded
+    - rejected
+raw_data_boundary:
+  raw_locator_columns_allowed: false
+  inline_text_columns_allowed: false
+  blob_byte_columns_allowed: false
+  raw_failure_log_allowed: false
+  prohibited_columns:
+    - absolute_path
+    - base64_content
+    - blob_bytes
+    - content_base64
+    - document_text
+    - file_name
+    - filename
+    - local_path
+    - ocr_text
+    - raw_bytes
+    - raw_content
+    - raw_filename
+    - source_path
+truth_effects:
+  creates_relation_rows: true
+  creates_source_occurrences: false
+  creates_content_identities: false
+  creates_artifact_versions: false
+  creates_ingest_jobs: false
+  starts_workers: false
+  runs_extractor: false
+  emits_timeline_events: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_relation_command
+  - public_api_route
+  - frontend_route
+  - locator_union
+  - archive_extraction_runtime
+  - evidence_binding_runtime
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - event_registry_change
+  - raw_corpus_import
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - source_locator_union_activation
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation

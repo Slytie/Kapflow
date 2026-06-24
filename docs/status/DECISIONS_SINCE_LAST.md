@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-141 W2 source relation and ingest state closeout)
+- Source relation decision: `TASK-0392` closes `ARCH-W2-S02` by adding internal `capex_source_occurrence_relations` runtime state, schema, contract, and repository helpers for duplicate, archive, derivative, and redaction relation rows over existing source occurrences.
+- Relation-boundary decision: relation rows require same tenant/domain/project, both source occurrences must already be project-scoped to the same CAPEX project, self-relations and active inverse duplicate relations fail closed, and raw paths, raw filenames, inline text/base64, blob bytes, and raw logs are banned from relation metadata.
+- Ingest state decision: `TASK-0393` closes `ARCH-W2-S03` by adding internal `capex_ingest_batches`, `capex_ingest_jobs`, `capex_ingest_attempts`, and `capex_ingest_job_logs` runtime state, schemas, contract, and repository helpers.
+- State-model boundary decision: ingest rows record state only; the repository enforces project scope, scoped idempotency, known job/status vocabularies, monotonic attempt numbers, optional existing command-receipt/execution-session references, terminal-state guards, and raw-material bans.
+- Activation decision: this closeout adds state/schema/repository/test/docs evidence only. It adds no public route, frontend route, queue worker, parser/OCR/search runtime, upload route, event-registry change, source occurrence creation, artifact creation, official pointer, reviewed-baseline claim, raw corpus import, production approval, or CAPEX product/runtime activation.
+
 ## 2026-06-23 (EPIC-141 bulk ingest adapter seam and W2 schema reconciliation closeout)
 - Bulk-ingest seam decision: `TASK-0374` closes `RF-006` by adding `onetruth.capex_platform.bulk_ingest_adapter_seam`, a deterministic planning-only adapter boundary that accepts sanitized staged descriptors and wraps `plan_staged_corpus_ingest(...)`.
 - Adapter-boundary decision: the seam requires tenant/domain/project scope, adapter request ID, ingest batch ID, idempotency key, actor, timestamp, supported descriptor modes, deterministic descriptor fingerprinting, and duplicate descriptor rejection while banning raw content, base64, source paths, raw filenames, absolute paths, and blob bytes.

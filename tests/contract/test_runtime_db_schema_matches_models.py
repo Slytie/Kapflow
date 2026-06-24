@@ -39,6 +39,11 @@ REQUIRED_NEW_TABLES = {
     "capex_source_root_bindings",
     "capex_source_root_sync_runs",
     "capex_folder_tree_snapshots",
+    "capex_source_occurrence_relations",
+    "capex_ingest_batches",
+    "capex_ingest_jobs",
+    "capex_ingest_attempts",
+    "capex_ingest_job_logs",
 }
 
 REQUIRED_INDEXES_BY_TABLE = {
@@ -73,6 +78,27 @@ REQUIRED_INDEXES_BY_TABLE = {
     "capex_folder_tree_snapshots": {
         "ix_capex_folder_tree_snapshots_root_observed",
         "ix_capex_folder_tree_snapshots_scope_status",
+    },
+    "capex_source_occurrence_relations": {
+        "ix_capex_source_occurrence_relations_source",
+        "ix_capex_source_occurrence_relations_target",
+        "ix_capex_source_occurrence_relations_scope_type",
+    },
+    "capex_ingest_batches": {
+        "ix_capex_ingest_batches_scope_status",
+    },
+    "capex_ingest_jobs": {
+        "ix_capex_ingest_jobs_batch_status",
+        "ix_capex_ingest_jobs_scope_status",
+    },
+    "capex_ingest_attempts": {
+        "ix_capex_ingest_attempts_job_status",
+        "ix_capex_ingest_attempts_execution_session",
+    },
+    "capex_ingest_job_logs": {
+        "ix_capex_ingest_job_logs_job_created",
+        "ix_capex_ingest_job_logs_attempt_created",
+        "ix_capex_ingest_job_logs_scope_kind",
     },
 }
 

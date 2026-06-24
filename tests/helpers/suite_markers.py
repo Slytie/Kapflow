@@ -44,6 +44,8 @@ CAPEX_SEMANTIC_TEST_GLOBS: tuple[str, ...] = (
     "tests/unit/test_capex_closure_governance.py",
     "tests/unit/test_capex_interface_burden_policy.py",
     "tests/unit/test_capex_project_access.py",
+    "tests/unit/test_capex_ingest_job_state.py",
+    "tests/unit/test_capex_source_occurrence_relations.py",
     "tests/unit/test_capex_source_occurrence_resolver.py",
     "tests/unit/test_capex_workflow_handoff_manifest.py",
     "tests/unit/test_capex_workpage_command_envelope.py",

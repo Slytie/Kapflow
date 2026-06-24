@@ -2,7 +2,7 @@
 
 ## Status
 - Status: `AUTHORITATIVE_SOURCE`
-- Owner tasks: `TASK-0564`, `TASK-0565`
+- Owner tasks: `TASK-0392`, `TASK-0393`, `TASK-0564`, `TASK-0565`
 - Scope: internal CAPEX runtime foundation only.
 
 This note records the repo-native guardrails for the first physical source-occurrence and closure-governance primitives. It does not activate CAPEX runtime/product behavior, import raw corpus material, add public APIs, add frontend routes, or approve production/pilot readiness.
@@ -22,7 +22,7 @@ The resolver must return an unresolved result for malformed refs, missing occurr
 
 Empty `source_refs` arrays and presence-only evidence are not meaningful evidence.
 
-Source occurrence relations remain inactive in this foundation. Any later relation or locator-union command must enforce same tenant/domain/project on both referenced occurrences, unless a reviewed sharing policy explicitly defines a narrower exception. This inactive relation posture cannot authorize CAPEX runtime activation, raw corpus import, evidence binding, public routes, workpage activation, or product activation.
+Source occurrence relations are now internal runtime state only. `TASK-0392` adds `capex_source_occurrence_relations` for same tenant/domain/project duplicate, archive, derivative, and redaction relation rows; both referenced occurrences must already be project-scoped to the same CAPEX project. Public relation commands, locator-union commands, evidence binding, workpage activation, and official pointer effects remain inactive. This relation posture cannot authorize CAPEX runtime activation, raw corpus import, public routes, reviewed baseline truth, or product activation.
 
 ## Closure Runtime
 `capex_waivers` records scoped waiver state. Direct source/evidence state remains authoritative; a waiver is never a pass.

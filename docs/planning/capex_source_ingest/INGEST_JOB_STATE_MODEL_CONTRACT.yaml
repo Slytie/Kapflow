@@ -1,0 +1,142 @@
+schema_version: capex.ingest_job_state_model_contract.v1
+contract_id: capex.ingest_job_state_model.runtime_schema.v1
+owner_task: TASK-0393
+source_row: ARCH-W2-S03
+activation_posture: planning_only_no_capex_activation
+overall_status: internal_ingest_state_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0391
+required_runtime_state:
+  alembic_revision: alembic/versions/20260624_0018_capex_w2_source_relations_ingest_jobs.py
+  sqlite_bootstrap_ddl: src/onetruth/infrastructure/events/event_store.py
+  sqlalchemy_models: src/onetruth/infrastructure/db/models.py
+  repository: src/onetruth/infrastructure/repositories/capex_ingest_jobs.py
+  runtime_schemas:
+    - schemas/runtime/capex_ingest_batch.schema.json
+    - schemas/runtime/capex_ingest_job.schema.json
+    - schemas/runtime/capex_ingest_attempt.schema.json
+    - schemas/runtime/capex_ingest_job_log.schema.json
+required_tables:
+  capex_ingest_batches:
+    primary_key:
+      - ingest_batch_id
+    unique_constraints:
+      - name: uq_capex_ingest_batches_scope_idempotency
+        columns:
+          - tenant_id
+          - domain_id
+          - project_id
+          - idempotency_key
+    indexes:
+      - ix_capex_ingest_batches_scope_status
+  capex_ingest_jobs:
+    primary_key:
+      - ingest_job_id
+    unique_constraints:
+      - name: uq_capex_ingest_jobs_batch_kind_idempotency
+        columns:
+          - ingest_batch_id
+          - job_kind
+          - idempotency_key
+    indexes:
+      - ix_capex_ingest_jobs_batch_status
+      - ix_capex_ingest_jobs_scope_status
+  capex_ingest_attempts:
+    primary_key:
+      - ingest_attempt_id
+    unique_constraints:
+      - name: uq_capex_ingest_attempts_job_attempt_no
+        columns:
+          - ingest_job_id
+          - attempt_no
+    indexes:
+      - ix_capex_ingest_attempts_job_status
+      - ix_capex_ingest_attempts_execution_session
+  capex_ingest_job_logs:
+    primary_key:
+      - ingest_job_log_id
+    indexes:
+      - ix_capex_ingest_job_logs_job_created
+      - ix_capex_ingest_job_logs_attempt_created
+      - ix_capex_ingest_job_logs_scope_kind
+state_model_policy:
+  same_tenant_domain_project_required: true
+  batch_idempotency_scoped_by_project: true
+  job_idempotency_scoped_by_batch_kind: true
+  attempt_numbers_monotonic: true
+  terminal_batch_states:
+    - succeeded
+    - failed
+    - canceled
+  terminal_job_states:
+    - succeeded
+    - failed
+    - canceled
+  terminal_attempt_states:
+    - succeeded
+    - failed
+    - canceled
+  command_receipts_created_by_this_task: false
+  execution_sessions_created_by_this_task: false
+raw_data_boundary:
+  raw_locator_columns_allowed: false
+  inline_text_columns_allowed: false
+  blob_byte_columns_allowed: false
+  raw_failure_log_allowed: false
+  allowed_material:
+    - sanitized_ids
+    - idempotency_keys
+    - sha256_request_fingerprints
+    - command_receipt_ids
+    - execution_session_ids
+    - planned_task_refs
+    - planned_artifact_refs
+    - aggregate_counts
+    - message_codes
+  prohibited_columns:
+    - absolute_path
+    - base64_content
+    - blob_bytes
+    - content_base64
+    - document_text
+    - file_name
+    - filename
+    - local_path
+    - ocr_text
+    - raw_bytes
+    - raw_content
+    - raw_filename
+    - source_path
+truth_effects:
+  creates_ingest_state_rows: true
+  creates_command_receipts: false
+  creates_execution_sessions: false
+  creates_source_occurrences: false
+  creates_artifact_versions: false
+  starts_workers: false
+  enqueues_runtime_jobs: false
+  runs_parser_adapter: false
+  emits_timeline_events: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - queue_worker
+  - parser_adapter
+  - extraction_runtime
+  - ocr_runtime
+  - search_runtime
+  - public_api_route
+  - frontend_route
+  - upload_route
+  - event_registry_change
+  - raw_corpus_import
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - worker_activation
+  - parser_runtime_activation
+  - ocr_runtime_activation
+  - reviewed_baseline_creation
+  - official_pointer_creation

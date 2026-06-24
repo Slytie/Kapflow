@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexSourceOccurrenceRelation",
+  "type": "object",
+  "required": [
+    "source_occurrence_relation_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "relation_type",
+    "source_occurrence_id",
+    "target_source_occurrence_id",
+    "status",
+    "basis_ref",
+    "policy_version",
+    "metadata_json",
+    "created_by_actor_id",
+    "created_by_actor_type",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "source_occurrence_relation_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "relation_type": {
+      "type": "string",
+      "enum": [
+        "duplicate_of",
+        "archive_contains",
+        "archive_member_of",
+        "derivative_of",
+        "redaction_of"
+      ]
+    },
+    "source_occurrence_id": { "type": "string" },
+    "target_source_occurrence_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["active", "superseded", "rejected"]
+    },
+    "basis_ref": { "type": "string" },
+    "policy_version": { "type": "string" },
+    "metadata_json": { "type": "object" },
+    "created_by_actor_id": { "type": "string" },
+    "created_by_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

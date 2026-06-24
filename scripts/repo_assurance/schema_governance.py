@@ -113,6 +113,13 @@ def validate_runtime_schema_coverage(state: AssuranceState) -> None:
         "capex_user_project_view": ROOT / "schemas/runtime/capex_user_project_view.schema.json",
         "capex_content_identity": ROOT / "schemas/runtime/capex_content_identity.schema.json",
         "capex_source_occurrence": ROOT / "schemas/runtime/capex_source_occurrence.schema.json",
+        "capex_source_occurrence_relation": ROOT
+        / "schemas/runtime/capex_source_occurrence_relation.schema.json",
+        "capex_ingest_batch": ROOT / "schemas/runtime/capex_ingest_batch.schema.json",
+        "capex_ingest_job": ROOT / "schemas/runtime/capex_ingest_job.schema.json",
+        "capex_ingest_attempt": ROOT / "schemas/runtime/capex_ingest_attempt.schema.json",
+        "capex_ingest_job_log": ROOT
+        / "schemas/runtime/capex_ingest_job_log.schema.json",
         "capex_waiver": ROOT / "schemas/runtime/capex_waiver.schema.json",
         "capex_closure_gate_evaluation": ROOT / "schemas/runtime/capex_closure_gate_evaluation.schema.json",
         "capex_closure_snapshot": ROOT / "schemas/runtime/capex_closure_snapshot.schema.json",

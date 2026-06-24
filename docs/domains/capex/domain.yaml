@@ -58,10 +58,12 @@ readiness_prerequisites:
       - docs/architecture/CAPEX_STORAGE_BLOB_CUSTODY_CED.md
       - docs/planning/checklists/CAPEX_PILOT_STORAGE_GATE.md
   - prerequisite_id: capex.source_occurrence_governance
-    description: Physical source occurrence truth and the first SourceRef resolver exist through TASK-0564; broader corpus ingest, source occurrence relations, locator unions, extraction, evidence binding, and source-data governance dependencies remain future work.
+    description: Physical source occurrence truth, the first SourceRef resolver, internal same-project source occurrence relations, and internal ingest job state exist through TASK-0393 and TASK-0564; broader corpus ingest activation, locator unions, extraction, evidence binding, and source-data governance dependencies remain future work.
     status: open
     task_refs:
       - TASK-0391
+      - TASK-0392
+      - TASK-0393
       - TASK-0407
       - TASK-0428
       - TASK-0564
@@ -170,9 +172,11 @@ disabled_capabilities:
       - TASK-0289
   - capability_id: capex.source_data_governance
     description: Broader source-data governance, corpus ingest, extraction, and evidence binding are disabled.
-    disabled_reason: TASK-0564 provides physical occurrence truth and SourceRef resolution, but EPIC-141 source governance and evidence-binding tasks remain TODO.
+    disabled_reason: TASK-0392 and TASK-0393 provide internal relation and ingest state only; locator unions, extraction, evidence binding, and broader source governance remain TODO.
     owner_task_refs:
       - TASK-0391
+      - TASK-0392
+      - TASK-0393
       - TASK-0407
       - TASK-0428
   - capability_id: capex.workpages

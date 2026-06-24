@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexIngestBatch",
+  "type": "object",
+  "required": [
+    "ingest_batch_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "intake_ref",
+    "idempotency_key",
+    "request_fingerprint",
+    "status",
+    "descriptor_count",
+    "metadata_json",
+    "created_by_actor_id",
+    "created_by_actor_type",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "ingest_batch_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "intake_ref": { "type": "string" },
+    "idempotency_key": { "type": "string" },
+    "request_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["planned", "accepted", "processing", "succeeded", "failed", "canceled"]
+    },
+    "descriptor_count": { "type": "integer", "minimum": 0 },
+    "metadata_json": { "type": "object" },
+    "created_by_actor_id": { "type": "string" },
+    "created_by_actor_type": {
+      "type": "string",
+      "enum": ["human", "agent", "service", "system"]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

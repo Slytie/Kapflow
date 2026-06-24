@@ -2,10 +2,11 @@
 id: TASK-0393
 epic: EPIC-141
 title: "Add ingest_batch, ingest_job, ingest_attempt, ingest_job_log state model"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0391"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,7 @@ Separate state machine from worker implementation
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence: added `docs/planning/capex_source_ingest/INGEST_JOB_STATE_MODEL_CONTRACT.yaml`, runtime schemas for ingest batches/jobs/attempts/job logs, Alembic/SQLite/SQLAlchemy state for `capex_ingest_batches`, `capex_ingest_jobs`, `capex_ingest_attempts`, and `capex_ingest_job_logs`, plus `src/onetruth/infrastructure/repositories/capex_ingest_jobs.py`.
+- The ingest state repository enforces project scope, scoped idempotency uniqueness, known job/status vocabularies, monotonic attempt numbers, optional existing command-receipt/execution-session references, terminal-state guards, sanitized planned refs, and raw-material bans.
+- Evidence: focused ingest job state unit tests, ingest schema parity tests, migration/bootstrap parity tests, runtime DB model contract tests, and CAPEX ingest contract tests cover the W2 ingest-state closeout.
+- Closeout posture: this task adds state-model rows only. It creates no command receipts, execution sessions, source occurrences, artifacts, queues, workers, parser/OCR/search runtime, public route, frontend route, event-registry change, official pointer, workflow activation, raw corpus import, or CAPEX product/runtime activation.

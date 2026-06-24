@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexIngestAttempt",
+  "type": "object",
+  "required": [
+    "ingest_attempt_id",
+    "ingest_job_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "attempt_no",
+    "status",
+    "metadata_json",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "ingest_attempt_id": { "type": "string" },
+    "ingest_job_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "attempt_no": { "type": "integer", "minimum": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "running", "succeeded", "failed", "canceled"]
+    },
+    "execution_session_id": { "type": ["string", "null"] },
+    "command_receipt_id": { "type": ["integer", "null"] },
+    "lease_token": { "type": ["string", "null"] },
+    "metadata_json": { "type": "object" },
+    "started_at": { "type": ["string", "null"], "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "error_code": { "type": ["string", "null"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

@@ -2,10 +2,11 @@
 id: TASK-0392
 epic: EPIC-141
 title: "Add source_occurrence_relation with duplicate/archive/derivative/redaction relation types"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0391"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,7 @@ Keep relation write path domain-neutral; no K12 raw data
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence: added `docs/planning/capex_source_ingest/SOURCE_OCCURRENCE_RELATION_CONTRACT.yaml`, runtime schema `schemas/runtime/capex_source_occurrence_relation.schema.json`, Alembic/SQLite/SQLAlchemy state for `capex_source_occurrence_relations`, and `src/onetruth/infrastructure/repositories/capex_source_occurrence_relations.py`.
+- The relation repository enforces same tenant/domain/project, project-scoped source occurrences, duplicate inverse prevention for active duplicate relations, raw-material bans, deterministic JSON metadata encoding, and terminal status guards.
+- Evidence: focused source-occurrence relation unit tests, source-occurrence schema parity tests, migration/bootstrap parity tests, runtime DB model contract tests, and CAPEX ingest contract tests cover the W2 relation closeout.
+- Closeout posture: this task creates internal relation state only. It adds no public relation command, route, frontend, locator union, evidence binding runtime, raw corpus import, reviewed baseline truth, official pointer, workflow activation, or CAPEX product/runtime activation.

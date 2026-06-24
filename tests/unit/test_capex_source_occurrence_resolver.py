@@ -250,5 +250,6 @@ def test_source_occurrence_relations_remain_inactive_until_same_project_policy_e
         / "CAPEX_SOURCE_REF_AND_CLOSURE_GUARDRAILS.md"
     ).read_text(encoding="utf-8")
 
-    assert "Source occurrence relations remain inactive" in guardrails
-    assert "same tenant/domain/project" in guardrails
+    assert "Source occurrence relations are now internal runtime state only" in guardrails
+    assert "same tenant/domain/project duplicate, archive, derivative, and redaction" in guardrails
+    assert "Public relation commands, locator-union commands" in guardrails

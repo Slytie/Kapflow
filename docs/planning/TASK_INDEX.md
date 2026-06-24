@@ -352,8 +352,8 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0389 | EPIC-140 | DONE | high | Add architecture snippets and code pattern register |
 | TASK-0390 | EPIC-140 | DONE | high | W1 closeout review and old-decision update |
 | TASK-0391 | EPIC-141 | DONE | high | Create content_identity and capex_source_occurrence runtime schema |
-| TASK-0392 | EPIC-141 | TODO | high | Add source_occurrence_relation with duplicate/archive/derivative/redaction relation types |
-| TASK-0393 | EPIC-141 | TODO | high | Add ingest_batch, ingest_job, ingest_attempt, ingest_job_log state model |
+| TASK-0392 | EPIC-141 | DONE | high | Add source_occurrence_relation with duplicate/archive/derivative/redaction relation types |
+| TASK-0393 | EPIC-141 | DONE | high | Add ingest_batch, ingest_job, ingest_attempt, ingest_job_log state model |
 | TASK-0394 | EPIC-141 | TODO | high | Add archive lineage support and nested-archive extraction metadata contract |
 | TASK-0395 | EPIC-141 | TODO | medium | Add manifest_generation attestation model for generated corpus registers |
 | TASK-0396 | EPIC-141 | TODO | high | Implement CommandReceipt canonical input hash and corrupted-idempotency rejection |

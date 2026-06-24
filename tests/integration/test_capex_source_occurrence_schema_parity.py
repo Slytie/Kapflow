@@ -18,6 +18,7 @@ from onetruth.infrastructure.repositories.capex_source_occurrences import (
 SOURCE_OCCURRENCE_TABLES = [
     "capex_content_identities",
     "capex_source_occurrences",
+    "capex_source_occurrence_relations",
 ]
 PROHIBITED_RAW_COLUMNS = {
     "absolute_path",
@@ -207,7 +208,8 @@ def test_capex_source_occurrence_required_fields_indexes_and_raw_column_boundary
             & _column_names(connection, "capex_source_occurrences")
         ) == set()
         assert _table_names_like(connection, "capex%source%occurrence%") == {
-            "capex_source_occurrences"
+            "capex_source_occurrences",
+            "capex_source_occurrence_relations",
         }
     finally:
         connection.close()
@@ -225,9 +227,16 @@ def test_capex_source_occurrence_runtime_schemas_match_table_boundary() -> None:
             encoding="utf-8"
         )
     )
+    source_occurrence_relation_schema = json.loads(
+        (
+            repo_root
+            / "schemas/runtime/capex_source_occurrence_relation.schema.json"
+        ).read_text(encoding="utf-8")
+    )
 
     assert content_identity_schema["additionalProperties"] is False
     assert source_occurrence_schema["additionalProperties"] is False
+    assert source_occurrence_relation_schema["additionalProperties"] is False
     assert {
         "content_identity_id",
         "tenant_id",
@@ -256,8 +265,69 @@ def test_capex_source_occurrence_runtime_schemas_match_table_boundary() -> None:
         source_occurrence_schema["properties"]["source_ref"]["pattern"]
         == r"^source_occurrence:[^\s]+$"
     )
+    assert {
+        "duplicate_of",
+        "archive_contains",
+        "archive_member_of",
+        "derivative_of",
+        "redaction_of",
+    } == set(
+        source_occurrence_relation_schema["properties"]["relation_type"]["enum"]
+    )
     assert PROHIBITED_RAW_COLUMNS & set(content_identity_schema["properties"]) == set()
     assert PROHIBITED_RAW_COLUMNS & set(source_occurrence_schema["properties"]) == set()
+    assert (
+        PROHIBITED_RAW_COLUMNS & set(source_occurrence_relation_schema["properties"])
+        == set()
+    )
+
+
+def test_capex_source_occurrence_relation_required_fields_indexes_and_raw_column_boundary(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "bootstrap.db"
+    _init_bootstrap(path)
+    connection = _open_connection(path)
+    try:
+        assert {
+            "source_occurrence_relation_id",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "relation_type",
+            "source_occurrence_id",
+            "target_source_occurrence_id",
+            "status",
+            "basis_ref",
+            "policy_version",
+            "metadata_json",
+            "created_by_actor_id",
+            "created_by_actor_type",
+            "created_at",
+            "updated_at",
+        } <= _column_names(connection, "capex_source_occurrence_relations")
+        assert _primary_key_columns(connection, "capex_source_occurrence_relations") == {
+            "source_occurrence_relation_id"
+        }
+        assert (
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "relation_type",
+            "source_occurrence_id",
+            "target_source_occurrence_id",
+        ) in _unique_column_sets(connection, "capex_source_occurrence_relations")
+        assert {
+            "ix_capex_source_occurrence_relations_source",
+            "ix_capex_source_occurrence_relations_target",
+            "ix_capex_source_occurrence_relations_scope_type",
+        } <= _index_names(connection, "capex_source_occurrence_relations")
+        assert (
+            PROHIBITED_RAW_COLUMNS
+            & _column_names(connection, "capex_source_occurrence_relations")
+        ) == set()
+    finally:
+        connection.close()
 
 
 def test_scoped_content_identity_uniqueness_allows_same_digest_multiple_occurrences(

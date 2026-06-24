@@ -141,6 +141,90 @@ _CAPEX_REQUIRED_COLUMNS_BY_TABLE: dict[str, set[str]] = {
         "created_at",
         "updated_at",
     },
+    "capex_source_occurrence_relations": {
+        "source_occurrence_relation_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "relation_type",
+        "source_occurrence_id",
+        "target_source_occurrence_id",
+        "status",
+        "basis_ref",
+        "policy_version",
+        "metadata_json",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "created_at",
+        "updated_at",
+    },
+    "capex_ingest_batches": {
+        "ingest_batch_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "intake_ref",
+        "idempotency_key",
+        "request_fingerprint",
+        "status",
+        "descriptor_count",
+        "metadata_json",
+        "created_by_actor_id",
+        "created_by_actor_type",
+        "created_at",
+        "updated_at",
+    },
+    "capex_ingest_jobs": {
+        "ingest_job_id",
+        "ingest_batch_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "job_kind",
+        "status",
+        "priority",
+        "idempotency_key",
+        "request_fingerprint",
+        "command_receipt_id",
+        "planned_task_refs_json",
+        "planned_artifact_refs_json",
+        "metadata_json",
+        "created_at",
+        "updated_at",
+        "terminal_at",
+    },
+    "capex_ingest_attempts": {
+        "ingest_attempt_id",
+        "ingest_job_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "attempt_no",
+        "status",
+        "execution_session_id",
+        "command_receipt_id",
+        "lease_token",
+        "metadata_json",
+        "started_at",
+        "completed_at",
+        "error_code",
+        "created_at",
+        "updated_at",
+    },
+    "capex_ingest_job_logs": {
+        "ingest_job_log_id",
+        "ingest_job_id",
+        "ingest_attempt_id",
+        "tenant_id",
+        "domain_id",
+        "project_id",
+        "log_kind",
+        "severity",
+        "message_code",
+        "message_summary",
+        "metadata_json",
+        "created_at",
+    },
     "capex_source_root_bindings": {
         "source_root_id",
         "tenant_id",
@@ -294,9 +378,14 @@ _CAPEX_EMPTY_SHELL_DROP_ORDER = (
     "capex_closure_snapshots",
     "capex_closure_gate_evaluations",
     "capex_waivers",
+    "capex_ingest_job_logs",
+    "capex_ingest_attempts",
+    "capex_ingest_jobs",
+    "capex_ingest_batches",
     "capex_folder_tree_snapshots",
     "capex_source_root_sync_runs",
     "capex_source_root_bindings",
+    "capex_source_occurrence_relations",
     "capex_source_occurrences",
     "capex_content_identities",
     "capex_user_project_view",
@@ -632,6 +721,167 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             ON capex_source_occurrences (tenant_id, domain_id, project_id, status);
         CREATE INDEX IF NOT EXISTS ix_capex_source_occurrences_content_identity
             ON capex_source_occurrences (content_identity_id);
+
+        CREATE TABLE IF NOT EXISTS capex_source_occurrence_relations (
+            source_occurrence_relation_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            relation_type TEXT NOT NULL,
+            source_occurrence_id TEXT NOT NULL,
+            target_source_occurrence_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            basis_ref TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (source_occurrence_id) REFERENCES capex_source_occurrences(source_occurrence_id),
+            FOREIGN KEY (target_source_occurrence_id) REFERENCES capex_source_occurrences(source_occurrence_id),
+            UNIQUE (
+                tenant_id,
+                domain_id,
+                project_id,
+                relation_type,
+                source_occurrence_id,
+                target_source_occurrence_id
+            )
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_source_occurrence_relations_source
+            ON capex_source_occurrence_relations (
+                source_occurrence_id,
+                relation_type,
+                status
+            );
+        CREATE INDEX IF NOT EXISTS ix_capex_source_occurrence_relations_target
+            ON capex_source_occurrence_relations (
+                target_source_occurrence_id,
+                relation_type,
+                status
+            );
+        CREATE INDEX IF NOT EXISTS ix_capex_source_occurrence_relations_scope_type
+            ON capex_source_occurrence_relations (
+                tenant_id,
+                domain_id,
+                project_id,
+                relation_type,
+                status
+            );
+
+        CREATE TABLE IF NOT EXISTS capex_ingest_batches (
+            ingest_batch_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            intake_ref TEXT NOT NULL,
+            idempotency_key TEXT NOT NULL,
+            request_fingerprint TEXT NOT NULL,
+            status TEXT NOT NULL,
+            descriptor_count INTEGER NOT NULL DEFAULT 0,
+            metadata_json TEXT NOT NULL,
+            created_by_actor_id TEXT NOT NULL,
+            created_by_actor_type TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            UNIQUE (tenant_id, domain_id, project_id, idempotency_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_ingest_batches_scope_status
+            ON capex_ingest_batches (tenant_id, domain_id, project_id, status);
+
+        CREATE TABLE IF NOT EXISTS capex_ingest_jobs (
+            ingest_job_id TEXT PRIMARY KEY,
+            ingest_batch_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            job_kind TEXT NOT NULL,
+            status TEXT NOT NULL,
+            priority INTEGER NOT NULL DEFAULT 0,
+            idempotency_key TEXT NOT NULL,
+            request_fingerprint TEXT NOT NULL,
+            command_receipt_id INTEGER,
+            planned_task_refs_json TEXT NOT NULL,
+            planned_artifact_refs_json TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            terminal_at TEXT,
+            FOREIGN KEY (ingest_batch_id) REFERENCES capex_ingest_batches(ingest_batch_id),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (command_receipt_id) REFERENCES command_receipts(command_receipt_id),
+            UNIQUE (ingest_batch_id, job_kind, idempotency_key)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_ingest_jobs_batch_status
+            ON capex_ingest_jobs (ingest_batch_id, status, priority, created_at);
+        CREATE INDEX IF NOT EXISTS ix_capex_ingest_jobs_scope_status
+            ON capex_ingest_jobs (tenant_id, domain_id, project_id, status);
+
+        CREATE TABLE IF NOT EXISTS capex_ingest_attempts (
+            ingest_attempt_id TEXT PRIMARY KEY,
+            ingest_job_id TEXT NOT NULL,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            attempt_no INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            execution_session_id TEXT,
+            command_receipt_id INTEGER,
+            lease_token TEXT,
+            metadata_json TEXT NOT NULL,
+            started_at TEXT,
+            completed_at TEXT,
+            error_code TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (ingest_job_id) REFERENCES capex_ingest_jobs(ingest_job_id),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (execution_session_id) REFERENCES execution_sessions(execution_session_id),
+            FOREIGN KEY (command_receipt_id) REFERENCES command_receipts(command_receipt_id),
+            UNIQUE (ingest_job_id, attempt_no)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_ingest_attempts_job_status
+            ON capex_ingest_attempts (ingest_job_id, status, attempt_no);
+        CREATE INDEX IF NOT EXISTS ix_capex_ingest_attempts_execution_session
+            ON capex_ingest_attempts (execution_session_id);
+
+        CREATE TABLE IF NOT EXISTS capex_ingest_job_logs (
+            ingest_job_log_id TEXT PRIMARY KEY,
+            ingest_job_id TEXT NOT NULL,
+            ingest_attempt_id TEXT,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            log_kind TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            message_code TEXT NOT NULL,
+            message_summary TEXT,
+            metadata_json TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (ingest_job_id) REFERENCES capex_ingest_jobs(ingest_job_id),
+            FOREIGN KEY (ingest_attempt_id) REFERENCES capex_ingest_attempts(ingest_attempt_id),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_capex_ingest_job_logs_job_created
+            ON capex_ingest_job_logs (ingest_job_id, created_at);
+        CREATE INDEX IF NOT EXISTS ix_capex_ingest_job_logs_attempt_created
+            ON capex_ingest_job_logs (ingest_attempt_id, created_at);
+        CREATE INDEX IF NOT EXISTS ix_capex_ingest_job_logs_scope_kind
+            ON capex_ingest_job_logs (
+                tenant_id,
+                domain_id,
+                project_id,
+                log_kind,
+                severity
+            );
 
         CREATE TABLE IF NOT EXISTS capex_source_root_bindings (
             source_root_id TEXT PRIMARY KEY,

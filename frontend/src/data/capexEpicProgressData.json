@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 432,
-    "done": 130,
+    "done": 132,
     "in_progress": 0,
-    "not_started": 299,
+    "not_started": 297,
     "blocked": 1,
     "needs_review": 2,
     "total": 432,
     "estimate": {
-      "percentComplete": 30.1,
-      "completedTasks": 130,
-      "remainingTasks": 302,
+      "percentComplete": 30.6,
+      "completedTasks": 132,
+      "remainingTasks": 300,
       "remainingBlockedOrReviewTasks": 3,
-      "completedWithTimestamps": 98,
-      "completionTimestampCoverage": 75.4,
-      "etaDate": "2026-08-24",
+      "completedWithTimestamps": 100,
+      "completionTimestampCoverage": 75.8,
+      "etaDate": "2026-08-22",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-24",
+      "label": "ETA 2026-08-22",
       "caveat": "3 blocked or needs-review task(s) remain."
     }
   },
@@ -4757,9 +4757,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 16,
+        "done": 18,
         "in_progress": 0,
-        "not_started": 37,
+        "not_started": 35,
         "blocked": 0,
         "needs_review": 0,
         "total": 53
@@ -5583,9 +5583,9 @@
           "epicId": "EPIC-141",
           "title": "Add source_occurrence_relation with duplicate/archive/derivative/redaction relation types",
           "plainPurpose": "Keep relation write path domain-neutral; no K12 raw data",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W2-S02 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5597,7 +5597,9 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0391"
+          ],
           "owners": [
             "platform"
           ],
@@ -5630,18 +5632,18 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0392-add-source-occurrence-relation-with-duplicate-archive-derivative-redaction-relation-types.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0393",
           "epicId": "EPIC-141",
           "title": "Add ingest_batch, ingest_job, ingest_attempt, ingest_job_log state model",
           "plainPurpose": "Separate state machine from worker implementation",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W2-S03 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5653,7 +5655,9 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0391"
+          ],
           "owners": [
             "platform"
           ],
@@ -5686,9 +5690,9 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0393-add-ingest-batch-ingest-job-ingest-attempt-ingest-job-log-state-model.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0394",
@@ -7843,16 +7847,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 30.2,
-        "completedTasks": 16,
-        "remainingTasks": 37,
+        "percentComplete": 34.0,
+        "completedTasks": 18,
+        "remainingTasks": 35,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 15,
-        "completionTimestampCoverage": 93.8,
-        "etaDate": "2026-08-01",
+        "completedWithTimestamps": 17,
+        "completionTimestampCoverage": 94.4,
+        "etaDate": "2026-07-26",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-08-01",
+        "label": "ETA 2026-07-26",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexIngestJobLog",
+  "type": "object",
+  "required": [
+    "ingest_job_log_id",
+    "ingest_job_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "log_kind",
+    "severity",
+    "message_code",
+    "metadata_json",
+    "created_at"
+  ],
+  "properties": {
+    "ingest_job_log_id": { "type": "string" },
+    "ingest_job_id": { "type": "string" },
+    "ingest_attempt_id": { "type": ["string", "null"] },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "log_kind": {
+      "type": "string",
+      "enum": ["state_transition", "validation", "retry", "failure", "operator_note", "worker"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["debug", "info", "warning", "error"]
+    },
+    "message_code": { "type": "string" },
+    "message_summary": { "type": ["string", "null"] },
+    "metadata_json": { "type": "object" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

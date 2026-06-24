@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexIngestJob",
+  "type": "object",
+  "required": [
+    "ingest_job_id",
+    "ingest_batch_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "job_kind",
+    "status",
+    "priority",
+    "idempotency_key",
+    "request_fingerprint",
+    "planned_task_refs_json",
+    "planned_artifact_refs_json",
+    "metadata_json",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "ingest_job_id": { "type": "string" },
+    "ingest_batch_id": { "type": "string" },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "job_kind": {
+      "type": "string",
+      "enum": [
+        "document_manifest_build",
+        "text_extraction",
+        "page_manifest",
+        "chunk_index",
+        "evidence_binding",
+        "corpus_processing",
+        "source_inventory",
+        "source_occurrence_binding"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "running",
+        "retry_pending",
+        "resume_pending",
+        "succeeded",
+        "failed",
+        "canceled"
+      ]
+    },
+    "priority": { "type": "integer" },
+    "idempotency_key": { "type": "string" },
+    "request_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "command_receipt_id": { "type": ["integer", "null"] },
+    "planned_task_refs_json": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "planned_artifact_refs_json": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "metadata_json": { "type": "object" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "terminal_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "additionalProperties": false
+}
