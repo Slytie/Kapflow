@@ -2,10 +2,11 @@
 id: TASK-0395
 epic: EPIC-141
 title: "Add manifest_generation attestation model for generated corpus registers"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0391", "TASK-0392"]
 risk: medium
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,7 @@ Generated register from physical rows only
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence: added `docs/planning/capex_source_ingest/MANIFEST_GENERATION_ATTESTATION_CONTRACT.yaml` and `src/onetruth/capex_platform/manifest_generation_attestation.py` for deterministic `capex.generated_corpus_register_manifest.v1`, `capex.manifest_generation_attestation.v1`, and wrapper `capex.manifest_generation_attestation.outputs.v1` planning outputs from physical corpus rows only.
+- The helper validates same tenant/domain/project, tenant/domain content identity scope, canonical SourceRefs, known relation membership, input digests, generator config digest, duplicate IDs, deterministic row/register/basis digests, and the rule that generated corpus registers are evidence only, not source authority.
+- Evidence: focused manifest-generation attestation unit tests and CAPEX ingest/generated-artifact contract tests cover deterministic output, physical-row basis, unknown refs, scope mismatch, duplicate IDs, bad digests, raw-content bans, and no runtime/official truth effects.
+- Closeout posture: this task records generated-register attestation evidence only. It adds no duplicate migration, raw corpus import, parser/archive extraction runtime, locator union, route, frontend, event-registry change, reviewed baseline truth, official pointer, workflow activation, or CAPEX product/runtime activation.

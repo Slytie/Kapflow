@@ -73,6 +73,16 @@ INGEST_JOB_STATE_MODEL_CONTRACT_PATH = (
     / "docs/planning/capex_source_ingest/"
     "INGEST_JOB_STATE_MODEL_CONTRACT.yaml"
 )
+ARCHIVE_LINEAGE_METADATA_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "ARCHIVE_LINEAGE_METADATA_CONTRACT.yaml"
+)
+MANIFEST_GENERATION_ATTESTATION_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "MANIFEST_GENERATION_ATTESTATION_CONTRACT.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -1036,6 +1046,175 @@ def test_ingest_job_state_model_contract_closes_task_0393_without_activation() -
         "raw_corpus_import",
         "worker_activation",
         "parser_runtime_activation",
+        "official_pointer_creation",
+    } <= set(contract["cannot_be_used_for"])
+
+
+def test_archive_lineage_metadata_contract_closes_task_0394_without_activation() -> None:
+    contract = _load_yaml(ARCHIVE_LINEAGE_METADATA_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0394"
+    assert contract["source_row"] == "ARCH-W2-S04"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0392", "TASK-0393"]
+    assert contract["helper"] == {
+        "module": "onetruth.capex_platform.archive_lineage_metadata",
+        "public_function": "build_archive_lineage_metadata_outputs",
+        "canonical_bytes_helper": "canonical_archive_lineage_metadata_bytes",
+        "digest_helper": "archive_lineage_metadata_digest",
+    }
+    assert contract["outputs"]["archive_lineage_register"] == {
+        "artifact_kind": "capex.archive_lineage_register",
+        "artifact_role": "evidence",
+        "file_name": "capex.archive_lineage_register.v1.json",
+        "schema_version": "capex.archive_lineage_register.v1",
+    }
+    assert contract["outputs"]["nested_archive_member_metadata"] == {
+        "artifact_kind": "capex.nested_archive_member_metadata",
+        "artifact_role": "evidence",
+        "file_name": "capex.nested_archive_member_metadata.v1.json",
+        "schema_version": "capex.nested_archive_member_metadata.v1",
+    }
+    assert contract["basis_policy"] == {
+        "source_occurrence_table": "capex_source_occurrences",
+        "source_occurrence_relation_table": "capex_source_occurrence_relations",
+        "allowed_relation_types": ["archive_contains", "archive_member_of"],
+        "same_tenant_domain_project_required": True,
+        "known_source_occurrences_required": True,
+        "relation_rows_must_already_exist": True,
+        "parent_child_self_relation_allowed": False,
+        "archive_containment_cycles_allowed": False,
+        "nested_member_depth_checked": True,
+    }
+    assert contract["metadata_policy"]["metadata_only_first"] is True
+    assert contract["metadata_policy"]["full_archive_extractor_required"] is False
+    assert contract["metadata_policy"]["raw_filenames_allowed"] is False
+    assert contract["metadata_policy"]["absolute_paths_allowed"] is False
+    assert contract["metadata_policy"]["inline_text_allowed"] is False
+    assert contract["metadata_policy"]["base64_content_allowed"] is False
+    assert contract["metadata_policy"]["blob_bytes_allowed"] is False
+    assert contract["truth_effects"] == {
+        "creates_relation_rows": False,
+        "creates_source_occurrences": False,
+        "creates_content_identities": False,
+        "creates_extraction_jobs": False,
+        "starts_workers": False,
+        "runs_archive_extractor": False,
+        "writes_artifacts_by_default": False,
+        "emits_timeline_events": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "archive_extraction_runtime",
+        "locator_union",
+        "parser_adapter",
+        "ocr_runtime",
+        "search_runtime",
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+        "raw_corpus_import",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "archive_extraction_runtime_activation",
+        "source_locator_union_activation",
+        "parser_runtime_activation",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "capex_runtime_activation",
+        "product_activation",
+    } <= set(contract["cannot_be_used_for"])
+
+
+def test_manifest_generation_attestation_contract_closes_task_0395_without_activation() -> None:
+    contract = _load_yaml(MANIFEST_GENERATION_ATTESTATION_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0395"
+    assert contract["source_row"] == "ARCH-W2-S05"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0391", "TASK-0392"]
+    assert contract["helper"] == {
+        "module": "onetruth.capex_platform.manifest_generation_attestation",
+        "public_function": "build_manifest_generation_attestation_outputs",
+        "canonical_bytes_helper": "canonical_manifest_generation_attestation_bytes",
+        "digest_helper": "manifest_generation_attestation_digest",
+    }
+    assert contract["outputs"]["generated_corpus_register_manifest"] == {
+        "artifact_kind": "capex.generated_corpus_register_manifest",
+        "artifact_role": "evidence",
+        "file_name": "capex.generated_corpus_register_manifest.v1.json",
+        "schema_version": "capex.generated_corpus_register_manifest.v1",
+    }
+    assert contract["outputs"]["manifest_generation_attestation"] == {
+        "artifact_kind": "capex.manifest_generation_attestation",
+        "artifact_role": "evidence",
+        "file_name": "capex.manifest_generation_attestation.v1.json",
+        "schema_version": "capex.manifest_generation_attestation.v1",
+    }
+    assert contract["basis_policy"] == {
+        "generated_from_physical_rows_only": True,
+        "allowed_basis_tables": [
+            "capex_content_identities",
+            "capex_source_occurrences",
+            "capex_source_occurrence_relations",
+        ],
+        "same_tenant_domain_project_required": True,
+        "content_identity_scope": "tenant_domain",
+        "source_occurrence_scope": "tenant_domain_project",
+        "source_refs_must_be_canonical": True,
+        "relation_refs_must_be_known": True,
+        "input_digests_required": True,
+        "generator_config_digest_required": True,
+        "deterministic_ordering_required": True,
+        "row_digest_required": True,
+        "register_digest_required": True,
+    }
+    assert contract["authority_policy"] == {
+        "generated_register_is_source_authority": False,
+        "generated_register_can_close_evidence_sufficiency": False,
+        "generated_register_can_promote_official_pointer": False,
+        "generated_register_can_create_reviewed_baseline": False,
+    }
+    assert {
+        "absolute_path",
+        "base64_content",
+        "blob_bytes",
+        "content_base64",
+        "document_text",
+        "filename",
+        "raw_content",
+        "source_path",
+    } <= set(contract["raw_data_boundary"]["prohibited_columns"])
+    assert contract["truth_effects"] == {
+        "creates_content_identities": False,
+        "creates_source_occurrences": False,
+        "creates_relation_rows": False,
+        "creates_ingest_jobs": False,
+        "writes_artifacts_by_default": False,
+        "emits_timeline_events": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "duplicate_migration",
+        "raw_corpus_import",
+        "parser_adapter",
+        "archive_extraction_runtime",
+        "locator_union",
+        "reviewed_baseline_creation",
+        "official_pointer_creation",
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+    } <= set(contract["not_implemented_in_this_task"])
+    assert {
+        "capex_runtime_activation",
+        "product_activation",
+        "raw_corpus_import",
+        "generated_register_as_source_authority",
+        "evidence_sufficiency_claim",
+        "reviewed_baseline_creation",
         "official_pointer_creation",
     } <= set(contract["cannot_be_used_for"])
 

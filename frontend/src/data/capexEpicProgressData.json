@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 432,
-    "done": 132,
+    "done": 134,
     "in_progress": 0,
-    "not_started": 297,
+    "not_started": 295,
     "blocked": 1,
     "needs_review": 2,
     "total": 432,
     "estimate": {
-      "percentComplete": 30.6,
-      "completedTasks": 132,
-      "remainingTasks": 300,
+      "percentComplete": 31.0,
+      "completedTasks": 134,
+      "remainingTasks": 298,
       "remainingBlockedOrReviewTasks": 3,
-      "completedWithTimestamps": 100,
-      "completionTimestampCoverage": 75.8,
-      "etaDate": "2026-08-22",
+      "completedWithTimestamps": 102,
+      "completionTimestampCoverage": 76.1,
+      "etaDate": "2026-08-20",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-22",
+      "label": "ETA 2026-08-20",
       "caveat": "3 blocked or needs-review task(s) remain."
     }
   },
@@ -4757,9 +4757,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 18,
+        "done": 20,
         "in_progress": 0,
-        "not_started": 35,
+        "not_started": 33,
         "blocked": 0,
         "needs_review": 0,
         "total": 53
@@ -5699,9 +5699,9 @@
           "epicId": "EPIC-141",
           "title": "Add archive lineage support and nested-archive extraction metadata contract",
           "plainPurpose": "Metadata only first; no full extractor required",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W2-S04 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5713,7 +5713,10 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0392",
+            "TASK-0393"
+          ],
           "owners": [
             "platform"
           ],
@@ -5746,18 +5749,18 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0394-add-archive-lineage-support-and-nested-archive-extraction-metadata-contract.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0395",
           "epicId": "EPIC-141",
           "title": "Add manifest_generation attestation model for generated corpus registers",
           "plainPurpose": "Generated register from physical rows only",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W2-S05 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -5769,7 +5772,10 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0391",
+            "TASK-0392"
+          ],
           "owners": [
             "platform"
           ],
@@ -5802,9 +5808,9 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0395-add-manifest-generation-attestation-model-for-generated-corpus-registers.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0396",
@@ -7847,16 +7853,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 34.0,
-        "completedTasks": 18,
-        "remainingTasks": 35,
+        "percentComplete": 37.7,
+        "completedTasks": 20,
+        "remainingTasks": 33,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 17,
-        "completionTimestampCoverage": 94.4,
-        "etaDate": "2026-07-26",
+        "completedWithTimestamps": 19,
+        "completionTimestampCoverage": 95.0,
+        "etaDate": "2026-07-21",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-07-26",
+        "label": "ETA 2026-07-21",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

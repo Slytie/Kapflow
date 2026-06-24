@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-141 W2 archive lineage and manifest attestation closeout)
+- Archive lineage decision: `TASK-0394` closes `ARCH-W2-S04` by adding a metadata-only archive lineage contract/helper that emits deterministic `capex.archive_lineage_register.v1` and `capex.nested_archive_member_metadata.v1` outputs over existing source occurrence and `capex_source_occurrence_relations` rows.
+- Archive-boundary decision: archive lineage accepts only existing `archive_contains` / `archive_member_of` relation rows, requires same tenant/domain/project, known source occurrences, no self-links, no containment cycles, checked nesting depth, sanitized logical member refs, optional `sha256:` member digests, deterministic ordering/digests, and raw-material bans.
+- Manifest-generation decision: `TASK-0395` closes `ARCH-W2-S05` by adding a manifest-generation attestation contract/helper that emits deterministic `capex.generated_corpus_register_manifest.v1` and `capex.manifest_generation_attestation.v1` outputs from physical `capex_content_identities`, `capex_source_occurrences`, and `capex_source_occurrence_relations` rows only.
+- Attestation-boundary decision: generated corpus registers are evidence artifacts only, not source authority, reviewed-baseline truth, evidence sufficiency, or pointer-promotion authority; the helper requires input digests, generator config digest, canonical SourceRefs, known relation membership, duplicate rejection, deterministic row/register/basis digests, and raw-material bans.
+- Activation decision: this closeout adds helper/contract/test/docs evidence only. It adds no duplicate migration, archive extraction runtime, locator union, parser/OCR/search runtime, queue worker, public route, frontend route, event-registry change, official pointer, reviewed-baseline claim, raw corpus import, production approval, or CAPEX runtime/product activation.
+
 ## 2026-06-23 (EPIC-141 W2 source relation and ingest state closeout)
 - Source relation decision: `TASK-0392` closes `ARCH-W2-S02` by adding internal `capex_source_occurrence_relations` runtime state, schema, contract, and repository helpers for duplicate, archive, derivative, and redaction relation rows over existing source occurrences.
 - Relation-boundary decision: relation rows require same tenant/domain/project, both source occurrences must already be project-scoped to the same CAPEX project, self-relations and active inverse duplicate relations fail closed, and raw paths, raw filenames, inline text/base64, blob bytes, and raw logs are banned from relation metadata.

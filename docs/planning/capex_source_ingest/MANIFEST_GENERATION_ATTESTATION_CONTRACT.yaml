@@ -1,0 +1,95 @@
+schema_version: capex.manifest_generation_attestation_contract.v1
+contract_id: capex.manifest_generation_attestation.outputs.v1
+owner_task: TASK-0395
+source_row: ARCH-W2-S05
+activation_posture: planning_only_no_capex_activation
+overall_status: manifest_generation_attestation_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0391
+    - TASK-0392
+helper:
+  module: onetruth.capex_platform.manifest_generation_attestation
+  public_function: build_manifest_generation_attestation_outputs
+  canonical_bytes_helper: canonical_manifest_generation_attestation_bytes
+  digest_helper: manifest_generation_attestation_digest
+outputs:
+  wrapper_schema_version: capex.manifest_generation_attestation.outputs.v1
+  generated_corpus_register_manifest:
+    artifact_kind: capex.generated_corpus_register_manifest
+    artifact_role: evidence
+    file_name: capex.generated_corpus_register_manifest.v1.json
+    schema_version: capex.generated_corpus_register_manifest.v1
+  manifest_generation_attestation:
+    artifact_kind: capex.manifest_generation_attestation
+    artifact_role: evidence
+    file_name: capex.manifest_generation_attestation.v1.json
+    schema_version: capex.manifest_generation_attestation.v1
+basis_policy:
+  generated_from_physical_rows_only: true
+  allowed_basis_tables:
+    - capex_content_identities
+    - capex_source_occurrences
+    - capex_source_occurrence_relations
+  same_tenant_domain_project_required: true
+  content_identity_scope: tenant_domain
+  source_occurrence_scope: tenant_domain_project
+  source_refs_must_be_canonical: true
+  relation_refs_must_be_known: true
+  input_digests_required: true
+  generator_config_digest_required: true
+  deterministic_ordering_required: true
+  row_digest_required: true
+  register_digest_required: true
+authority_policy:
+  generated_register_is_source_authority: false
+  generated_register_can_close_evidence_sufficiency: false
+  generated_register_can_promote_official_pointer: false
+  generated_register_can_create_reviewed_baseline: false
+raw_data_boundary:
+  raw_locator_columns_allowed: false
+  inline_text_columns_allowed: false
+  blob_byte_columns_allowed: false
+  raw_failure_log_allowed: false
+  prohibited_columns:
+    - absolute_path
+    - base64_content
+    - blob_bytes
+    - content_base64
+    - document_text
+    - file_name
+    - filename
+    - local_path
+    - ocr_text
+    - raw_bytes
+    - raw_content
+    - raw_filename
+    - source_path
+truth_effects:
+  creates_content_identities: false
+  creates_source_occurrences: false
+  creates_relation_rows: false
+  creates_ingest_jobs: false
+  writes_artifacts_by_default: false
+  emits_timeline_events: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - duplicate_migration
+  - raw_corpus_import
+  - parser_adapter
+  - archive_extraction_runtime
+  - locator_union
+  - reviewed_baseline_creation
+  - official_pointer_creation
+  - public_api_route
+  - frontend_route
+  - event_registry_change
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - generated_register_as_source_authority
+  - evidence_sufficiency_claim
+  - reviewed_baseline_creation
+  - official_pointer_creation
