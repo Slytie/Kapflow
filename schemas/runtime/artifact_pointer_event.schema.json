@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ArtifactPointerEvent",
+  "type": "object",
+  "required": [
+    "artifact_pointer_event_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "pointer_id",
+    "pointer_family",
+    "event_kind",
+    "to_generation",
+    "basis_digest",
+    "payload_digest",
+    "payload_json",
+    "metadata_json",
+    "recorded_at",
+    "recorded_by_actor_ref"
+  ],
+  "properties": {
+    "artifact_pointer_event_id": {
+      "type": "string",
+      "pattern": "^artifact-pointer-event:[0-9a-f]{64}$"
+    },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "pointer_id": { "type": "string" },
+    "pointer_family": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{1,127}$"
+    },
+    "event_kind": {
+      "type": "string",
+      "enum": ["promoted", "drift_detected", "promotion_rejected", "policy_registered"]
+    },
+    "from_generation": { "type": ["integer", "null"], "minimum": 0 },
+    "to_generation": { "type": "integer", "minimum": 0 },
+    "artifact_version_id": { "type": ["string", "null"] },
+    "previous_artifact_version_id": { "type": ["string", "null"] },
+    "basis_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "payload_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "payload_json": { "type": "object" },
+    "metadata_json": { "type": "object" },
+    "recorded_at": { "type": "string", "format": "date-time" },
+    "recorded_by_actor_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/#@-]{0,254}$"
+    }
+  },
+  "additionalProperties": false
+}

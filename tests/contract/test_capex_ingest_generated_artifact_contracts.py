@@ -113,6 +113,16 @@ ARTIFACT_VERSION_IDENTITY_CONTRACT_PATH = (
     / "docs/planning/capex_source_ingest/"
     "ARTIFACT_VERSION_IDENTITY_CONTRACT.yaml"
 )
+ARTIFACT_POINTER_EVENT_POLICY_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "ARTIFACT_POINTER_EVENT_POLICY_CONTRACT.yaml"
+)
+SUBMITTED_RUNTIME_GENERATED_ARTIFACT_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_generated_artifacts/"
+    "SUBMITTED_RUNTIME_GENERATED_ARTIFACT_CONTRACT.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -135,6 +145,12 @@ CORPUS_BASELINE_WORKFLOW_PATH = (
 )
 GENERATED_ARTIFACT_SCHEMA_PATH = (
     ROOT / "schemas/runtime/capex_generated_artifact_envelope.schema.json"
+)
+SUBMITTED_GENERATED_ARTIFACT_SCHEMA_PATH = (
+    ROOT / "schemas/runtime/capex_submitted_generated_artifact.schema.json"
+)
+RUNTIME_GENERATED_ARTIFACT_VIEW_SCHEMA_PATH = (
+    ROOT / "schemas/runtime/capex_runtime_generated_artifact_view.schema.json"
 )
 CEO_TRANSPARENCY_SCHEMA_PATH = (
     ROOT / "schemas/runtime/capex_ceo_transparency_snapshot.schema.json"
@@ -1631,6 +1647,126 @@ def test_artifact_version_identity_contract_closes_task_0401_without_officialnes
     } <= set(contract["not_implemented_in_this_task"])
 
 
+def test_artifact_pointer_event_policy_contract_closes_task_0403_without_pointer_mutation() -> None:
+    contract = _load_yaml(ARTIFACT_POINTER_EVENT_POLICY_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0403"
+    assert contract["source_row"] == "ARCH-W2-S13"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0396", "TASK-0401"]
+    assert contract["required_runtime_state"]["runtime_schemas"] == [
+        "schemas/runtime/artifact_pointer_event.schema.json",
+        "schemas/runtime/artifact_pointer_family_policy.schema.json",
+    ]
+    assert contract["required_tables"]["artifact_pointer_events"]["primary_key"] == [
+        "artifact_pointer_event_id",
+    ]
+    assert contract["required_tables"]["artifact_pointer_family_policies"]["primary_key"] == [
+        "artifact_pointer_family_policy_id",
+    ]
+    assert contract["pointer_event_policy"] == {
+        "current_pointer_table": "artifact_pointers",
+        "append_only_history_table": "artifact_pointer_events",
+        "pointer_family_policy_table": "artifact_pointer_family_policies",
+        "current_pointer_row_mutated_by_helper": False,
+        "timeline_events_emitted_by_helper": False,
+        "event_kinds": [
+            "promoted",
+            "drift_detected",
+            "promotion_rejected",
+            "policy_registered",
+        ],
+        "digest_format": "sha256:<64 lowercase hex>",
+        "duplicate_same_payload_replays": True,
+        "duplicate_different_payload_rejected": True,
+        "project_scope_required": True,
+        "raw_material_allowed": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_artifact_pointer_event_rows": True,
+        "creates_artifact_pointer_family_policy_rows": True,
+        "mutates_current_artifact_pointers": False,
+        "emits_timeline_events": False,
+        "creates_artifact_versions": False,
+        "changes_pointer_officialness": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+        "pointer_promotion_service",
+        "current_pointer_mutation",
+        "official_pointer_creation",
+    } <= set(contract["not_implemented_in_this_task"])
+
+
+def test_submitted_runtime_generated_artifact_contract_closes_task_0405_without_pointer_authority() -> None:
+    contract = _load_yaml(SUBMITTED_RUNTIME_GENERATED_ARTIFACT_CONTRACT_PATH)
+    submitted_schema = json.loads(
+        SUBMITTED_GENERATED_ARTIFACT_SCHEMA_PATH.read_text(encoding="utf-8"),
+    )
+    runtime_view_schema = json.loads(
+        RUNTIME_GENERATED_ARTIFACT_VIEW_SCHEMA_PATH.read_text(encoding="utf-8"),
+    )
+
+    assert contract["owner_task"] == "TASK-0405"
+    assert contract["source_row"] == "ARCH-W2-S15"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0401"]
+    assert contract["required_runtime_state"] == {
+        "helper": "src/onetruth/capex_platform/generated_artifact_submission.py",
+        "submitted_schema": "schemas/runtime/capex_submitted_generated_artifact.schema.json",
+        "runtime_view_schema": "schemas/runtime/capex_runtime_generated_artifact_view.schema.json",
+        "canonical_envelope_helper": "src/onetruth/application/handlers/_shared/artifact_effects.py",
+    }
+    assert contract["submitted_artifact_policy"]["converts_to_existing_envelope_schema"] == (
+        "capex.generated_artifact_envelope.v1"
+    )
+    assert {
+        "artifact_version_id",
+        "storage_uri",
+        "content_digest",
+        "artifact_identity_digest",
+        "pointer_id",
+        "official_status",
+        "event_id",
+        "created_at",
+    } <= set(contract["submitted_artifact_policy"]["forbidden_runtime_owned_fields"])
+    assert contract["runtime_view_policy"] == {
+        "schema_version": "capex.runtime_generated_artifact_view.v1",
+        "exposes_runtime_artifact_metadata": True,
+        "implies_promotability": False,
+        "implies_evidence_sufficiency": False,
+        "implies_reviewed_baseline": False,
+        "includes_pointer_state": False,
+    }
+    assert contract["truth_effects"] == {
+        "validates_submitted_generated_artifact_shape": True,
+        "builds_runtime_generated_artifact_view": True,
+        "persists_artifact_versions": False,
+        "mutates_artifact_versions": False,
+        "mutates_current_artifact_pointers": False,
+        "emits_timeline_events": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert submitted_schema["properties"]["schema_version"]["const"] == (
+        "capex.submitted_generated_artifact.v1"
+    )
+    assert runtime_view_schema["properties"]["schema_version"]["const"] == (
+        "capex.runtime_generated_artifact_view.v1"
+    )
+    assert {
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+        "pointer_promotion_service",
+        "broad_generated_artifact_migration",
+    } <= set(contract["not_implemented_in_this_task"])
+
+
 def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
@@ -1665,6 +1801,8 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0399 = _frontmatter("TASK-0399")
     task_0400 = _frontmatter("TASK-0400")
     task_0401 = _frontmatter("TASK-0401")
+    task_0403 = _frontmatter("TASK-0403")
+    task_0405 = _frontmatter("TASK-0405")
     task_0539 = _frontmatter("TASK-0539")
     task_0540 = _frontmatter("TASK-0540")
 
@@ -1774,6 +1912,13 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     assert task_0401["status"] == "DONE"
     assert task_0401["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0396" in task_0401["depends_on"]
+    assert task_0403["status"] == "DONE"
+    assert task_0403["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0396" in task_0403["depends_on"]
+    assert "TASK-0401" in task_0403["depends_on"]
+    assert task_0405["status"] == "DONE"
+    assert task_0405["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0401" in task_0405["depends_on"]
     assert task_0539["status"] == "DONE"
     assert task_0539["completed_at"] == "2026-06-23T00:00:00Z"
     assert task_0540["status"] == "DONE"

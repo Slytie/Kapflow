@@ -2,10 +2,11 @@
 id: TASK-0403
 epic: EPIC-141
 title: "Define ArtifactPointerEvent and PointerFamilyPolicy minimal schema"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0396", "TASK-0401"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,6 @@ Append-only history separate from current pointer row
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence adds `docs/planning/capex_source_ingest/ARTIFACT_POINTER_EVENT_POLICY_CONTRACT.yaml`, Alembic revision `20260624_0022`, runtime schemas, bootstrap/model parity, and `onetruth.infrastructure.repositories.artifact_pointer_events`.
+- `artifact_pointer_events` records append-only pointer history only; `artifact_pointer_family_policies` records minimal project-scoped pointer-family policy rows. The helper replays exact duplicates, rejects conflicts, validates digests/scope/generations, and bans raw material.
+- This task does not mutate current `artifact_pointers`, emit timeline events, create official pointers, activate pointer promotion service behavior, create public/frontend routes, import raw corpus data, or activate CAPEX runtime/product behavior.

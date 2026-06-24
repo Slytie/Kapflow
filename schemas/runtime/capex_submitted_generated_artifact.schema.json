@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexSubmittedGeneratedArtifact",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "artifact_role",
+    "source_refs",
+    "input_digests",
+    "validation_summary",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "capex.submitted_generated_artifact.v1"
+    },
+    "artifact_kind": {
+      "type": "string",
+      "pattern": "^capex(\\.[a-z0-9_]+)+$"
+    },
+    "artifact_role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^source_occurrence:[^\\s]+$"
+      }
+    },
+    "input_digests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "validation_summary": {
+      "type": "object"
+    },
+    "payload": true
+  },
+  "not": {
+    "anyOf": [
+      { "required": ["artifact_version_id"] },
+      { "required": ["storage_uri"] },
+      { "required": ["content_digest"] },
+      { "required": ["byte_size"] },
+      { "required": ["artifact_identity_profile"] },
+      { "required": ["artifact_identity_digest"] },
+      { "required": ["pointer_id"] },
+      { "required": ["pointer_key"] },
+      { "required": ["pointer_family"] },
+      { "required": ["officialness"] },
+      { "required": ["official_status"] },
+      { "required": ["is_official"] },
+      { "required": ["event_id"] },
+      { "required": ["created_at"] },
+      { "required": ["updated_at"] }
+    ]
+  },
+  "additionalProperties": false
+}

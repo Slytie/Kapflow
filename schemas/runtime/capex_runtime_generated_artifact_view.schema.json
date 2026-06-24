@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapexRuntimeGeneratedArtifactView",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_version_id",
+    "workflow_run_id",
+    "artifact_kind",
+    "media_type",
+    "storage_uri",
+    "content_digest",
+    "runtime_state",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "capex.runtime_generated_artifact_view.v1"
+    },
+    "artifact_version_id": { "type": "string" },
+    "workflow_run_id": { "type": "string" },
+    "tenant_id": { "type": ["string", "null"] },
+    "domain_id": { "type": ["string", "null"] },
+    "project_id": { "type": ["string", "null"] },
+    "artifact_kind": {
+      "type": "string",
+      "pattern": "^capex(\\.[a-z0-9_]+)+$"
+    },
+    "artifact_role": { "type": ["string", "null"] },
+    "media_type": { "type": "string" },
+    "storage_uri": { "type": "string" },
+    "content_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "byte_size": { "type": ["integer", "null"], "minimum": 0 },
+    "artifact_identity_profile": { "type": ["string", "null"] },
+    "artifact_identity_digest": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "metadata_json": { "type": "object" },
+    "runtime_state": {
+      "type": "object",
+      "required": [
+        "promotable",
+        "evidence_sufficient",
+        "reviewed_baseline",
+        "pointer_bound"
+      ],
+      "properties": {
+        "promotable": { "type": "boolean", "const": false },
+        "evidence_sufficient": { "type": "boolean", "const": false },
+        "reviewed_baseline": { "type": "boolean", "const": false },
+        "pointer_bound": { "type": "boolean", "const": false }
+      },
+      "additionalProperties": false
+    },
+    "created_at": { "type": "string" }
+  },
+  "additionalProperties": false
+}

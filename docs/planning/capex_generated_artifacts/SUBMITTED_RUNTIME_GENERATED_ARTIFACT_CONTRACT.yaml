@@ -1,0 +1,73 @@
+schema_version: capex.submitted_runtime_generated_artifact_contract.v1
+contract_id: capex.submitted_runtime_generated_artifact.boundary.v1
+owner_task: TASK-0405
+source_row: ARCH-W2-S15
+activation_posture: planning_only_no_capex_activation
+overall_status: generated_artifact_submission_view_schema_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0401
+required_runtime_state:
+  helper: src/onetruth/capex_platform/generated_artifact_submission.py
+  submitted_schema: schemas/runtime/capex_submitted_generated_artifact.schema.json
+  runtime_view_schema: schemas/runtime/capex_runtime_generated_artifact_view.schema.json
+  canonical_envelope_helper: src/onetruth/application/handlers/_shared/artifact_effects.py
+submitted_artifact_policy:
+  schema_version: capex.submitted_generated_artifact.v1
+  converts_to_existing_envelope_schema: capex.generated_artifact_envelope.v1
+  required_fields:
+    - artifact_kind
+    - artifact_role
+    - source_refs
+    - input_digests
+    - validation_summary
+    - payload
+  forbidden_runtime_owned_fields:
+    - artifact_version_id
+    - storage_uri
+    - content_digest
+    - byte_size
+    - artifact_identity_profile
+    - artifact_identity_digest
+    - pointer_id
+    - pointer_key
+    - pointer_family
+    - officialness
+    - official_status
+    - is_official
+    - event_id
+    - created_at
+    - updated_at
+  raw_material_allowed: false
+runtime_view_policy:
+  schema_version: capex.runtime_generated_artifact_view.v1
+  exposes_runtime_artifact_metadata: true
+  implies_promotability: false
+  implies_evidence_sufficiency: false
+  implies_reviewed_baseline: false
+  includes_pointer_state: false
+truth_effects:
+  validates_submitted_generated_artifact_shape: true
+  builds_runtime_generated_artifact_view: true
+  persists_artifact_versions: false
+  mutates_artifact_versions: false
+  mutates_current_artifact_pointers: false
+  emits_timeline_events: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_api_route
+  - frontend_route
+  - event_registry_change
+  - pointer_promotion_service
+  - broad_generated_artifact_migration
+  - submitted_artifact_persistence_command
+  - official_pointer_creation
+  - reviewed_baseline_creation
+  - raw_corpus_import
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - official_pointer_creation
+  - pointer_promotion_authority
+  - reviewed_baseline_creation

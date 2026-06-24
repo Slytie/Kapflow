@@ -1538,6 +1538,62 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
                 stream_key
             );
 
+        CREATE TABLE IF NOT EXISTS artifact_pointer_family_policies (
+            artifact_pointer_family_policy_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            pointer_family TEXT NOT NULL,
+            registry_kind TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            basis_digest TEXT NOT NULL,
+            policy_digest TEXT NOT NULL,
+            policy_json TEXT NOT NULL,
+            state TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            UNIQUE (tenant_id, domain_id, project_id, pointer_family)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_artifact_pointer_family_policies_scope
+            ON artifact_pointer_family_policies (tenant_id, domain_id, project_id, state);
+
+        CREATE TABLE IF NOT EXISTS artifact_pointer_events (
+            artifact_pointer_event_id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            domain_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            pointer_id TEXT NOT NULL,
+            pointer_family TEXT NOT NULL,
+            event_kind TEXT NOT NULL,
+            from_generation INTEGER,
+            to_generation INTEGER NOT NULL,
+            artifact_version_id TEXT,
+            previous_artifact_version_id TEXT,
+            basis_digest TEXT NOT NULL,
+            payload_digest TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            metadata_json TEXT NOT NULL,
+            recorded_at TEXT NOT NULL,
+            recorded_by_actor_ref TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),
+            FOREIGN KEY (artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            FOREIGN KEY (previous_artifact_version_id) REFERENCES artifact_versions(artifact_version_id),
+            UNIQUE (tenant_id, domain_id, project_id, pointer_id, event_kind, to_generation)
+        );
+
+        CREATE INDEX IF NOT EXISTS ix_artifact_pointer_events_scope
+            ON artifact_pointer_events (
+                tenant_id,
+                domain_id,
+                project_id,
+                pointer_family,
+                recorded_at
+            );
+        CREATE INDEX IF NOT EXISTS ix_artifact_pointer_events_pointer_generation
+            ON artifact_pointer_events (pointer_id, to_generation);
+
         CREATE TABLE IF NOT EXISTS artifact_provenance_edges (
             edge_id TEXT PRIMARY KEY,
             workflow_run_id TEXT,

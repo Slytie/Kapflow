@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ArtifactPointerFamilyPolicy",
+  "type": "object",
+  "required": [
+    "artifact_pointer_family_policy_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "pointer_family",
+    "registry_kind",
+    "policy_version",
+    "basis_digest",
+    "policy_digest",
+    "policy_json",
+    "state",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "artifact_pointer_family_policy_id": {
+      "type": "string",
+      "pattern": "^artifact-pointer-family-policy:[0-9a-f]{64}$"
+    },
+    "tenant_id": { "type": "string" },
+    "domain_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "pointer_family": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{1,127}$"
+    },
+    "registry_kind": {
+      "type": "string",
+      "enum": ["singleton", "stream"]
+    },
+    "policy_version": { "type": "string" },
+    "basis_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "policy_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "policy_json": { "type": "object" },
+    "state": {
+      "type": "string",
+      "enum": ["active", "inactive"]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

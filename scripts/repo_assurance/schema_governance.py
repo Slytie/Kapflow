@@ -109,6 +109,9 @@ def validate_runtime_schema_coverage(state: AssuranceState) -> None:
         "command_receipt": ROOT / "schemas/runtime/command_receipt.schema.json",
         "effect_ledger_entry": ROOT / "schemas/runtime/effect_ledger_entry.schema.json",
         "tool_execution_attempt": ROOT / "schemas/runtime/tool_execution_attempt.schema.json",
+        "artifact_pointer_event": ROOT / "schemas/runtime/artifact_pointer_event.schema.json",
+        "artifact_pointer_family_policy": ROOT
+        / "schemas/runtime/artifact_pointer_family_policy.schema.json",
         "capex_project": ROOT / "schemas/runtime/capex_project.schema.json",
         "project_membership": ROOT / "schemas/runtime/project_membership.schema.json",
         "capex_project_authorization": ROOT / "schemas/runtime/capex_project_authorization.schema.json",
@@ -116,6 +119,10 @@ def validate_runtime_schema_coverage(state: AssuranceState) -> None:
         "capex_project_concurrency_policy": ROOT
         / "schemas/runtime/capex_project_concurrency_policy.schema.json",
         "capex_project_runtime_slot": ROOT / "schemas/runtime/capex_project_runtime_slot.schema.json",
+        "capex_submitted_generated_artifact": ROOT
+        / "schemas/runtime/capex_submitted_generated_artifact.schema.json",
+        "capex_runtime_generated_artifact_view": ROOT
+        / "schemas/runtime/capex_runtime_generated_artifact_view.schema.json",
         "capex_user_project_view": ROOT / "schemas/runtime/capex_user_project_view.schema.json",
         "capex_content_identity": ROOT / "schemas/runtime/capex_content_identity.schema.json",
         "capex_source_occurrence": ROOT / "schemas/runtime/capex_source_occurrence.schema.json",

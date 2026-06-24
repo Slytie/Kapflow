@@ -2,10 +2,11 @@
 id: TASK-0405
 epic: EPIC-141
 title: "Define SubmittedGeneratedArtifact and RuntimeGeneratedArtifactView schemas"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0401"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,6 @@ Submitted artifact forbids runtime-owned fields
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence adds `docs/planning/capex_generated_artifacts/SUBMITTED_RUNTIME_GENERATED_ARTIFACT_CONTRACT.yaml`, `schemas/runtime/capex_submitted_generated_artifact.schema.json`, `schemas/runtime/capex_runtime_generated_artifact_view.schema.json`, and `onetruth.capex_platform.generated_artifact_submission`.
+- Submitted generated artifacts carry only author-supplied artifact kind/role, SourceRefs, input digests, validation summary, and payload; runtime-owned fields including artifact IDs, storage refs, digests, identity fields, pointer fields, officialness/status fields, event IDs, and timestamps are rejected.
+- Runtime generated artifact views expose persisted artifact metadata with explicit non-authoritative posture. This task does not persist submissions, promote pointers, claim evidence sufficiency, create reviewed baselines, add public/frontend routes, import raw corpus data, or activate CAPEX runtime/product behavior.

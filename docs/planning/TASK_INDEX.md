@@ -363,9 +363,9 @@ Note: `TASK-0087` / `TASK-0088` / `TASK-0089` were formerly duplicated as `TASK-
 | TASK-0400 | EPIC-141 | DONE | medium | Add RuntimeOutbox after-commit dispatch scaffold |
 | TASK-0401 | EPIC-141 | DONE | high | Define ArtifactVersionIdentityContract and add identity fields |
 | TASK-0402 | EPIC-141 | TODO | high | Harden ArtifactProvenanceEdge as runtime-computed immutable typed edge |
-| TASK-0403 | EPIC-141 | TODO | high | Define ArtifactPointerEvent and PointerFamilyPolicy minimal schema |
+| TASK-0403 | EPIC-141 | DONE | high | Define ArtifactPointerEvent and PointerFamilyPolicy minimal schema |
 | TASK-0404 | EPIC-141 | TODO | high | Implement PointerPromotionService guarded transaction |
-| TASK-0405 | EPIC-141 | TODO | high | Define SubmittedGeneratedArtifact and RuntimeGeneratedArtifactView schemas |
+| TASK-0405 | EPIC-141 | DONE | high | Define SubmittedGeneratedArtifact and RuntimeGeneratedArtifactView schemas |
 | TASK-0406 | EPIC-141 | TODO | high | Implement ValidationRun / ValidationItem vector contract |
 | TASK-0407 | EPIC-141 | TODO | high | Implement sourceRef resolver and edge-emission contract |
 | TASK-0408 | EPIC-141 | TODO | high | Add canonicalization profile and hash test vectors |

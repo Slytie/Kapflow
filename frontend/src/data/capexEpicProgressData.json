@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 432,
-    "done": 140,
+    "done": 142,
     "in_progress": 0,
-    "not_started": 289,
+    "not_started": 287,
     "blocked": 1,
     "needs_review": 2,
     "total": 432,
     "estimate": {
-      "percentComplete": 32.4,
-      "completedTasks": 140,
-      "remainingTasks": 292,
+      "percentComplete": 32.9,
+      "completedTasks": 142,
+      "remainingTasks": 290,
       "remainingBlockedOrReviewTasks": 3,
-      "completedWithTimestamps": 108,
-      "completionTimestampCoverage": 77.1,
-      "etaDate": "2026-08-16",
+      "completedWithTimestamps": 110,
+      "completionTimestampCoverage": 77.5,
+      "etaDate": "2026-08-15",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-16",
+      "label": "ETA 2026-08-15",
       "caveat": "3 blocked or needs-review task(s) remain."
     }
   },
@@ -4757,9 +4757,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 26,
+        "done": 28,
         "in_progress": 0,
-        "not_started": 27,
+        "not_started": 25,
         "blocked": 0,
         "needs_review": 0,
         "total": 53
@@ -6229,9 +6229,9 @@
           "epicId": "EPIC-141",
           "title": "Define ArtifactPointerEvent and PointerFamilyPolicy minimal schema",
           "plainPurpose": "Append-only history separate from current pointer row",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W2-S13 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -6243,7 +6243,10 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0396",
+            "TASK-0401"
+          ],
           "owners": [
             "platform"
           ],
@@ -6276,9 +6279,9 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0403-define-artifactpointerevent-and-pointerfamilypolicy-minimal-schema.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0404",
@@ -6341,9 +6344,9 @@
           "epicId": "EPIC-141",
           "title": "Define SubmittedGeneratedArtifact and RuntimeGeneratedArtifactView schemas",
           "plainPurpose": "Submitted artifact forbids runtime-owned fields",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W2-S15 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -6355,7 +6358,9 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0401"
+          ],
           "owners": [
             "platform"
           ],
@@ -6388,9 +6393,9 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0405-define-submittedgeneratedartifact-and-runtimegeneratedartifactview-schemas.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0406",
@@ -7865,16 +7870,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 49.1,
-        "completedTasks": 26,
-        "remainingTasks": 27,
+        "percentComplete": 52.8,
+        "completedTasks": 28,
+        "remainingTasks": 25,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 25,
-        "completionTimestampCoverage": 96.2,
-        "etaDate": "2026-07-10",
+        "completedWithTimestamps": 27,
+        "completionTimestampCoverage": 96.4,
+        "etaDate": "2026-07-08",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-07-10",
+        "label": "ETA 2026-07-08",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

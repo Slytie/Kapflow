@@ -37,6 +37,8 @@ REQUIRED_NEW_TABLES = {
     "consumer_cursors",
     "effect_ledger_entries",
     "artifact_provenance_edges",
+    "artifact_pointer_events",
+    "artifact_pointer_family_policies",
     "workflow_run_inputs",
     "task_input_bindings",
     "capex_source_root_bindings",
@@ -142,6 +144,42 @@ REQUIRED_ARTIFACT_VERSION_IDENTITY_COLUMNS = {
     "artifact_identity_digest",
 }
 
+REQUIRED_ARTIFACT_POINTER_EVENT_COLUMNS = {
+    "artifact_pointer_event_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "pointer_id",
+    "pointer_family",
+    "event_kind",
+    "from_generation",
+    "to_generation",
+    "artifact_version_id",
+    "previous_artifact_version_id",
+    "basis_digest",
+    "payload_digest",
+    "payload_json",
+    "metadata_json",
+    "recorded_at",
+    "recorded_by_actor_ref",
+}
+
+REQUIRED_ARTIFACT_POINTER_FAMILY_POLICY_COLUMNS = {
+    "artifact_pointer_family_policy_id",
+    "tenant_id",
+    "domain_id",
+    "project_id",
+    "pointer_family",
+    "registry_kind",
+    "policy_version",
+    "basis_digest",
+    "policy_digest",
+    "policy_json",
+    "state",
+    "created_at",
+    "updated_at",
+}
+
 REQUIRED_INDEXES_BY_TABLE = {
     "command_receipts": {
         "ix_command_receipts_workflow_run_id",
@@ -165,6 +203,13 @@ REQUIRED_INDEXES_BY_TABLE = {
         "ix_artifact_provenance_edges_output",
         "ix_artifact_provenance_edges_input",
         "ix_artifact_provenance_edges_project",
+    },
+    "artifact_pointer_events": {
+        "ix_artifact_pointer_events_scope",
+        "ix_artifact_pointer_events_pointer_generation",
+    },
+    "artifact_pointer_family_policies": {
+        "ix_artifact_pointer_family_policies_scope",
     },
     "workflow_run_inputs": {
         "ix_workflow_run_inputs_workflow_run_id",
@@ -298,6 +343,12 @@ def test_models_include_strategy_a_expand_schema_surfaces() -> None:
     assert REQUIRED_VERSION_COLUMNS <= _model_columns("artifact_versions")
     assert REQUIRED_PROVENANCE_COLUMNS <= _model_columns("artifact_provenance_edges")
     assert REQUIRED_ARTIFACT_VERSION_IDENTITY_COLUMNS <= _model_columns("artifact_versions")
+    assert REQUIRED_ARTIFACT_POINTER_EVENT_COLUMNS <= _model_columns(
+        "artifact_pointer_events",
+    )
+    assert REQUIRED_ARTIFACT_POINTER_FAMILY_POLICY_COLUMNS <= _model_columns(
+        "artifact_pointer_family_policies",
+    )
     assert REQUIRED_CONSUMER_CURSOR_COLUMNS <= _model_columns("consumer_cursors")
     assert REQUIRED_COMMAND_RECEIPT_COLUMNS <= _model_columns("command_receipts")
     assert REQUIRED_EFFECT_LEDGER_COLUMNS <= _model_columns("effect_ledger_entries")
@@ -329,6 +380,14 @@ def test_bootstrap_schema_matches_strategy_a_expand_schema_surfaces() -> None:
         assert REQUIRED_ARTIFACT_VERSION_IDENTITY_COLUMNS <= _sqlite_columns(
             connection,
             "artifact_versions",
+        )
+        assert REQUIRED_ARTIFACT_POINTER_EVENT_COLUMNS <= _sqlite_columns(
+            connection,
+            "artifact_pointer_events",
+        )
+        assert REQUIRED_ARTIFACT_POINTER_FAMILY_POLICY_COLUMNS <= _sqlite_columns(
+            connection,
+            "artifact_pointer_family_policies",
         )
         assert REQUIRED_CONSUMER_CURSOR_COLUMNS <= _sqlite_columns(
             connection,

@@ -1524,6 +1524,110 @@ class ArtifactPointer(Base):
     )
 
 
+class ArtifactPointerFamilyPolicy(Base):
+    __tablename__ = "artifact_pointer_family_policies"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "pointer_family",
+            name="uq_artifact_pointer_family_policies_scope_family",
+        ),
+        Index(
+            "ix_artifact_pointer_family_policies_scope",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "state",
+        ),
+    )
+
+    artifact_pointer_family_policy_id: Mapped[str] = mapped_column(
+        String(255),
+        primary_key=True,
+    )
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    pointer_family: Mapped[str] = mapped_column(String(128), nullable=False)
+    registry_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    basis_digest: Mapped[str] = mapped_column(String(71), nullable=False)
+    policy_digest: Mapped[str] = mapped_column(String(71), nullable=False)
+    policy_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+
+class ArtifactPointerEvent(Base):
+    __tablename__ = "artifact_pointer_events"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "pointer_id",
+            "event_kind",
+            "to_generation",
+            name="uq_artifact_pointer_events_generation",
+        ),
+        Index(
+            "ix_artifact_pointer_events_scope",
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "pointer_family",
+            "recorded_at",
+        ),
+        Index(
+            "ix_artifact_pointer_events_pointer_generation",
+            "pointer_id",
+            "to_generation",
+        ),
+    )
+
+    artifact_pointer_event_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    domain_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(128),
+        ForeignKey("capex_projects.project_id"),
+        nullable=False,
+    )
+    pointer_id: Mapped[str] = mapped_column(String(512), nullable=False)
+    pointer_family: Mapped[str] = mapped_column(String(128), nullable=False)
+    event_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    from_generation: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    to_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    artifact_version_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=True,
+    )
+    previous_artifact_version_id: Mapped[Optional[str]] = mapped_column(
+        String(128),
+        ForeignKey("artifact_versions.artifact_version_id"),
+        nullable=True,
+    )
+    basis_digest: Mapped[str] = mapped_column(String(71), nullable=False)
+    payload_digest: Mapped[str] = mapped_column(String(71), nullable=False)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    recorded_by_actor_ref: Mapped[str] = mapped_column(String(255), nullable=False)
+
+
 class ArtifactProvenanceEdge(Base):
     __tablename__ = "artifact_provenance_edges"
     __table_args__ = (

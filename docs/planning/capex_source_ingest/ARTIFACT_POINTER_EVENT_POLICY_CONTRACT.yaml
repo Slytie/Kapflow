@@ -1,0 +1,86 @@
+schema_version: capex.artifact_pointer_event_policy_contract.v1
+contract_id: capex.artifact_pointer_event_policy.minimal_schema.v1
+owner_task: TASK-0403
+source_row: ARCH-W2-S13
+activation_posture: planning_only_no_capex_activation
+overall_status: pointer_event_policy_schema_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0396
+    - TASK-0401
+required_runtime_state:
+  alembic_revision: alembic/versions/20260624_0022_pointer_events_generated_artifact_views.py
+  sqlite_bootstrap_ddl: src/onetruth/infrastructure/events/event_store.py
+  sqlalchemy_models: src/onetruth/infrastructure/db/models.py
+  repository: src/onetruth/infrastructure/repositories/artifact_pointer_events.py
+  runtime_schemas:
+    - schemas/runtime/artifact_pointer_event.schema.json
+    - schemas/runtime/artifact_pointer_family_policy.schema.json
+required_tables:
+  artifact_pointer_events:
+    primary_key:
+      - artifact_pointer_event_id
+    unique_constraints:
+      - name: uq_artifact_pointer_events_generation
+        columns:
+          - tenant_id
+          - domain_id
+          - project_id
+          - pointer_id
+          - event_kind
+          - to_generation
+    indexes:
+      - ix_artifact_pointer_events_scope
+      - ix_artifact_pointer_events_pointer_generation
+  artifact_pointer_family_policies:
+    primary_key:
+      - artifact_pointer_family_policy_id
+    unique_constraints:
+      - name: uq_artifact_pointer_family_policies_scope_family
+        columns:
+          - tenant_id
+          - domain_id
+          - project_id
+          - pointer_family
+    indexes:
+      - ix_artifact_pointer_family_policies_scope
+pointer_event_policy:
+  current_pointer_table: artifact_pointers
+  append_only_history_table: artifact_pointer_events
+  pointer_family_policy_table: artifact_pointer_family_policies
+  current_pointer_row_mutated_by_helper: false
+  timeline_events_emitted_by_helper: false
+  event_kinds:
+    - promoted
+    - drift_detected
+    - promotion_rejected
+    - policy_registered
+  digest_format: "sha256:<64 lowercase hex>"
+  duplicate_same_payload_replays: true
+  duplicate_different_payload_rejected: true
+  project_scope_required: true
+  raw_material_allowed: false
+truth_effects:
+  creates_artifact_pointer_event_rows: true
+  creates_artifact_pointer_family_policy_rows: true
+  mutates_current_artifact_pointers: false
+  emits_timeline_events: false
+  creates_artifact_versions: false
+  changes_pointer_officialness: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_api_route
+  - frontend_route
+  - event_registry_change
+  - pointer_promotion_service
+  - current_pointer_mutation
+  - official_pointer_creation
+  - reviewed_baseline_creation
+  - raw_corpus_import
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - official_pointer_creation
+  - pointer_promotion_authority
+  - reviewed_baseline_creation
