@@ -2,10 +2,11 @@
 id: TASK-0400
 epic: EPIC-141
 title: "Add RuntimeOutbox after-commit dispatch scaffold"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0396", "TASK-0397"]
 risk: medium
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,6 @@ Outbox worker can be simple initially
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence adds `docs/planning/capex_source_ingest/RUNTIME_OUTBOX_AFTER_COMMIT_CONTRACT.yaml` and `onetruth.infrastructure.repositories.runtime_outbox` as an internal relay scaffold over canonical `timeline_events` plus `consumer_cursors`.
+- RuntimeOutbox reads committed timeline events after a tenant/domain-scoped consumer cursor, dispatches in deterministic `sequence_no` order, advances the cursor only after successful dispatch or explicit event-type skip, and leaves the cursor before failed events for retry.
+- This task adds no second authoritative outbox table, public route, frontend route, worker rewiring, event-registry change, raw corpus import, official pointer, reviewed-baseline claim, or CAPEX runtime/product activation.

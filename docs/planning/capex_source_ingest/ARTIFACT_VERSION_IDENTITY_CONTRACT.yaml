@@ -1,0 +1,83 @@
+schema_version: capex.artifact_version_identity_contract.v1
+contract_id: capex.artifact_version_identity.runtime_schema.v1
+owner_task: TASK-0401
+source_row: ARCH-W2-S11
+activation_posture: planning_only_no_capex_activation
+overall_status: artifact_version_identity_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0396
+required_runtime_state:
+  alembic_revision: alembic/versions/20260624_0021_runtime_outbox_artifact_identity.py
+  sqlite_bootstrap_ddl: src/onetruth/infrastructure/events/event_store.py
+  sqlalchemy_models: src/onetruth/infrastructure/db/models.py
+  repository: src/onetruth/infrastructure/repositories/artifact_versions.py
+required_table:
+  artifact_versions:
+    added_columns:
+      - artifact_identity_profile
+      - artifact_identity_digest
+identity_policy:
+  profile_id: onetruth.artifact_version_identity.canonical_json.sha256.v1
+  digest_format: "sha256:<64 lowercase hex>"
+  canonical_json:
+    sort_keys: true
+    separators:
+      - ","
+      - ":"
+    ensure_ascii: true
+    allow_nan: false
+  input_fields:
+    - tenant_id
+    - domain_id
+    - project_id
+    - workflow_run_id
+    - dataset_key
+    - partition_kind
+    - partition_key
+    - artifact_kind
+    - media_type
+    - content_digest
+    - byte_size
+  excluded_fields:
+    - artifact_version_id
+    - artifact_role
+    - storage_uri
+    - metadata_json
+    - parent_artifact_version_id
+    - supersedes_artifact_version_id
+    - lineage_note
+    - pointer_id
+    - officialness
+    - official_status
+officialness_policy:
+  artifact_version_officialness_field_allowed: false
+  pointer_state_defines_officialness: true
+  pointer_event_required_for_officialness_change: true
+truth_effects:
+  creates_artifact_versions: false
+  adds_artifact_identity_metadata: true
+  changes_pointer_officialness: false
+  emits_timeline_events: false
+  creates_source_occurrences: false
+  creates_ingest_jobs: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_api_route
+  - frontend_route
+  - event_registry_change
+  - pointer_promotion_service
+  - officialness_field
+  - blobref_schema
+  - capex_workflow_activation
+  - raw_corpus_import
+  - official_pointer_creation
+  - reviewed_baseline_creation
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - artifact_version_as_official_pointer
+  - official_pointer_creation
+  - reviewed_baseline_creation

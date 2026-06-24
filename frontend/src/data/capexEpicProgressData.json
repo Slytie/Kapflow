@@ -11,23 +11,23 @@
   "summary": {
     "epicCount": 17,
     "taskCount": 432,
-    "done": 138,
+    "done": 140,
     "in_progress": 0,
-    "not_started": 291,
+    "not_started": 289,
     "blocked": 1,
     "needs_review": 2,
     "total": 432,
     "estimate": {
-      "percentComplete": 31.9,
-      "completedTasks": 138,
-      "remainingTasks": 294,
+      "percentComplete": 32.4,
+      "completedTasks": 140,
+      "remainingTasks": 292,
       "remainingBlockedOrReviewTasks": 3,
-      "completedWithTimestamps": 106,
-      "completionTimestampCoverage": 76.8,
-      "etaDate": "2026-08-17",
+      "completedWithTimestamps": 108,
+      "completionTimestampCoverage": 77.1,
+      "etaDate": "2026-08-16",
       "etaConfidence": "medium",
       "etaSource": "epic_completed_at",
-      "label": "ETA 2026-08-17",
+      "label": "ETA 2026-08-16",
       "caveat": "3 blocked or needs-review task(s) remain."
     }
   },
@@ -4757,9 +4757,9 @@
         "docs/planning/capex_real_project_acceptance/SME_RP_ACCEPTANCE_REGISTER.yaml"
       ],
       "counts": {
-        "done": 24,
+        "done": 26,
         "in_progress": 0,
-        "not_started": 29,
+        "not_started": 27,
         "blocked": 0,
         "needs_review": 0,
         "total": 53
@@ -6056,9 +6056,9 @@
           "epicId": "EPIC-141",
           "title": "Add RuntimeOutbox after-commit dispatch scaffold",
           "plainPurpose": "Outbox worker can be simple initially",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W2-S10 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -6070,7 +6070,10 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0396",
+            "TASK-0397"
+          ],
           "owners": [
             "platform"
           ],
@@ -6103,18 +6106,18 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0400-add-runtimeoutbox-after-commit-dispatch-scaffold.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0401",
           "epicId": "EPIC-141",
           "title": "Define ArtifactVersionIdentityContract and add identity fields",
           "plainPurpose": "No officialness field allowed",
-          "sourceStatus": "TODO",
-          "displayStatus": "not_started",
-          "statusReason": "Task is still planned backlog work.",
+          "sourceStatus": "DONE",
+          "displayStatus": "done",
+          "statusReason": "Task frontmatter records DONE status.",
           "why": [
             "Imported from CAPEX v6 source task ARCH-W2-S11 so future work can be executed from repo-native backlog memory without loading the full master package."
           ],
@@ -6126,7 +6129,9 @@
             "Copying raw K12, K3, or blind-validation project files into the repository.",
             "Treating generated artifacts, lab reports, or AI outputs as canonical authority."
           ],
-          "dependsOn": [],
+          "dependsOn": [
+            "TASK-0396"
+          ],
           "owners": [
             "platform"
           ],
@@ -6159,9 +6164,9 @@
           },
           "evidence": [],
           "taskPath": "codex/tasks/TASK-0401-define-artifactversionidentitycontract-and-add-identity-fields.md",
-          "completedAt": null,
-          "completionTimestampStatus": "not_applicable",
-          "completionTimestampSource": "not_completed"
+          "completedAt": "2026-06-23T00:00:00Z",
+          "completionTimestampStatus": "recorded",
+          "completionTimestampSource": "task_frontmatter"
         },
         {
           "id": "TASK-0402",
@@ -7860,16 +7865,16 @@
         }
       ],
       "estimate": {
-        "percentComplete": 45.3,
-        "completedTasks": 24,
-        "remainingTasks": 29,
+        "percentComplete": 49.1,
+        "completedTasks": 26,
+        "remainingTasks": 27,
         "remainingBlockedOrReviewTasks": 0,
-        "completedWithTimestamps": 23,
-        "completionTimestampCoverage": 95.8,
-        "etaDate": "2026-07-13",
+        "completedWithTimestamps": 25,
+        "completionTimestampCoverage": 96.2,
+        "etaDate": "2026-07-10",
         "etaConfidence": "medium",
         "etaSource": "epic_completed_at",
-        "label": "ETA 2026-07-13",
+        "label": "ETA 2026-07-10",
         "caveat": "Estimate is based on remaining current-scope task count."
       }
     },

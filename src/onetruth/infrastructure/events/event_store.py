@@ -1461,6 +1461,8 @@ def create_sqlite_substrate(connection: sqlite3.Connection) -> None:
             parent_artifact_version_id TEXT,
             supersedes_artifact_version_id TEXT,
             lineage_note TEXT,
+            artifact_identity_profile TEXT,
+            artifact_identity_digest TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs(workflow_run_id),
             FOREIGN KEY (project_id) REFERENCES capex_projects(project_id),

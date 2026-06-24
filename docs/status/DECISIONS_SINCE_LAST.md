@@ -2,6 +2,13 @@
 
 Record any decisions made since the last session so a fresh Codex run can rehydrate quickly.
 
+## 2026-06-23 (EPIC-141 W2 RuntimeOutbox and artifact identity closeout)
+- RuntimeOutbox decision: `TASK-0400` closes `ARCH-W2-S10` by adding `docs/planning/capex_source_ingest/RUNTIME_OUTBOX_AFTER_COMMIT_CONTRACT.yaml` and `onetruth.infrastructure.repositories.runtime_outbox` as an internal relay scaffold over canonical `timeline_events` plus existing `consumer_cursors`.
+- Outbox-boundary decision: no second authoritative outbox table is added. RuntimeOutbox reads committed timeline events after a tenant/domain-scoped consumer cursor, dispatches in deterministic `sequence_no` order, supports bounded batches and optional event-type filtering, advances past skipped committed events, and leaves the cursor before failed events for retry.
+- Artifact identity decision: `TASK-0401` closes `ARCH-W2-S11` by adding `docs/planning/capex_source_ingest/ARTIFACT_VERSION_IDENTITY_CONTRACT.yaml`, Alembic revision `20260624_0021`, SQLite bootstrap/model parity, and repository helpers for `artifact_versions.artifact_identity_profile` and `artifact_versions.artifact_identity_digest`.
+- Identity-boundary decision: artifact identity digests use canonical JSON over scope/content identity fields only: tenant, domain, project, workflow run, dataset, partition, artifact kind, media type, content digest, and byte size. Storage URI, officialness, pointer state, and mutable status are excluded, and no `officialness`, `is_official`, `official_status`, or pointer-like column is added to `artifact_versions`.
+- Activation decision: this closeout adds internal runtime scaffolding, immutable artifact metadata, contracts, tests, docs, and schema parity only. It adds no public route, frontend route, event-registry change, broad worker rewiring, external bus activation, raw corpus import, official pointer, reviewed-baseline claim, production approval, or CAPEX runtime/product activation.
+
 ## 2026-06-23 (EPIC-141 W2 attempt and runtime slot closeout)
 - ToolExecutionAttempt decision: `TASK-0398` closes `ARCH-W2-S08` by adding internal `tool_execution_attempts`, a repository helper, runtime schema/model/bootstrap/Alembic coverage, and `execution_runtime.start_tool_execution_attempt_command(...)` as the attempt/lease foundation over existing logical `tool_executions`.
 - Attempt-boundary decision: legacy tool completion remains compatible when no active attempt exists; once an active attempt exists, completion must provide matching `tool_execution_attempt_id` and `lease_token`. Missing leases raise `tool_execution_attempt_lease_required`; wrong or stale leases raise `tool_execution_attempt_stale_completion` without logical completion or completion-event emission.

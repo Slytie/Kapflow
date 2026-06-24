@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from typing import Any
+
+
+ARTIFACT_VERSION_IDENTITY_PROFILE = (
+    "onetruth.artifact_version_identity.canonical_json.sha256.v1"
+)
 
 
 class ArtifactProjectIdentityError(ValueError):
@@ -55,6 +61,19 @@ def create_artifact_version(
         domain_id=domain_id,
         project_id=project_id,
     )
+    artifact_identity_digest = build_artifact_version_identity_digest(
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=resolved_project_id,
+        workflow_run_id=workflow_run_id,
+        dataset_key=dataset_key,
+        partition_kind=partition_kind,
+        partition_key=partition_key,
+        artifact_kind=artifact_kind,
+        media_type=media_type,
+        content_digest=content_digest,
+        byte_size=byte_size,
+    )
     connection.execute(
         """
         INSERT INTO artifact_versions (
@@ -77,9 +96,11 @@ def create_artifact_version(
             parent_artifact_version_id,
             supersedes_artifact_version_id,
             lineage_note,
+            artifact_identity_profile,
+            artifact_identity_digest,
             created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             artifact_version_id,
@@ -101,6 +122,8 @@ def create_artifact_version(
             parent_artifact_version_id,
             supersedes_artifact_version_id,
             lineage_note,
+            ARTIFACT_VERSION_IDENTITY_PROFILE,
+            artifact_identity_digest,
             created_at,
         ),
     )
@@ -132,6 +155,8 @@ def get_artifact_version(
             parent_artifact_version_id,
             supersedes_artifact_version_id,
             lineage_note,
+            artifact_identity_profile,
+            artifact_identity_digest,
             created_at
         FROM artifact_versions
         WHERE artifact_version_id = ?
@@ -171,6 +196,8 @@ def get_superseding_artifact_version(
             parent_artifact_version_id,
             supersedes_artifact_version_id,
             lineage_note,
+            artifact_identity_profile,
+            artifact_identity_digest,
             created_at
         FROM artifact_versions
         WHERE supersedes_artifact_version_id = ?
@@ -237,6 +264,8 @@ def list_artifact_versions_for_workflow_run(
             parent_artifact_version_id,
             supersedes_artifact_version_id,
             lineage_note,
+            artifact_identity_profile,
+            artifact_identity_digest,
             created_at
         FROM artifact_versions
         WHERE workflow_run_id = ?
@@ -281,6 +310,8 @@ def list_artifact_versions_for_scope_and_kind(
             av.parent_artifact_version_id,
             av.supersedes_artifact_version_id,
             av.lineage_note,
+            av.artifact_identity_profile,
+            av.artifact_identity_digest,
             av.created_at,
             wr.workflow_id AS workflow_id,
             wr.partition_key AS workflow_partition_key,
@@ -334,6 +365,72 @@ def require_artifact_project_identity(
             project_id=project_id,
         )
     return artifact
+
+
+def artifact_version_identity_payload(
+    *,
+    tenant_id: str | None,
+    domain_id: str | None,
+    project_id: str | None,
+    workflow_run_id: str,
+    dataset_key: str | None,
+    partition_kind: str | None,
+    partition_key: str | None,
+    artifact_kind: str,
+    media_type: str,
+    content_digest: str,
+    byte_size: int | None,
+) -> dict[str, Any]:
+    return {
+        "tenant_id": tenant_id,
+        "domain_id": domain_id,
+        "project_id": project_id,
+        "workflow_run_id": workflow_run_id,
+        "dataset_key": dataset_key,
+        "partition_kind": partition_kind,
+        "partition_key": partition_key,
+        "artifact_kind": artifact_kind,
+        "media_type": media_type,
+        "content_digest": content_digest,
+        "byte_size": byte_size,
+    }
+
+
+def build_artifact_version_identity_digest(
+    *,
+    tenant_id: str | None,
+    domain_id: str | None,
+    project_id: str | None,
+    workflow_run_id: str,
+    dataset_key: str | None,
+    partition_kind: str | None,
+    partition_key: str | None,
+    artifact_kind: str,
+    media_type: str,
+    content_digest: str,
+    byte_size: int | None,
+) -> str:
+    payload = artifact_version_identity_payload(
+        tenant_id=tenant_id,
+        domain_id=domain_id,
+        project_id=project_id,
+        workflow_run_id=workflow_run_id,
+        dataset_key=dataset_key,
+        partition_kind=partition_kind,
+        partition_key=partition_key,
+        artifact_kind=artifact_kind,
+        media_type=media_type,
+        content_digest=content_digest,
+        byte_size=byte_size,
+    )
+    canonical = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("utf-8")
+    return f"sha256:{hashlib.sha256(canonical).hexdigest()}"
 
 
 def _resolve_project_id_for_workflow(

@@ -1443,6 +1443,8 @@ class ArtifactVersion(Base):
         nullable=True,
     )
     lineage_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    artifact_identity_profile: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    artifact_identity_digest: Mapped[Optional[str]] = mapped_column(String(71), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 

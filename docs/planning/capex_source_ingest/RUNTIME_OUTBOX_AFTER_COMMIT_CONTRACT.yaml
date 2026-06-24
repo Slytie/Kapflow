@@ -1,0 +1,67 @@
+schema_version: capex.runtime_outbox_after_commit_contract.v1
+contract_id: capex.runtime_outbox.after_commit_scaffold.v1
+owner_task: TASK-0400
+source_row: ARCH-W2-S10
+activation_posture: planning_only_no_capex_activation
+overall_status: runtime_outbox_scaffold_recorded_not_activated
+depends_on:
+  repo_tasks:
+    - TASK-0396
+    - TASK-0397
+required_runtime_state:
+  canonical_event_table: timeline_events
+  cursor_table: consumer_cursors
+  repository: src/onetruth/infrastructure/repositories/runtime_outbox.py
+  runtime_bootstrap_contract: docs/planning/RUNTIME_BOOTSTRAP.md
+required_tables:
+  consumer_cursors:
+    primary_key:
+      - consumer_name
+      - tenant_id
+      - domain_id
+    columns:
+      - consumer_name
+      - tenant_id
+      - domain_id
+      - last_sequence_no
+      - updated_at
+outbox_policy:
+  second_authoritative_outbox_table_allowed: false
+  canonical_event_source: timeline_events
+  committed_events_only: true
+  cursor_table: consumer_cursors
+  deterministic_ordering: sequence_no_ascending
+  max_batch_size: 500
+  tenant_domain_scope_required: true
+  event_type_filter_allowed: true
+  filtered_events_advance_cursor: true
+  dispatch_failure_error_code: runtime_outbox_dispatch_failed
+  dispatch_failure_cursor_position: before_failed_event
+  broad_worker_rewire_required_in_this_task: false
+truth_effects:
+  creates_runtime_outbox_table: false
+  creates_second_event_log: false
+  advances_consumer_cursors: true
+  emits_timeline_events: false
+  creates_artifact_versions: false
+  creates_source_occurrences: false
+  creates_ingest_jobs: false
+  promotes_official_pointers: false
+  activates_workflow_pack: false
+not_implemented_in_this_task:
+  - public_api_route
+  - frontend_route
+  - event_registry_change
+  - broad_worker_rewire
+  - external_bus_activation
+  - capex_workflow_activation
+  - raw_corpus_import
+  - official_pointer_creation
+  - reviewed_baseline_creation
+cannot_be_used_for:
+  - capex_runtime_activation
+  - product_activation
+  - raw_corpus_import
+  - second_authoritative_event_log
+  - official_pointer_creation
+  - reviewed_baseline_creation

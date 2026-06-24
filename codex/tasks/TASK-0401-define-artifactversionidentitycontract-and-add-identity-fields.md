@@ -2,10 +2,11 @@
 id: TASK-0401
 epic: EPIC-141
 title: "Define ArtifactVersionIdentityContract and add identity fields"
-status: TODO
+status: DONE
+completed_at: "2026-06-23T00:00:00Z"
 owners: ["platform"]
 reviewers: ["architect", "qa"]
-depends_on: []
+depends_on: ["TASK-0396"]
 risk: high
 context_packs:
   - "codex/context/EPIC-141.md"
@@ -61,3 +62,6 @@ No officialness field allowed
 
 ## Notes / decisions
 - Raw project corpora remain off-repo; use only sanitized fixtures, manifests, hashes, and aggregate evidence approved by the relevant fixture/governance task.
+- Closeout evidence adds `docs/planning/capex_source_ingest/ARTIFACT_VERSION_IDENTITY_CONTRACT.yaml`, Alembic revision `20260624_0021`, SQLite bootstrap/model parity, and repository helpers for `artifact_versions.artifact_identity_profile` and `artifact_versions.artifact_identity_digest`.
+- Artifact identity digests are `sha256:` values over canonical scope/content identity JSON: tenant, domain, project, workflow run, dataset, partition, artifact kind, media type, content digest, and byte size. Storage URI and officialness/pointer state are excluded.
+- This task adds immutable artifact metadata only. It adds no `officialness`, `is_official`, `official_status`, pointer-like field, pointer mutation, public route, frontend route, raw corpus import, reviewed-baseline claim, or CAPEX runtime/product activation.

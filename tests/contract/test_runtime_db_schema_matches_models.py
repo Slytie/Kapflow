@@ -34,6 +34,7 @@ REQUIRED_PROVENANCE_COLUMNS = {
 
 REQUIRED_NEW_TABLES = {
     "command_receipts",
+    "consumer_cursors",
     "effect_ledger_entries",
     "artifact_provenance_edges",
     "workflow_run_inputs",
@@ -54,6 +55,14 @@ REQUIRED_NEW_TABLES = {
 REQUIRED_COMMAND_RECEIPT_COLUMNS = {
     "request_fingerprint",
     "request_fingerprint_profile",
+}
+
+REQUIRED_CONSUMER_CURSOR_COLUMNS = {
+    "consumer_name",
+    "tenant_id",
+    "domain_id",
+    "last_sequence_no",
+    "updated_at",
 }
 
 REQUIRED_EFFECT_LEDGER_COLUMNS = {
@@ -126,6 +135,11 @@ REQUIRED_PROJECT_RUNTIME_SLOT_COLUMNS = {
     "metadata_json",
     "created_at",
     "updated_at",
+}
+
+REQUIRED_ARTIFACT_VERSION_IDENTITY_COLUMNS = {
+    "artifact_identity_profile",
+    "artifact_identity_digest",
 }
 
 REQUIRED_INDEXES_BY_TABLE = {
@@ -283,6 +297,8 @@ def test_models_include_strategy_a_expand_schema_surfaces() -> None:
     assert REQUIRED_POINTER_COLUMNS <= _model_columns("artifact_pointers")
     assert REQUIRED_VERSION_COLUMNS <= _model_columns("artifact_versions")
     assert REQUIRED_PROVENANCE_COLUMNS <= _model_columns("artifact_provenance_edges")
+    assert REQUIRED_ARTIFACT_VERSION_IDENTITY_COLUMNS <= _model_columns("artifact_versions")
+    assert REQUIRED_CONSUMER_CURSOR_COLUMNS <= _model_columns("consumer_cursors")
     assert REQUIRED_COMMAND_RECEIPT_COLUMNS <= _model_columns("command_receipts")
     assert REQUIRED_EFFECT_LEDGER_COLUMNS <= _model_columns("effect_ledger_entries")
     assert REQUIRED_TOOL_EXECUTION_ATTEMPT_COLUMNS <= _model_columns(
@@ -309,6 +325,14 @@ def test_bootstrap_schema_matches_strategy_a_expand_schema_surfaces() -> None:
         assert REQUIRED_PROVENANCE_COLUMNS <= _sqlite_columns(
             connection,
             "artifact_provenance_edges",
+        )
+        assert REQUIRED_ARTIFACT_VERSION_IDENTITY_COLUMNS <= _sqlite_columns(
+            connection,
+            "artifact_versions",
+        )
+        assert REQUIRED_CONSUMER_CURSOR_COLUMNS <= _sqlite_columns(
+            connection,
+            "consumer_cursors",
         )
         assert REQUIRED_COMMAND_RECEIPT_COLUMNS <= _sqlite_columns(connection, "command_receipts")
         assert REQUIRED_EFFECT_LEDGER_COLUMNS <= _sqlite_columns(

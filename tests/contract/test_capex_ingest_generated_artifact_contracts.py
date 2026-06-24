@@ -103,6 +103,16 @@ PROJECT_CONCURRENCY_RUNTIME_SLOT_CONTRACT_PATH = (
     / "docs/planning/capex_source_ingest/"
     "PROJECT_CONCURRENCY_RUNTIME_SLOT_CONTRACT.yaml"
 )
+RUNTIME_OUTBOX_AFTER_COMMIT_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "RUNTIME_OUTBOX_AFTER_COMMIT_CONTRACT.yaml"
+)
+ARTIFACT_VERSION_IDENTITY_CONTRACT_PATH = (
+    ROOT
+    / "docs/planning/capex_source_ingest/"
+    "ARTIFACT_VERSION_IDENTITY_CONTRACT.yaml"
+)
 GENERATED_ARTIFACT_VALIDATOR_CONTRACT_PATH = (
     ROOT
     / "docs/planning/capex_generated_artifacts/"
@@ -1499,6 +1509,128 @@ def test_project_concurrency_runtime_slot_contract_closes_task_0399_without_acti
     } <= set(contract["not_implemented_in_this_task"])
 
 
+def test_runtime_outbox_after_commit_contract_closes_task_0400_without_second_event_log() -> None:
+    contract = _load_yaml(RUNTIME_OUTBOX_AFTER_COMMIT_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0400"
+    assert contract["source_row"] == "ARCH-W2-S10"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0396", "TASK-0397"]
+    assert contract["required_runtime_state"] == {
+        "canonical_event_table": "timeline_events",
+        "cursor_table": "consumer_cursors",
+        "repository": "src/onetruth/infrastructure/repositories/runtime_outbox.py",
+        "runtime_bootstrap_contract": "docs/planning/RUNTIME_BOOTSTRAP.md",
+    }
+    assert contract["outbox_policy"] == {
+        "second_authoritative_outbox_table_allowed": False,
+        "canonical_event_source": "timeline_events",
+        "committed_events_only": True,
+        "cursor_table": "consumer_cursors",
+        "deterministic_ordering": "sequence_no_ascending",
+        "max_batch_size": 500,
+        "tenant_domain_scope_required": True,
+        "event_type_filter_allowed": True,
+        "filtered_events_advance_cursor": True,
+        "dispatch_failure_error_code": "runtime_outbox_dispatch_failed",
+        "dispatch_failure_cursor_position": "before_failed_event",
+        "broad_worker_rewire_required_in_this_task": False,
+    }
+    assert contract["truth_effects"] == {
+        "creates_runtime_outbox_table": False,
+        "creates_second_event_log": False,
+        "advances_consumer_cursors": True,
+        "emits_timeline_events": False,
+        "creates_artifact_versions": False,
+        "creates_source_occurrences": False,
+        "creates_ingest_jobs": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+        "broad_worker_rewire",
+        "external_bus_activation",
+        "capex_workflow_activation",
+        "raw_corpus_import",
+    } <= set(contract["not_implemented_in_this_task"])
+
+
+def test_artifact_version_identity_contract_closes_task_0401_without_officialness_field() -> None:
+    contract = _load_yaml(ARTIFACT_VERSION_IDENTITY_CONTRACT_PATH)
+
+    assert contract["owner_task"] == "TASK-0401"
+    assert contract["source_row"] == "ARCH-W2-S11"
+    assert contract["activation_posture"] == "planning_only_no_capex_activation"
+    assert contract["depends_on"]["repo_tasks"] == ["TASK-0396"]
+    assert contract["required_table"]["artifact_versions"]["added_columns"] == [
+        "artifact_identity_profile",
+        "artifact_identity_digest",
+    ]
+    assert contract["identity_policy"] == {
+        "profile_id": "onetruth.artifact_version_identity.canonical_json.sha256.v1",
+        "digest_format": "sha256:<64 lowercase hex>",
+        "canonical_json": {
+            "sort_keys": True,
+            "separators": [",", ":"],
+            "ensure_ascii": True,
+            "allow_nan": False,
+        },
+        "input_fields": [
+            "tenant_id",
+            "domain_id",
+            "project_id",
+            "workflow_run_id",
+            "dataset_key",
+            "partition_kind",
+            "partition_key",
+            "artifact_kind",
+            "media_type",
+            "content_digest",
+            "byte_size",
+        ],
+        "excluded_fields": [
+            "artifact_version_id",
+            "artifact_role",
+            "storage_uri",
+            "metadata_json",
+            "parent_artifact_version_id",
+            "supersedes_artifact_version_id",
+            "lineage_note",
+            "pointer_id",
+            "officialness",
+            "official_status",
+        ],
+    }
+    assert contract["officialness_policy"] == {
+        "artifact_version_officialness_field_allowed": False,
+        "pointer_state_defines_officialness": True,
+        "pointer_event_required_for_officialness_change": True,
+    }
+    assert contract["truth_effects"] == {
+        "creates_artifact_versions": False,
+        "adds_artifact_identity_metadata": True,
+        "changes_pointer_officialness": False,
+        "emits_timeline_events": False,
+        "creates_source_occurrences": False,
+        "creates_ingest_jobs": False,
+        "promotes_official_pointers": False,
+        "activates_workflow_pack": False,
+    }
+    assert {
+        "public_api_route",
+        "frontend_route",
+        "event_registry_change",
+        "pointer_promotion_service",
+        "officialness_field",
+        "blobref_schema",
+        "capex_workflow_activation",
+        "raw_corpus_import",
+    } <= set(contract["not_implemented_in_this_task"])
+
+
 def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0267 = _frontmatter("TASK-0267")
     task_0268 = _frontmatter("TASK-0268")
@@ -1531,6 +1663,8 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     task_0397 = _frontmatter("TASK-0397")
     task_0398 = _frontmatter("TASK-0398")
     task_0399 = _frontmatter("TASK-0399")
+    task_0400 = _frontmatter("TASK-0400")
+    task_0401 = _frontmatter("TASK-0401")
     task_0539 = _frontmatter("TASK-0539")
     task_0540 = _frontmatter("TASK-0540")
 
@@ -1633,6 +1767,13 @@ def test_task_0267_through_0290_close_after_unblocker_pairs() -> None:
     assert task_0399["completed_at"] == "2026-06-23T00:00:00Z"
     assert "TASK-0385" in task_0399["depends_on"]
     assert "TASK-0563" in task_0399["depends_on"]
+    assert task_0400["status"] == "DONE"
+    assert task_0400["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0396" in task_0400["depends_on"]
+    assert "TASK-0397" in task_0400["depends_on"]
+    assert task_0401["status"] == "DONE"
+    assert task_0401["completed_at"] == "2026-06-23T00:00:00Z"
+    assert "TASK-0396" in task_0401["depends_on"]
     assert task_0539["status"] == "DONE"
     assert task_0539["completed_at"] == "2026-06-23T00:00:00Z"
     assert task_0540["status"] == "DONE"
